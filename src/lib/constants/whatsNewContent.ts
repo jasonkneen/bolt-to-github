@@ -7,9 +7,14 @@ export interface WhatsNewVersion {
 
 export const whatsNewContent: Record<string, WhatsNewVersion> = {
   '1.3.16': {
-    date: '2026-XX-XX',
-    highlights: [],
-    details: ``,
+    date: '2026-04-04',
+    highlights: [
+      '🔐 Independent Auth – Extension auth no longer breaks when the website session expires or rotates',
+      '📋 Commits List Modal (Pro) – View commit history with pagination and link to GitHub',
+      '✏️ Editable Repo Settings – Rename your project title and repository directly',
+      '🐛 Bug Fix – Fixed inability to rename repository in settings',
+    ],
+    details: `This release solves the #1 reported issue: authentication randomly breaking. The extension now mints its own independent session, so website token rotation or session expiry no longer affects it. Also adds a new Pro feature to browse your commit history, and fixes the repo rename bug.`,
     type: 'patch',
   },
   '1.3.15': {
