@@ -528,6 +528,21 @@ export class SupabaseAuthService {
         if (user) {
           logger.info(`👤 Verified user: ${user.email}`);
 
+          /* Mint an independent session if we don't have one yet.
+           * This decouples the extension's refresh lifecycle from the website's,
+           * preventing token rotation on bolt2github.com from invalidating
+           * the extension's refresh token. */
+          const hasMinted = await this.hasIndependentSession();
+          if (!hasMinted) {
+            logger.info('🔑 Minting independent session for extension...');
+            const minted = await this.mintIndependentSession(token);
+            if (minted) {
+              logger.info('✅ Independent session minted — extension auth is now decoupled');
+            } else {
+              logger.warn('⚠️ Failed to mint independent session, continuing with shared session');
+            }
+          }
+
           /* Get subscription status using the user info */
           const subscription = await this.getSubscriptionStatus(token, user);
 
@@ -729,6 +744,8 @@ export class SupabaseAuthService {
             'supabaseRefreshToken',
             'supabaseTokenExpiry',
             'refreshTokenIssuedAt',
+            'extensionSessionMinted',
+            'extensionSessionMintedAt',
           ]);
           return null;
         }
@@ -778,6 +795,74 @@ export class SupabaseAuthService {
       });
     } catch (error) {
       logger.error('Failed to store token data:', error);
+    }
+  }
+
+  /**
+   * Check if the extension already has an independent (minted) session.
+   */
+  private async hasIndependentSession(): Promise<boolean> {
+    try {
+      const result = await chrome.storage.local.get(['extensionSessionMinted']);
+      return result.extensionSessionMinted === true;
+    } catch (error) {
+      logger.warn('Failed to check independent session flag:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Mint an independent Supabase session for the extension via the
+   * mint-extension-session edge function.
+   *
+   * The edge function generates a magic-link token (admin, no email) and
+   * immediately verifies it server-side to create a brand new session that
+   * is completely separate from the bolt2github.com website session.
+   *
+   * @returns true if an independent session was successfully created
+   */
+  private async mintIndependentSession(currentToken: string): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.supabaseUrl}/functions/v1/mint-extension-session`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${currentToken}`,
+          'Content-Type': 'application/json',
+          apikey: this.anonKey,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        logger.warn('❌ Failed to mint independent session:', response.status, errorData);
+        return false;
+      }
+
+      const data = await response.json();
+
+      if (!data.access_token || !data.refresh_token) {
+        logger.warn('❌ Mint response missing tokens');
+        return false;
+      }
+
+      /* Store the independent session tokens */
+      await this.storeTokenData({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+        expires_at: data.expires_at,
+        expires_in: data.expires_in,
+      });
+
+      /* Mark this session as independently minted */
+      await chrome.storage.local.set({
+        extensionSessionMinted: true,
+        extensionSessionMintedAt: Date.now(),
+      });
+
+      return true;
+    } catch (error) {
+      logger.error('❌ Error minting independent session:', error);
+      return false;
     }
   }
 
@@ -1140,12 +1225,14 @@ export class SupabaseAuthService {
           );
         }
 
-        /* If refresh failed, clear stored tokens */
+        /* If refresh failed, clear stored tokens and independent session flag */
         await chrome.storage.local.remove([
           'supabaseToken',
           'supabaseRefreshToken',
           'supabaseTokenExpiry',
           'refreshTokenIssuedAt',
+          'extensionSessionMinted',
+          'extensionSessionMintedAt',
         ]);
         return null;
       }
@@ -1543,6 +1630,8 @@ export class SupabaseAuthService {
         'supabaseTokenExpiry',
         'supabaseAuthState',
         'refreshTokenIssuedAt',
+        'extensionSessionMinted',
+        'extensionSessionMintedAt',
       ]);
 
       /* Reset internal auth state */
