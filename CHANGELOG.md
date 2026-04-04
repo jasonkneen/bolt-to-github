@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-04-04 - Version 1.3.16
+
+### 🎉 New Features
+
+- **Commits List Modal (Pro)** - View your commit history directly within the extension with a dedicated modal, including pagination and a link to view the full history on GitHub
+- **Editable Project Title & Repository Name** - Rename your project and repository directly from repo settings
+
+### 🔧 Performance & Stability
+
+- **Independent Extension Auth Session** - The extension now mints its own Supabase session, completely decoupled from the bolt2github.com website. Website token rotation, session expiry, or logout no longer break the extension's authentication — the #1 reliability improvement requested by users
+- **Commits Modal UX** - Improved modal height, keyboard navigation, and close button behavior
+
+### 🧪 Testing & Quality
+
+- **Independent Session Tests** - 18 tests covering session minting, flag management, cleanup paths, and migration scenarios
+- **CommitCard & CommitsService Tests** - Comprehensive component and service test coverage for the commits feature
+- **Editable Settings Tests** - Tests for editable project title and repository name
+
+### 🐛 Bug Fixes
+
+- **Repo Rename** - Fixed inability to rename repository in repo settings
+
 ## 2026-03-27 - Version 1.3.15
 
 ### 🔧 Performance & Stability
