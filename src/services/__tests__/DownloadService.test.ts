@@ -179,5 +179,68 @@ describe('DownloadService', () => {
 
       expect(clickSpy).toHaveBeenCalled();
     });
+
+    it('finds project name dropdown when chevron uses i-ph:caret-down (May 2026 Bolt DOM)', async () => {
+      // Bolt swapped icon library from Lucide to Phosphor / Heroicons.
+      // Project-name button now uses i-ph:caret-down instead of i-lucide:chevron-down.
+      const projectNameButton = document.createElement('button');
+      projectNameButton.setAttribute('aria-haspopup', 'menu');
+      projectNameButton.setAttribute('data-state', 'closed');
+      projectNameButton.innerHTML = `
+        <span class="mt-px truncate sm:max-w-80">VitePress Starter (forked)</span>
+        <span class="i-ph:caret-down size-4"></span>
+      `;
+      document.body.appendChild(projectNameButton);
+
+      const menu = document.createElement('div');
+      menu.setAttribute('role', 'menu');
+      const exportItem = document.createElement('div');
+      exportItem.setAttribute('role', 'menuitem');
+      exportItem.innerHTML =
+        '<span class="i-heroicons:arrow-down-tray size-4"></span>Export<span class="i-ph:caret-right ml-auto size-4"></span>';
+      menu.appendChild(exportItem);
+      document.body.appendChild(menu);
+
+      const clickSpy = vi.spyOn(projectNameButton, 'click');
+
+      const findAndClickExportButton = (
+        downloadService as unknown as DownloadServiceWithPrivateMethods
+      ).findAndClickExportButton.bind(downloadService);
+      await findAndClickExportButton();
+
+      expect(clickSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe('findAndClickDownloadButton with May 2026 Bolt DOM', () => {
+    it('finds download menuitem when icon class uses i-ph:file-archive', async () => {
+      // Submenu icon class moved from i-lucide:file-archive to i-ph:file-archive.
+      const submenu = document.createElement('div');
+      submenu.setAttribute('role', 'menu');
+
+      const downloadItem = document.createElement('div');
+      downloadItem.setAttribute('role', 'menuitem');
+      downloadItem.innerHTML = '<span class="i-ph:file-archive size-4 mt-0.5"></span>Download';
+      submenu.appendChild(downloadItem);
+
+      const stackBlitzItem = document.createElement('div');
+      stackBlitzItem.setAttribute('role', 'menuitem');
+      stackBlitzItem.innerHTML =
+        '<span class="i-bolt:logos-stackblitz size-4"></span><span>Open in StackBlitz</span>';
+      submenu.appendChild(stackBlitzItem);
+
+      document.body.appendChild(submenu);
+
+      const downloadSpy = vi.spyOn(downloadItem, 'click');
+      const stackBlitzSpy = vi.spyOn(stackBlitzItem, 'click');
+
+      const findAndClickDownloadButton = (
+        downloadService as unknown as DownloadServiceWithPrivateMethods
+      ).findAndClickDownloadButton.bind(downloadService);
+      await findAndClickDownloadButton();
+
+      expect(downloadSpy).toHaveBeenCalled();
+      expect(stackBlitzSpy).not.toHaveBeenCalled();
+    });
   });
 });

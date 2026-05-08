@@ -222,8 +222,9 @@ export class DownloadService {
     );
 
     const projectNameButton = Array.from(allMenuButtons).find((btn) => {
-      // Check if it has a chevron-down icon (indicating it's a dropdown)
-      const hasChevronDown = btn.querySelector('.i-lucide\\:chevron-down');
+      // Match any down-pointing chevron/caret regardless of icon library
+      // (Bolt has shipped i-lucide:chevron-down and i-ph:caret-down across redesigns).
+      const hasChevronDown = btn.querySelector('[class*="chevron-down"], [class*="caret-down"]');
       // Check if it contains project name text (not just icons)
       const hasProjectText =
         btn.textContent &&
@@ -400,8 +401,9 @@ export class DownloadService {
         logger.info(`Checking dropdown with ${menuItems.length} menu items`);
 
         // Find the download button by looking for the file-archive icon
+        // Match across icon libraries (i-lucide:file-archive, i-ph:file-archive, etc.).
         downloadButton = Array.from(menuItems).find((item) => {
-          const hasFileArchiveIcon = item.querySelector('[class*="i-lucide:file-archive"]');
+          const hasFileArchiveIcon = item.querySelector('[class*="file-archive"]');
           const hasDownloadText = item.textContent?.toLowerCase().includes('download');
           return hasFileArchiveIcon || hasDownloadText;
         });
@@ -412,11 +414,12 @@ export class DownloadService {
         }
 
         // Fallback: also check for buttons with download-related content
+        // Includes Heroicons "arrow-down-tray" used in the May 2026 Bolt DOM.
         const buttons = dropdown.querySelectorAll('button');
         downloadButton = Array.from(buttons).find((button) => {
           const hasDownloadText = button.textContent?.toLowerCase().includes('download');
           const hasDownloadIcon = button.querySelector(
-            '[class*="i-ph:download-simple"], [class*="i-lucide:download"], [class*="i-lucide:file-archive"]'
+            '[class*="download-simple"], [class*="file-archive"], [class*="arrow-down-tray"]'
           );
           return hasDownloadText || hasDownloadIcon;
         });
