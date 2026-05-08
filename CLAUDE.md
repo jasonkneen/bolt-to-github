@@ -2,9 +2,9 @@
 
 ## Overview
 
-Bolt to GitHub is a Chrome Extension (Manifest v3) that automatically captures ZIP file downloads from bolt.new, extracts them, and pushes contents to GitHub repositories. Built with Svelte v4.2.x, TypeScript v5.6.x, and TailwindCSS.
+Bolt to GitHub is a Chrome Extension (Manifest v3) that automatically captures ZIP file downloads from bolt.new, extracts them, and pushes contents to GitHub repositories. Built with Svelte v4.2.x, TypeScript v5.9.x, and TailwindCSS.
 
-**Current Version**: v1.3.15
+**Current Version**: v1.3.17
 **Repository**: mamertofabian/bolt-to-github  
 **Package Manager**: pnpm (required)
 
@@ -56,31 +56,26 @@ When starting new development work:
 Follow this Anthropic-recommended workflow for all changes:
 
 1. **Write Tests First**
-
    - Write tests based on expected input/output pairs
    - Avoid creating mock implementations for non-existent functionality
    - Focus on what the code SHOULD do, not how it does it
 
 2. **Verify Tests Fail**
-
    - Run the tests and confirm they fail
    - DO NOT write any implementation code at this stage
    - Ensure tests are testing the right things
 
 3. **Commit Tests**
-
    - Commit the tests when satisfied with their coverage
    - Use descriptive commit messages like "test: add tests for X functionality"
 
 4. **Write Implementation**
-
    - Write code that passes the tests
    - DO NOT modify the tests during implementation
    - Keep iterating until all tests pass
    - Run tests after each change to track progress
 
 5. **Verify Implementation**
-
    - Use a subagent to verify the implementation isn't overfitting
    - Ensure code follows existing patterns and conventions
    - Check that implementation is minimal but complete
@@ -106,13 +101,11 @@ When working on GitHub issues, follow this structured approach:
    ```
 
 2. **Plan Implementation**
-
    - Review acceptance criteria
    - Create a comprehensive todo list
    - Identify which existing patterns to follow
 
 3. **Follow TDD Workflow**
-
    - Write comprehensive tests first
    - Verify tests fail
    - Commit tests
@@ -121,7 +114,6 @@ When working on GitHub issues, follow this structured approach:
    - Commit implementation
 
 4. **Testing**
-
    - Use Vitest with Testing Library for frontend tests
    - Run tests with: `pnpm test` or `pnpm test:watch` for watch mode
    - Ensure TypeScript compilation passes: `pnpm build`
@@ -184,8 +176,8 @@ src/
 
 ### Key Technologies
 
-- **Framework**: Svelte v4.2.x with TypeScript v5.6.x
-- **Build Tool**: Vite v4.5.x with @crxjs/vite-plugin v2.0.0-beta.18
+- **Framework**: Svelte v4.2.x with TypeScript v5.9.x
+- **Build Tool**: Vite v5.4.x with @crxjs/vite-plugin v2.4.x
 - **Styling**: TailwindCSS v3.4.x with custom theme system
 - **UI Components**: bits-ui v0.21.x for base components
 - **Icons**: lucide-svelte v0.460.x
@@ -317,8 +309,8 @@ src/
 
 ### Key Dependencies
 
-- **Core**: svelte@^4.2.19, typescript@^5.6.3
-- **Build**: vite@^4.5.5, @crxjs/vite-plugin@^2.0.0-beta.18
+- **Core**: svelte@^4.2.19, typescript@^5.9.3
+- **Build**: vite@^5.4.21, @crxjs/vite-plugin@^2.4.0, @sveltejs/vite-plugin-svelte@^3.1.2
 - **Styling**: tailwindcss@^3.4.15, bits-ui@^0.21.16
 - **Testing**: vitest@^1.6.0, @vitest/coverage-v8@^3.2.4, @vitest/ui@^1.6.0, @testing-library/jest-dom@^6.6.3
 - **Utilities**: fflate@^0.8.2, lucide-svelte@^0.460.1

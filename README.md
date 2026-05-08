@@ -375,13 +375,11 @@ To try the latest development version:
 Get started in just 3 simple steps:
 
 1. **Install from Chrome Web Store**
-
    - Visit our [Chrome Web Store page](https://chrome.google.com/webstore/detail/pikdepbilbnnpgdkdaaoeekgflljmame)
    - Click "Add to Chrome"
    - Click "Add extension" when prompted
 
 2. **Configure the Extension**
-
    - Make sure you have a Bolt.new project loaded
    - Click the extension icon in your Chrome toolbar
    - Choose your authentication method:
@@ -414,7 +412,7 @@ If you want to modify the extension or contribute to its development:
 1. Set up your development environment:
 
    ```bash
-   # Make sure you have Node.js v16 or later installed
+   # Make sure you have Node.js v18 or later installed (v22 LTS recommended)
    node --version
    ```
 
@@ -705,13 +703,11 @@ A: Currently, the extension processes all files in the ZIP. File filtering may b
 ### Common Issues
 
 1. **Extension not intercepting downloads**
-
    - Ensure you're on bolt.new
    - Check if the file is a ZIP
    - Verify permissions are enabled
 
 2. **GitHub push fails**
-
    - Verify your token has repo permissions
    - Check repository name and owner
    - Ensure branch exists
