@@ -135,7 +135,7 @@ export async function calculateGitBlobHash(content: string): Promise<string> {
   const totalLength = new TextEncoder().encode(prefixStr + content).length;
 
   // Encode directly into a single buffer
-  let bytes: Uint8Array;
+  let bytes: Uint8Array<ArrayBuffer>;
 
   // Modern browsers support encodeInto for better performance
   if (typeof encoder.encodeInto === 'function') {
