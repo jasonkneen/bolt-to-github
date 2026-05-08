@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-05-08 - Version 1.3.17
+
+### 🐛 Bug Fixes
+
+- **Restored Download Flow on May 2026 Bolt DOM** - Bolt swapped the project-name dropdown chevron from Lucide (`i-lucide:chevron-down`) to Phosphor (`i-ph:caret-down`), which broke Strategy 1 of `findAndClickExportButton` and surfaced as "Export menu trigger not found". Selectors are now icon-library agnostic and keep working across Lucide, Phosphor, and Heroicons variants
+- **Hardened File and Download Icon Matching** - File-archive and download icon detection no longer hard-code a `i-lucide:` prefix, with `arrow-down-tray` (Heroicons) added as a fallback
+
+### 🧪 Testing & Quality
+
+- **May 2026 Bolt DOM Regression Tests** - Added two regression tests pinning the project-name button and download submenu item against the captured `bolt-download-button-v3.html` fixture, so the next icon-library shuffle fails fast in CI
+
+### 🛠️ Developer Experience
+
+- **Two-Step Bolt DOM Capture** - `scripts/capture-bolt-dom.mjs` now captures the toolbar/Publish context and the project-name dropdown plus Export submenu in a single run, feeding both `GitHubButtonManager` and `DownloadService` selector work
+- **`fix-bolt-selectors` Skill** - Project-level Claude Code skill that codifies the recovery playbook (capture, diff, branch off `dev-v{NEXT}`, write failing tests, ship library-agnostic selectors), turning future Bolt redesigns from an investigation into a single skill invocation
+- **Contributor Guidelines** - Added `AGENTS.md` with repository contributor guidelines
+
 ## 2026-04-04 - Version 1.3.16
 
 ### 🎉 New Features

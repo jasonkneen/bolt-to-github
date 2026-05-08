@@ -31,17 +31,39 @@ A Chrome extension that automatically captures ZIP file downloads from bolt.new,
   <img src="https://img.shields.io/badge/Install%20from-Chrome%20Web%20Store-blue?style=for-the-badge&logo=google-chrome&logoColor=white" alt="Install from Chrome Web Store" height="40">
 </a>
 
-### Latest Version: v1.3.16 (Development)
+### Latest Version: v1.3.17
+
+#### 📝 Version 1.3.17 – Bolt DOM Recovery (May 2026)
+
+**What's new:**
+
+- Restored download/export flow after Bolt swapped the dropdown chevron from Lucide to Phosphor
+- Icon-library agnostic selectors that work across Lucide, Phosphor, and Heroicons
+- Regression tests pinned against the May 2026 Bolt DOM
+- New `fix-bolt-selectors` recovery skill and two-step DOM capture script
+
+**Key Benefits:**
+
+- Download button keeps working through Bolt's icon library reshuffles
+- Future Bolt redesigns get fixed in minutes instead of hours
+- Failing tests catch the next selector regression before it ships
+
+### Previous Version: v1.3.16
 
 #### 📝 Version 1.3.16
 
 **What's new:**
 
-- Coming soon
+- Independent extension auth session decoupled from bolt2github.com
+- Commits List Modal (Pro) with pagination and GitHub link
+- Editable project title and repository name from repo settings
+- Fixed inability to rename repository
 
 **Key Benefits:**
 
-- Coming soon
+- Auth no longer breaks when the website session rotates or expires
+- Browse and audit your commit history without leaving the extension
+- Rename projects and repos in place
 
 ### Previous Version: v1.3.15
 

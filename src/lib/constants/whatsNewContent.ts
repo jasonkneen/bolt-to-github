@@ -6,6 +6,15 @@ export interface WhatsNewVersion {
 }
 
 export const whatsNewContent: Record<string, WhatsNewVersion> = {
+  '1.3.17': {
+    date: '2026-05-08',
+    highlights: [
+      '🛠️ Download Flow Restored – Fixed export/download after Bolt swapped the chevron icon from Lucide to Phosphor',
+      '🎯 Icon-Library Agnostic Selectors – Works across Lucide, Phosphor, and Heroicons variants',
+    ],
+    details: `Bolt's May 2026 redesign swapped the project-name dropdown chevron from Lucide to Phosphor, breaking the entire export/download flow. This release ships icon-library agnostic selectors so the same code keeps working across Lucide, Phosphor, and Heroicons variants, plus regression tests and a packaged recovery skill so future Bolt redesigns get fixed in minutes instead of hours.`,
+    type: 'patch',
+  },
   '1.3.16': {
     date: '2026-04-04',
     highlights: [
