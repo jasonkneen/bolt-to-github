@@ -1,0 +1,44 @@
+# draft-kind: hardening-plan
+schema: '2'
+goal: 'Clear avoidable build and test release noise'
+description: |
+  Remove avoidable validation noise by updating the Vite JSON manifest import for the
+  current Node target and converting the ZIP debug test into a quiet behavioral regression
+  test, while documenting any remaining accepted chunk-size warnings.
+type: fix
+files:
+  edit:
+    - path: vite.config.ts
+      artifacts:
+        - kind: namespace
+          name: manifestWithAssets
+          description: |
+            Build configuration should no longer emit the Node JSON import assertion
+            warning after this draft is implemented.
+    - path: src/lib/__tests__/zip-debug.test.ts
+      artifacts:
+        - kind: test_function
+          name: should work with a direct test
+    - path: docs/plans/bolt-extension-bug-hunt-hardening-backlog.md
+      artifacts:
+        - kind: namespace
+          name: Verification Notes
+          description: |
+            Planning note to record whether remaining chunk-size warnings are accepted or
+            split into a separate performance task.
+  read:
+    - tsconfig.node.json
+    - package.json
+    - src/lib/zip.ts
+validate:
+  - pnpm build
+  - pnpm exec vitest run src/lib/__tests__/zip-debug.test.ts
+  - pnpm test:ci
+created: '2026-05-30T20:41:28+08:00'
+metadata:
+  tags:
+    - release-ci
+    - build
+    - test-output
+  priority: medium
+  status: planning

@@ -1,0 +1,54 @@
+# draft-kind: hardening-plan
+schema: '2'
+goal: 'Add regression coverage for Bolt DOM capture toolbar extraction'
+description: |
+  Add regression coverage for the Bolt DOM capture script's current Publish/Share-first
+  toolbar extraction and legacy ml-auto fallback so future selector recovery keeps using
+  the same strategy as runtime injection.
+type: fix
+files:
+  create:
+    - path: scripts/__tests__/capture-bolt-dom.test.ts
+      artifacts:
+        - kind: test_function
+          name: extracts toolbar HTML from the current Publish anchored Bolt DOM
+          description: Required new behavioral test before promotion.
+        - kind: test_function
+          name: falls back to legacy ml-auto toolbar DOM
+          description: Required new behavioral test before promotion.
+  edit:
+    - path: scripts/capture-bolt-dom.mjs
+      artifacts:
+        - kind: function
+          name: toolbar HTML extraction
+          description: |
+            Existing inline extraction logic to factor or cover without replacing the
+            current Publish/Share-first behavior.
+        - kind: function
+          name: structured toolbar candidate collection
+          description: |
+            Existing inline candidate collection to cover with current and legacy fixture
+            scenarios.
+    - path: src/content/managers/__tests__/GitHubButtonManager.test.ts
+      artifacts:
+        - kind: test_function
+          name: finds the current toolbar group via the Publish button when not under div.ml-auto
+        - kind: test_function
+          name: finds the legacy container when the toolbar sits under div.ml-auto
+  read:
+    - src/content/managers/GitHubButtonManager.ts
+    - bolt-publish-button.html
+    - bolt-download-button-v3.html
+    - docs/e2e-testing-rules.md
+validate:
+  - pnpm exec vitest run scripts/__tests__/capture-bolt-dom.test.ts src/content/managers/__tests__/GitHubButtonManager.test.ts
+  - pnpm lint
+  - pnpm build
+created: '2026-05-30T20:41:28+08:00'
+metadata:
+  tags:
+    - bolt-dom
+    - selectors
+    - tooling
+  priority: high
+  status: planning
