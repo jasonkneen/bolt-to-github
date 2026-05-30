@@ -147,6 +147,25 @@ When working on GitHub issues, follow this structured approach:
 - Test UI: `pnpm run test:ui` - Run tests with Vitest UI
 - Test Failed Files: `pnpm run test:failed-files` - Extract and display only the filenames of failing test files (useful for debugging test failures)
 
+### MAID
+
+This repository uses MAID for AI-assisted feature, bug-fix, and refactor work.
+Use the checked-in wrapper so local agents and hooks run the same runner:
+
+```bash
+./scripts/maid validate --manifest-dir manifests --mode schema
+./scripts/maid validate --manifest-dir manifests --mode behavioral
+./scripts/maid validate --manifest-dir manifests --mode implementation
+./scripts/maid test --manifest-dir manifests
+./scripts/maid files --manifest-dir manifests
+```
+
+Wrapper aliases are also available through `pnpm maid:*` scripts. Keep active
+manifests directly under `manifests/`. Start new features, bug fixes, and
+refactors with a manifest or intentional manifest evolution. When touching files
+that lack MAID coverage, add focused behavioral or characterization coverage in
+the same change.
+
 ### Git Hooks
 
 - Prepare: `pnpm run prepare` - Set up Husky git hooks

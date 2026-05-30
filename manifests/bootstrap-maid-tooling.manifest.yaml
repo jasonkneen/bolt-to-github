@@ -1,0 +1,31 @@
+schema: '2'
+goal: 'Bootstrap MAID tooling for bolt-to-github'
+description: |
+  Add the repository-local MAID wrapper, package aliases, manifest directory
+  guidance, and a characterization test so directory-wide MAID validation has
+  an active contract from the start.
+type: feature
+files:
+  edit:
+    - path: src/test/maid-wrapper.test.ts
+      artifacts:
+        - kind: test_function
+          name: runs the MAID runner through the checked-in uvx wrapper
+        - kind: test_function
+          name: exposes pnpm aliases for the standard MAID commands
+        - kind: test_function
+          name: documents the repository MAID workflow for future agents
+  read:
+    - scripts/maid
+    - package.json
+    - AGENTS.md
+    - CLAUDE.md
+    - manifests/README.md
+validate:
+  - pnpm exec vitest run src/test/maid-wrapper.test.ts
+created: '2026-05-30T20:10:00+08:00'
+metadata:
+  tags:
+    - maid
+    - tooling
+  priority: high

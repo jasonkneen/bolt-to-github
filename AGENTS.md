@@ -25,6 +25,17 @@ Use strict TypeScript and ESM imports. Svelte components must use `<script lang=
 
 Vitest uses `jsdom`, globals, and setup from `src/test/setup/vitest-setup.ts`; coverage uses V8 and writes to `coverage/`. Follow `docs/unit-testing-rules.md` for classes, services, and utilities, and `docs/component-testing-rules.md` for Svelte UI tests. Prefer TDD for behavior changes: add a focused failing test, implement the fix, then run the relevant tests plus `pnpm lint` and `pnpm check`.
 
+## MAID Workflow
+
+This repository uses MAID for AI-assisted code changes. Use the repository wrapper, not a global `maid` executable:
+
+- `./scripts/maid validate --manifest-dir manifests --mode schema`
+- `./scripts/maid validate --manifest-dir manifests --mode behavioral`
+- `./scripts/maid validate --manifest-dir manifests --mode implementation`
+- `./scripts/maid test --manifest-dir manifests`
+
+Wrapper aliases are available through `pnpm maid:*` scripts. Keep active manifests directly under `manifests/`. For new features, bug fixes, and refactors, create or evolve a manifest first, validate the behavioral contract, then implement within manifest scope. When touching files that lack MAID coverage, add focused behavioral or characterization coverage in the same change.
+
 ## Commit & Pull Request Guidelines
 
 History follows Conventional Commits, for example `feat: mint independent Supabase session` and `fix: address PR review issues`. Branch from the active `dev-vX.Y.Z` branch; reserve `main` for releases. PRs should target the active dev branch, describe behavior changes, list validation commands, link issues when applicable, and include screenshots or recordings for visible UI changes.
