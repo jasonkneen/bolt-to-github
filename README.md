@@ -31,9 +31,25 @@ A Chrome extension that automatically captures ZIP file downloads from bolt.new,
   <img src="https://img.shields.io/badge/Install%20from-Chrome%20Web%20Store-blue?style=for-the-badge&logo=google-chrome&logoColor=white" alt="Install from Chrome Web Store" height="40">
 </a>
 
-### Latest Version: v1.3.17
+### Latest Version: v1.3.18
 
-#### 📝 Version 1.3.17 – Bolt DOM Recovery (May 2026)
+#### Version 1.3.18 - Push Button Recovery (May 2026)
+
+**What's new:**
+
+- Restored the Push to GitHub button after Bolt moved the Share/Publish toolbar
+- Toolbar detection now supports both legacy `ml-auto` layouts and the current Publish/Share anchored layout
+- Added regression tests for the current May 2026 toolbar structure
+
+**Key Benefits:**
+
+- Push to GitHub appears again on current bolt.new project pages
+- Cached or older Bolt tabs remain supported through legacy selector fallbacks
+- Future toolbar changes are easier to diagnose with a dedicated fixture
+
+### Previous Version: v1.3.17
+
+#### Version 1.3.17 - Bolt DOM Recovery (May 2026)
 
 **What's new:**
 
