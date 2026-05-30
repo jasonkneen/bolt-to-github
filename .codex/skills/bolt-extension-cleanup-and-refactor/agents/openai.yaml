@@ -1,0 +1,6 @@
+interface:
+  display_name: 'Bolt Extension Cleanup'
+  short_description: 'Plan safe cleanup for the deployed extension'
+  default_prompt: 'Use $bolt-extension-cleanup-and-refactor to find safe cleanup and refactor opportunities in this Chrome extension.'
+policy:
+  allow_implicit_invocation: true
