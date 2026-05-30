@@ -23,15 +23,43 @@ export class GitHubButtonManager implements IGitHubButtonManager {
   }
 
   /**
+   * Locate the top-right toolbar container that holds the inline button slots
+   * (`div.flex.gap-1`) next to Bolt's Share/Publish buttons, so the GitHub
+   * button can be injected there.
+   *
+   * Strategy 1 (legacy / cached tabs): the toolbar group sits directly under
+   * `div.ml-auto`. Kept so older bolt.new tabs keep working.
+   *
+   * Strategy 2 (current Bolt DOM, May 2026): the group is no longer a child of
+   * `div.ml-auto` — that class now only marks a collapse button and a hidden
+   * resize handle. Anchor on the Publish/Share button (an accessible-name match
+   * that survives Tailwind class churn) and return its flex gap container.
+   */
+  public static findToolbarContainer(): Element | null {
+    const legacyContainer =
+      document.querySelector('div.ml-auto > div.flex.gap-2') ??
+      document.querySelector('div.ml-auto > div.flex.gap-3');
+    if (legacyContainer) {
+      return legacyContainer;
+    }
+
+    const anchor =
+      document.querySelector<HTMLElement>('button[aria-controls="publish-menu"]') ??
+      Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find((button) =>
+        /^(publish|deploy|share)$/i.test(button.textContent?.trim() ?? '')
+      );
+
+    return anchor?.closest('div.flex.gap-2, div.flex.gap-3') ?? null;
+  }
+
+  /**
    * Initialize the GitHub upload button
    * Replaces the previous initializeUploadButton method from UIManager
    */
   public async initialize(): Promise<void> {
     logger.info('🔊 Initializing GitHub upload button');
 
-    const buttonContainer =
-      document.querySelector('div.ml-auto > div.flex.gap-2') ||
-      document.querySelector('div.ml-auto > div.flex.gap-3');
+    const buttonContainer = GitHubButtonManager.findToolbarContainer();
     logger.debug('Button container found:', !!buttonContainer);
 
     const existingButton = document.querySelector('[data-github-upload]');
