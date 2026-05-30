@@ -31,9 +31,25 @@ A Chrome extension that automatically captures ZIP file downloads from bolt.new,
   <img src="https://img.shields.io/badge/Install%20from-Chrome%20Web%20Store-blue?style=for-the-badge&logo=google-chrome&logoColor=white" alt="Install from Chrome Web Store" height="40">
 </a>
 
-### Latest Version: v1.3.17
+### Latest Version: v1.3.18
 
-#### 📝 Version 1.3.17 – Bolt DOM Recovery (May 2026)
+#### Version 1.3.18 - Push Button Recovery (May 2026)
+
+**What's new:**
+
+- Restored the Push to GitHub button after Bolt moved the Share/Publish toolbar
+- Toolbar detection now supports both legacy `ml-auto` layouts and the current Publish/Share anchored layout
+- Added regression tests for the current May 2026 toolbar structure
+
+**Key Benefits:**
+
+- Push to GitHub appears again on current bolt.new project pages
+- Cached or older Bolt tabs remain supported through legacy selector fallbacks
+- Future toolbar changes are easier to diagnose with a dedicated fixture
+
+### Previous Version: v1.3.17
+
+#### Version 1.3.17 - Bolt DOM Recovery (May 2026)
 
 **What's new:**
 
@@ -375,13 +391,11 @@ To try the latest development version:
 Get started in just 3 simple steps:
 
 1. **Install from Chrome Web Store**
-
    - Visit our [Chrome Web Store page](https://chrome.google.com/webstore/detail/pikdepbilbnnpgdkdaaoeekgflljmame)
    - Click "Add to Chrome"
    - Click "Add extension" when prompted
 
 2. **Configure the Extension**
-
    - Make sure you have a Bolt.new project loaded
    - Click the extension icon in your Chrome toolbar
    - Choose your authentication method:
@@ -414,7 +428,7 @@ If you want to modify the extension or contribute to its development:
 1. Set up your development environment:
 
    ```bash
-   # Make sure you have Node.js v16 or later installed
+   # Make sure you have Node.js v18 or later installed (v22 LTS recommended)
    node --version
    ```
 
@@ -705,13 +719,11 @@ A: Currently, the extension processes all files in the ZIP. File filtering may b
 ### Common Issues
 
 1. **Extension not intercepting downloads**
-
    - Ensure you're on bolt.new
    - Check if the file is a ZIP
    - Verify permissions are enabled
 
 2. **GitHub push fails**
-
    - Verify your token has repo permissions
    - Check repository name and owner
    - Ensure branch exists

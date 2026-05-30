@@ -31,7 +31,12 @@ const ts = new Date().toISOString().replace(/[:.]/g, '-');
 
 async function waitForEnter(prompt) {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise((resolve) => rl.question(prompt, () => { rl.close(); resolve(); }));
+  return new Promise((resolve) =>
+    rl.question(prompt, () => {
+      rl.close();
+      resolve();
+    })
+  );
 }
 
 (async () => {
@@ -45,35 +50,41 @@ async function waitForEnter(prompt) {
     args: ['--disable-blink-features=AutomationControlled'],
   });
 
-  const page = ctx.pages()[0] ?? await ctx.newPage();
+  const page = ctx.pages()[0] ?? (await ctx.newPage());
   await page.goto('https://bolt.new/', { waitUntil: 'domcontentloaded' });
 
   console.log('\n[capture] STEP 1 of 2 — toolbar / Publish button context');
   console.log('  1. Log in if needed.');
   console.log('  2. Open any existing project (URL should look like bolt.new/~/...).');
-  console.log('  3. Make sure the page is loaded with the top-right toolbar fully visible (Publish button area).\n');
+  console.log(
+    '  3. Make sure the page is loaded with the top-right toolbar fully visible (Publish button area).\n'
+  );
 
-  await waitForEnter('[capture] Press ENTER once the project page is loaded with the toolbar visible ');
+  await waitForEnter(
+    '[capture] Press ENTER once the project page is loaded with the toolbar visible '
+  );
 
   console.log('[capture] capturing toolbar / publish DOM...');
 
   const toolbarSnapshot = await page.evaluate(() => {
-    const collect = (sel) => Array.from(document.querySelectorAll(sel)).map((el) => ({
-      tag: el.tagName,
-      id: el.id,
-      classes: el.className?.toString?.() ?? '',
-      ariaControls: el.getAttribute('aria-controls'),
-      ariaHaspopup: el.getAttribute('aria-haspopup'),
-      ariaLabel: el.getAttribute('aria-label'),
-      dataState: el.getAttribute('data-state'),
-      text: (el.textContent ?? '').trim().slice(0, 120),
-      outerHtmlPreview: el.outerHTML.slice(0, 600),
-    }));
+    const collect = (sel) =>
+      Array.from(document.querySelectorAll(sel)).map((el) => ({
+        tag: el.tagName,
+        id: el.id,
+        classes: el.className?.toString?.() ?? '',
+        ariaControls: el.getAttribute('aria-controls'),
+        ariaHaspopup: el.getAttribute('aria-haspopup'),
+        ariaLabel: el.getAttribute('aria-label'),
+        dataState: el.getAttribute('data-state'),
+        text: (el.textContent ?? '').trim().slice(0, 120),
+        outerHtmlPreview: el.outerHTML.slice(0, 600),
+      }));
 
-    const publishCandidates = Array.from(document.querySelectorAll('button')).filter((b) =>
-      /publish|deploy|share/i.test(b.textContent ?? '') ||
-      /publish|deploy/i.test(b.getAttribute('aria-controls') ?? '') ||
-      /publish|deploy/i.test(b.getAttribute('aria-label') ?? '')
+    const publishCandidates = Array.from(document.querySelectorAll('button')).filter(
+      (b) =>
+        /publish|deploy|share/i.test(b.textContent ?? '') ||
+        /publish|deploy/i.test(b.getAttribute('aria-controls') ?? '') ||
+        /publish|deploy/i.test(b.getAttribute('aria-label') ?? '')
     );
 
     return {
@@ -96,13 +107,21 @@ async function waitForEnter(prompt) {
   });
 
   const toolbarHtml = await page.evaluate(() => {
+    const publishOrShareButton =
+      document.querySelector('button[aria-controls="publish-menu"]') ??
+      Array.from(document.querySelectorAll('button')).find((button) =>
+        /^(publish|deploy|share)$/i.test((button.textContent ?? '').trim())
+      );
+
     const candidates = [
+      publishOrShareButton?.closest('div.flex.gap-2, div.flex.gap-3'),
       document.querySelector('div.ml-auto > div.flex.gap-2'),
       document.querySelector('div.ml-auto > div.flex.gap-3'),
       document.querySelector('div.ml-auto'),
     ].filter(Boolean);
     if (candidates.length === 0) return null;
-    const container = candidates[0].closest('header, nav, [class*="toolbar"]') ?? candidates[0].parentElement;
+    const container =
+      candidates[0].closest('header, nav, [class*="toolbar"]') ?? candidates[0].parentElement;
     return container?.outerHTML?.slice(0, 12000) ?? candidates[0].outerHTML.slice(0, 12000);
   });
 
@@ -112,8 +131,12 @@ async function waitForEnter(prompt) {
   await writeFile(toolbarJsonPath, JSON.stringify(toolbarSnapshot, null, 2), 'utf8');
 
   console.log('\n[capture] STEP 2 of 2 — project-name dropdown + Export submenu');
-  console.log('  1. Click the project-name dropdown (button with the chevron/caret next to the project title).');
-  console.log('  2. Hover over the "Export" item so the submenu showing "Download" is fully expanded.');
+  console.log(
+    '  1. Click the project-name dropdown (button with the chevron/caret next to the project title).'
+  );
+  console.log(
+    '  2. Hover over the "Export" item so the submenu showing "Download" is fully expanded.'
+  );
   console.log('  3. Leave that submenu open and come back here.\n');
 
   await waitForEnter('[capture] Press ENTER once the Export submenu (with Download) is open ');
@@ -124,21 +147,22 @@ async function waitForEnter(prompt) {
   const fullHtml = await page.content();
 
   const snapshot = await page.evaluate(() => {
-    const collect = (sel) => Array.from(document.querySelectorAll(sel)).map((el) => ({
-      tag: el.tagName,
-      id: el.id,
-      role: el.getAttribute('role'),
-      ariaHaspopup: el.getAttribute('aria-haspopup'),
-      ariaExpanded: el.getAttribute('aria-expanded'),
-      ariaLabel: el.getAttribute('aria-label'),
-      dataState: el.getAttribute('data-state'),
-      classes: el.className?.toString?.() ?? '',
-      text: (el.textContent ?? '').trim().slice(0, 200),
-      iconClasses: Array.from(el.querySelectorAll('[class*="i-"]'))
-        .map((c) => Array.from(c.classList).filter((cls) => cls.startsWith('i-')))
-        .flat(),
-      outerHtmlPreview: el.outerHTML.slice(0, 600),
-    }));
+    const collect = (sel) =>
+      Array.from(document.querySelectorAll(sel)).map((el) => ({
+        tag: el.tagName,
+        id: el.id,
+        role: el.getAttribute('role'),
+        ariaHaspopup: el.getAttribute('aria-haspopup'),
+        ariaExpanded: el.getAttribute('aria-expanded'),
+        ariaLabel: el.getAttribute('aria-label'),
+        dataState: el.getAttribute('data-state'),
+        classes: el.className?.toString?.() ?? '',
+        text: (el.textContent ?? '').trim().slice(0, 200),
+        iconClasses: Array.from(el.querySelectorAll('[class*="i-"]'))
+          .map((c) => Array.from(c.classList).filter((cls) => cls.startsWith('i-')))
+          .flat(),
+        outerHtmlPreview: el.outerHTML.slice(0, 600),
+      }));
 
     return {
       url: window.location.href,
@@ -153,8 +177,9 @@ async function waitForEnter(prompt) {
           ariaHaspopup: el.getAttribute('aria-haspopup'),
           text: (el.textContent ?? '').trim().slice(0, 200),
           classes: el.className?.toString?.() ?? '',
-          iconClasses: Array.from(el.querySelectorAll('[class*="i-"]'))
-            .flatMap((c) => Array.from(c.classList).filter((cls) => cls.startsWith('i-'))),
+          iconClasses: Array.from(el.querySelectorAll('[class*="i-"]')).flatMap((c) =>
+            Array.from(c.classList).filter((cls) => cls.startsWith('i-'))
+          ),
           outerHtml: el.outerHTML.slice(0, 1000),
         })),
       header: document.querySelector('header')?.outerHTML?.slice(0, 8000) ?? null,
@@ -173,7 +198,11 @@ async function waitForEnter(prompt) {
   if (snapshot.header) await writeFile(headerPath, snapshot.header, 'utf8');
 
   const menusHtml = await page.evaluate(() => {
-    return Array.from(document.querySelectorAll('[role="menu"], [data-radix-menu-content], [data-radix-popper-content-wrapper]'))
+    return Array.from(
+      document.querySelectorAll(
+        '[role="menu"], [data-radix-menu-content], [data-radix-popper-content-wrapper]'
+      )
+    )
       .map((el) => el.outerHTML)
       .join('\n\n<!-- next menu -->\n\n');
   });

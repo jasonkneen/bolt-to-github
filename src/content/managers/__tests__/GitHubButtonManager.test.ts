@@ -30,6 +30,46 @@ function createButtonContainer() {
   return { mlAuto, flexContainer, githubButtonContainer };
 }
 
+/**
+ * Builds the May 2026 Bolt DOM, where the toolbar group is `flex 2xl:gap-3 gap-2`
+ * and is NO LONGER a child of `div.ml-auto` (that class now only marks a collapse
+ * button and a hidden resize handle elsewhere on the page). Bolt also ships its
+ * own native "Connect project to GitHub" button inside the gap-1 slot.
+ */
+function createCurrentBoltToolbar() {
+  const group = document.createElement('div');
+  group.className = 'flex 2xl:gap-3 gap-2';
+
+  const emptyDiv = document.createElement('div');
+  emptyDiv.className = 'flex gap-1 empty:hidden';
+  group.appendChild(emptyDiv);
+
+  const nativeSlot = document.createElement('div');
+  nativeSlot.className = 'flex gap-1';
+  const nativeGitHubButton = document.createElement('button');
+  nativeGitHubButton.setAttribute('aria-label', 'Connect project to GitHub');
+  nativeSlot.appendChild(nativeGitHubButton);
+  group.appendChild(nativeSlot);
+
+  const shareButton = document.createElement('button');
+  shareButton.setAttribute('aria-haspopup', 'dialog');
+  shareButton.textContent = 'Share';
+  group.appendChild(shareButton);
+
+  // On the real page the Publish button is wrapped in a classless span.
+  const publishWrapper = document.createElement('span');
+  const publishButton = document.createElement('button');
+  publishButton.setAttribute('aria-controls', 'publish-menu');
+  publishButton.setAttribute('aria-haspopup', 'dialog');
+  publishButton.textContent = 'Publish';
+  publishWrapper.appendChild(publishButton);
+  group.appendChild(publishWrapper);
+
+  document.body.appendChild(group);
+
+  return { group, emptyDiv, nativeSlot, shareButton, publishButton };
+}
+
 function getButtonFromDOM(): HTMLButtonElement | null {
   return document.querySelector('[data-github-upload]');
 }
@@ -139,6 +179,43 @@ describe('GitHubButtonManager', () => {
 
       const button = getButtonFromDOM();
       expect(githubButtonContainer.contains(button)).toBe(true);
+    });
+
+    it('injects the button into the current Bolt toolbar when it is not under div.ml-auto', async () => {
+      const { group, nativeSlot } = createCurrentBoltToolbar();
+
+      await manager.initialize();
+
+      const button = getButtonFromDOM();
+      expect(button).toBeTruthy();
+      expect(group.contains(button)).toBe(true);
+      // Injected into the non-empty:hidden gap-1 slot (beside Bolt's native button).
+      expect(nativeSlot.contains(button)).toBe(true);
+    });
+  });
+
+  describe('Toolbar container discovery', () => {
+    it('finds the legacy container when the toolbar sits under div.ml-auto', () => {
+      const { flexContainer } = createButtonContainer();
+
+      expect(GitHubButtonManager.findToolbarContainer()).toBe(flexContainer);
+    });
+
+    it('finds the current toolbar group via the Publish button when not under div.ml-auto', () => {
+      const { group } = createCurrentBoltToolbar();
+
+      expect(GitHubButtonManager.findToolbarContainer()).toBe(group);
+    });
+
+    it('falls back to the Share button when no publish-menu button exists', () => {
+      const { group, publishButton } = createCurrentBoltToolbar();
+      publishButton.parentElement?.remove();
+
+      expect(GitHubButtonManager.findToolbarContainer()).toBe(group);
+    });
+
+    it('returns null when no toolbar container is present', () => {
+      expect(GitHubButtonManager.findToolbarContainer()).toBeNull();
     });
   });
 

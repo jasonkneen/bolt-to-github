@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-05-30 - Version 1.3.18
+
+### 🐛 Bug Fixes
+
+- **Restored Push to GitHub Button on May 2026 Bolt DOM** - Bolt moved the top-right Share/Publish toolbar out from under `div.ml-auto`, which meant the extension's button container selector no longer matched and the Push to GitHub button never initialized. Toolbar discovery now keeps the legacy `ml-auto` path for cached tabs and falls back to a Publish/Share anchor for the current Bolt layout.
+
+### 🧪 Testing & Quality
+
+- **Toolbar Regression Tests** - Added tests covering the current `flex 2xl:gap-3 gap-2` toolbar, including Bolt's native "Connect project to GitHub" slot and the classless Publish button wrapper.
+
+### 🛠️ Developer Experience
+
+- **Updated Toolbar Fixture** - Added a captured May 2026 toolbar fixture for future selector recovery work.
+
 ## 2026-05-08 - Version 1.3.17
 
 ### 🐛 Bug Fixes
@@ -192,7 +206,6 @@ Thanks for the quick feedback that helped us ship this fix! 🎉
 ### 🎉 New Features
 
 - **Automatic README Generation** - Smart README creation for projects without meaningful documentation
-
   - **ReadmeGeneratorService** - New service for intelligent README detection and generation
   - **Push workflow integration** - Seamlessly integrated into ZipHandler push process
   - **Content preservation** - Preserves existing meaningful README content

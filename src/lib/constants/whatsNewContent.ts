@@ -6,6 +6,16 @@ export interface WhatsNewVersion {
 }
 
 export const whatsNewContent: Record<string, WhatsNewVersion> = {
+  '1.3.18': {
+    date: '2026-05-30',
+    highlights: [
+      'Push to GitHub Button Restored - Fixed button injection after Bolt moved the Share/Publish toolbar',
+      'Toolbar Detection Hardened - Supports both legacy ml-auto layouts and the current Publish/Share anchored layout',
+      'Regression Coverage - Added tests for the May 2026 toolbar structure',
+    ],
+    details: `Bolt's May 2026 toolbar restructure moved the Share/Publish button group out from under div.ml-auto, so the extension could no longer find the place to inject the Push to GitHub button. This release restores button injection by anchoring on the Publish/Share controls while keeping the old selector path for cached Bolt tabs.`,
+    type: 'patch',
+  },
   '1.3.17': {
     date: '2026-05-08',
     highlights: [
