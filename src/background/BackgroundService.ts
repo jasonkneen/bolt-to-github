@@ -277,9 +277,20 @@ export class BackgroundService {
     });
 
     // Setup runtime message listener for direct messages (not using ports)
-    chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       logger.info('📥 Received runtime message:', message);
       this.updateLastActivity();
+
+      const runAsync = (operation: () => Promise<void>): true => {
+        operation().catch((error) => {
+          logger.error('❌ Runtime message handler failed:', error);
+          sendResponse({
+            success: false,
+            error: error instanceof Error ? error.message : 'Runtime message failed',
+          });
+        });
+        return true;
+      };
 
       if (message.action === 'PUSH_TO_GITHUB') {
         this.handlePushToGitHub();
@@ -290,109 +301,110 @@ export class BackgroundService {
         chrome.runtime.sendMessage(message);
         sendResponse({ success: true });
       } else if (message.type === 'CHECK_PREMIUM_FEATURE') {
-        this.handleCheckPremiumFeature(message.feature, sendResponse);
-        return true; // Will respond asynchronously
+        return runAsync(() => this.handleCheckPremiumFeature(message.feature, sendResponse));
       } else if (message.type === 'FORCE_AUTH_CHECK') {
         logger.info('🔐 Forcing auth check via message');
-        this.supabaseAuthService.forceCheck();
-        sendResponse({ success: true });
+        return runAsync(async () => {
+          await this.supabaseAuthService.forceCheck();
+          sendResponse({ success: true });
+        });
       } else if (message.type === 'FORCE_SUBSCRIPTION_REFRESH') {
         logger.info('💰 Forcing subscription refresh via message');
-        this.supabaseAuthService.forceSubscriptionRevalidation();
-        sendResponse({ success: true });
+        return runAsync(async () => {
+          await this.supabaseAuthService.forceSubscriptionRevalidation();
+          sendResponse({ success: true });
+        });
       } else if (message.type === 'FORCE_POPUP_SYNC') {
         logger.info('🔄 Forcing popup sync via message');
-        await this.supabaseAuthService.forceSyncToPopup();
-        sendResponse({ success: true });
+        return runAsync(async () => {
+          await this.supabaseAuthService.forceSyncToPopup();
+          sendResponse({ success: true });
+        });
       } else if (message.type === 'USER_LOGOUT') {
         logger.info('🚪 User logout requested from popup');
-        await analytics.trackEvent({
-          category: 'user_action',
-          action: 'user_logout',
-          label: JSON.stringify({ context: 'popup' }),
+        return runAsync(async () => {
+          await analytics.trackEvent({
+            category: 'user_action',
+            action: 'user_logout',
+            label: JSON.stringify({ context: 'popup' }),
+          });
+          await this.supabaseAuthService.logout();
+          sendResponse({ success: true });
         });
-        await this.supabaseAuthService.logout();
-        sendResponse({ success: true });
       } else if (message.type === 'ANALYTICS_EVENT') {
         logger.info('📊 Received analytics event:', message.eventType, message.eventData);
         this.handleAnalyticsEvent(message.eventType, message.eventData);
         sendResponse({ success: true });
       } else if (message.type === 'SHOW_UPGRADE_MODAL') {
         logger.info('🔊 Received SHOW_UPGRADE_MODAL message:', message.feature);
-        await analytics.trackEvent({
-          category: 'user_action',
-          action: 'upgrade_modal_requested',
-          label: JSON.stringify({ feature: message.feature, context: 'content_script' }),
+        return runAsync(async () => {
+          await analytics.trackEvent({
+            category: 'user_action',
+            action: 'upgrade_modal_requested',
+            label: JSON.stringify({ feature: message.feature, context: 'content_script' }),
+          });
+          // Store the upgrade modal context and open popup
+          await chrome.storage.local.set({
+            popupContext: 'upgrade',
+            upgradeModalFeature: message.feature,
+          });
+          await chrome.action.openPopup();
+          sendResponse({ success: true });
         });
-        // Store the upgrade modal context and open popup
-        await chrome.storage.local.set({
-          popupContext: 'upgrade',
-          upgradeModalFeature: message.feature,
-        });
-        chrome.action.openPopup();
-        sendResponse({ success: true });
       } else if (message.type === 'NOTIFY_GITHUB_APP_SYNC') {
         const syncMessage = message as NotifyGitHubAppSyncMessage;
         logger.info('📢 Received NOTIFY_GITHUB_APP_SYNC message:', syncMessage.data);
-        await this.handleGitHubAppSyncNotification(syncMessage.data);
-        sendResponse({ success: true });
+        return runAsync(async () => {
+          await this.handleGitHubAppSyncNotification(syncMessage.data);
+          sendResponse({ success: true });
+        });
       } else if (
         message.type === 'getExtensionStatus' &&
         sender.tab &&
         this.isValidBolt2GitHubOrigin(sender.url)
       ) {
         // Handle welcome page status request
-        this.handleGetExtensionStatus(sendResponse);
-        return true; // Will respond asynchronously
+        return runAsync(() => this.handleGetExtensionStatus(sendResponse));
       } else if (
         message.type === 'completeOnboardingStep' &&
         sender.tab &&
         this.isValidBolt2GitHubOrigin(sender.url)
       ) {
         // Handle onboarding step completion
-        this.handleCompleteOnboardingStep(message.step, sendResponse);
-        return true; // Will respond asynchronously
+        return runAsync(() => this.handleCompleteOnboardingStep(message.step, sendResponse));
       } else if (
         message.type === 'initiateGitHubAuth' &&
         sender.tab &&
         this.isValidBolt2GitHubOrigin(sender.url)
       ) {
         // Handle GitHub authentication initiation
-        this.handleInitiateGitHubAuth(message.method, sendResponse);
-        return true; // Will respond asynchronously
+        return runAsync(() => this.handleInitiateGitHubAuth(message.method, sendResponse));
       } else if (message.type === 'SYNC_BOLT_PROJECTS') {
         // Handle manual sync trigger
-        this.handleManualSync(sendResponse);
-        return true; // Will respond asynchronously
+        return runAsync(() => this.handleManualSync(sendResponse));
       } else if (message.type === 'OPEN_REAUTHENTICATION') {
         // Handle re-authentication request (self-healing)
         logger.info('🔐 Opening re-authentication page for token renewal');
-        this.handleOpenReauthentication(message.data, sendResponse);
-        return true; // Will respond asynchronously
+        return runAsync(() => this.handleOpenReauthentication(message.data, sendResponse));
       } else if (message.type === 'OPEN_POPUP_WINDOW') {
         // Handle popup window opening request
         logger.info('🪟 Opening popup in window mode');
-        this.handleOpenPopupWindow(sendResponse);
-        return true; // Will respond asynchronously
+        return runAsync(() => this.handleOpenPopupWindow(sendResponse));
       } else if (message.type === 'CLOSE_POPUP_WINDOW') {
         // Handle popup window closing request
         logger.info('🔄 Closing popup window and opening regular popup');
-        this.handleClosePopupWindow(sendResponse);
-        return true; // Will respond asynchronously
+        return runAsync(() => this.handleClosePopupWindow(sendResponse));
       } else if (message.type === 'CLEAR_LOGS_EMERGENCY') {
         // Handle emergency log clearing when storage quota is exceeded
         logger.info('🧹 Emergency log clearing requested');
-        this.handleEmergencyLogClear(sendResponse);
-        return true; // Will respond asynchronously
+        return runAsync(() => this.handleEmergencyLogClear(sendResponse));
       } else if (message.type === 'RELOAD_EXTENSION') {
         // Handle extension reload request (self-healing for auth failures)
         logger.info('🔄 Extension reload requested for authentication recovery');
-        this.handleExtensionReload(message.data, sendResponse);
-        return true; // Will respond asynchronously
+        return runAsync(() => this.handleExtensionReload(message.data, sendResponse));
       }
 
-      // Return true to indicate we'll send a response asynchronously
-      return true;
+      return false;
     });
 
     // Clean up when tabs are closed
@@ -540,7 +552,7 @@ export class BackgroundService {
           logger.info('Setting commit message:', commitMessage.data.message);
           const hasCustomMessage = Boolean(
             commitMessage.data?.message &&
-              commitMessage.data.message !== 'Commit from Bolt to GitHub'
+            commitMessage.data.message !== 'Commit from Bolt to GitHub'
           );
           await analytics.trackEvent({
             category: 'user_action',

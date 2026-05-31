@@ -1,0 +1,200 @@
+schema: '2'
+goal: 'Harden background runtime message responses for MV3'
+description: |
+  Convert BackgroundService runtime message handling so asynchronous branches keep the
+  Chrome response channel open by returning literal true synchronously, while preserving
+  current behavior for direct and helper-handled message types.
+type: fix
+files:
+  edit:
+    - path: src/background/BackgroundService.ts
+      artifacts:
+        - kind: class
+          name: BackgroundService
+          description: |
+            Runtime message listener registration must return literal true synchronously
+            for async response branches, surface async failures through sendResponse,
+            and avoid holding the channel open for unmatched runtime messages.
+    - path: src/background/__tests__/BackgroundService.reload.test.ts
+      artifacts:
+        - kind: test_function
+          name: should respond successfully when reload request is processed
+          description: |
+            Existing reload coverage extended with a synchronous return-value assertion.
+        - kind: test_function
+          name: should handle reload request gracefully when alarm creation fails
+          description: |
+            Existing async failure-path coverage extended with sendResponse channel
+            preservation.
+        - kind: test_function
+          name: runtime listener returns literal true synchronously for async response branches
+          description: |
+            Verifies async response branches return literal true synchronously and
+            unmatched messages do not keep the response channel open.
+        - kind: test_function
+          name: runtime listener sends failure response when async branch rejects
+          description: |
+            Verifies rejected async runtime branches surface visible failure responses
+            through sendResponse.
+  read:
+    - src/background/__tests__/BackgroundService.alarms.test.ts
+    - src/background/__tests__/BackgroundService.auth-lifecycle.test.ts
+    - src/background/test-fixtures/BackgroundServiceMocks.ts
+validate:
+  - pnpm exec vitest run src/background/__tests__/BackgroundService.reload.test.ts src/background/__tests__/BackgroundService.alarms.test.ts src/background/__tests__/BackgroundService.auth-lifecycle.test.ts
+  - pnpm lint
+  - pnpm check
+  - pnpm test:ci
+created: '2026-05-30T20:41:28+08:00'
+metadata:
+  tags:
+    - mv3
+    - messaging
+    - reliability
+  priority: critical
+  status: completed
+outcome:
+  status: completed
+  summary: |
+    Hardened the background runtime message listener so async response branches
+    return literal true synchronously, async failures are surfaced through
+    sendResponse, popup opening failures are awaited, and unmatched messages no
+    longer keep a response channel open.
+  rationale: |
+    Chrome MV3 runtime message listeners must return literal true synchronously
+    to preserve async sendResponse channels. An async listener returned a Promise
+    instead, and several async branches could reject after reporting success or
+    without a visible response. A local runAsync wrapper keeps branch behavior
+    explicit while preserving direct synchronous responses for non-async branches.
+  lessons:
+    - lesson_type: mv3-runtime-messaging
+      summary: |
+        Do not register Chrome runtime message listeners as async functions when
+        sendResponse may be used later; return literal true synchronously from
+        each async branch instead.
+      tags:
+        - mv3
+        - messaging
+        - service-worker
+      paths:
+        - src/background/BackgroundService.ts
+    - lesson_type: regression-coverage
+      summary: |
+        Runtime message tests should capture the listener's immediate return
+        value and rejected async branches, because awaiting eventual responses
+        alone will not catch MV3 channel preservation bugs.
+      tags:
+        - vitest
+        - mv3
+        - reliability
+      paths:
+        - src/background/__tests__/BackgroundService.reload.test.ts
+  review_notes:
+    - source: independent reviewer subagent Cicero
+      severity: no code findings after fixes
+      summary: |
+        Reviewer initially found unmatched messages holding the channel open,
+        missing auth/subscription branch rejection coverage, and an unawaited
+        popup open path. Those findings were fixed and re-reviewed. Final review
+        found no remaining code defects.
+    - source: local implementation review
+      severity: manifest-chain issue fixed during promotion
+      summary: |
+        Draft-specific MAID test failed with E230 because read-only background
+        test files were listed but not directly run by validate commands. The
+        active manifest now runs the reload, alarms, and auth-lifecycle specs
+        together in its focused Vitest validate command.
+  validation:
+    - command:
+        - pnpm
+        - exec
+        - vitest
+        - run
+        - src/background/__tests__/BackgroundService.reload.test.ts
+        - src/background/__tests__/BackgroundService.alarms.test.ts
+        - src/background/__tests__/BackgroundService.auth-lifecycle.test.ts
+      status: passed
+      summary: Focused background regression command passed the reload, alarms, and auth-lifecycle specs.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/harden-background-runtime-message-channel.manifest.yaml
+        - --mode
+        - schema
+      status: passed
+      summary: Promoted active manifest schema validation passed.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/harden-background-runtime-message-channel.manifest.yaml
+        - --mode
+        - behavioral
+      status: passed
+      summary: Promoted active manifest behavioral validation passed.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/harden-background-runtime-message-channel.manifest.yaml
+        - --mode
+        - implementation
+      status: passed
+      summary: Promoted active manifest implementation validation passed.
+    - command:
+        - ./scripts/maid
+        - test
+        - --manifest
+        - manifests/harden-background-runtime-message-channel.manifest.yaml
+      status: passed
+      summary: |
+        Promoted active manifest test runner passed all four declared validate
+        commands, including the focused background specs, lint, check, and test:ci.
+    - command:
+        - pnpm
+        - lint
+      status: passed
+      summary: ESLint completed successfully for src/**/*.{js,ts,svelte}.
+    - command:
+        - pnpm
+        - check
+      status: passed
+      summary: svelte-check found 0 errors and 0 warnings.
+    - command:
+        - pnpm
+        - test:ci
+      status: passed
+      summary: Full Vitest CI suite passed 174 test files and 4210 tests.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - schema
+      status: passed
+      summary: Active manifest schema validation passed for 5 manifests after promotion.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - behavioral
+      status: passed
+      summary: Active manifest behavioral validation passed for 5 manifests after promotion.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - implementation
+      status: passed
+      summary: Active manifest implementation validation passed for 5 manifests after promotion.
+    - command:
+        - ./scripts/maid
+        - test
+        - --manifest-dir
+        - manifests
+      status: passed
+      summary: Full active MAID test runner passed 5 commands after promotion.
+  completed_at: '2026-05-31T19:43:26+08:00'
