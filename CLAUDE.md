@@ -166,6 +166,18 @@ refactors with a manifest or intentional manifest evolution. When touching files
 that lack MAID coverage, add focused behavioral or characterization coverage in
 the same change.
 
+Draft manifests under `manifests/drafts/` are planning inventory, not active
+contracts. Promote one implementation-sized draft into `manifests/`, implement
+and review the promoted manifest, then remove only the matching draft path.
+
+After implementation validation and implementation review, capture an Outcome
+record in the promoted active manifest before final handoff. Outcome capture is
+required for completed, partial, failed, superseded, archived, or abandoned MAID
+work. The Outcome must cite concrete validation evidence and review notes; it
+does not replace behavioral tests, declared artifacts, validation commands, or
+implementation review. See `docs/draft-manifest-workflow.md` and
+`docs/manifest-outcome-records.md`.
+
 ### Git Hooks
 
 - Prepare: `pnpm run prepare` - Set up Husky git hooks

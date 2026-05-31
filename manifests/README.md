@@ -37,3 +37,18 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 - Validate implementation and run the manifest test commands before handoff.
 - Prefer observable behavior in Vitest tests over private helpers or local
   component state as MAID artifacts.
+
+## Drafts and Outcomes
+
+Draft manifests under `manifests/drafts/` are mutable planning inventory. They
+must be promoted into `manifests/` before implementation. Promote one
+implementation-sized draft at a time, validate the promoted path, and remove
+only the matching draft file.
+
+Outcome records are required after implementation validation and implementation
+review, before final handoff, for completed, partial, failed, superseded,
+archived, or abandoned MAID work. Add the `outcome` section to the promoted
+active manifest and cite concrete validation evidence plus review notes.
+
+See `../docs/draft-manifest-workflow.md`,
+`../docs/manifest-outcome-records.md`, and `drafts/README.md`.

@@ -36,6 +36,18 @@ This repository uses MAID for AI-assisted code changes. Use the repository wrapp
 
 Wrapper aliases are available through `pnpm maid:*` scripts. Keep active manifests directly under `manifests/`. For new features, bug fixes, and refactors, create or evolve a manifest first, validate the behavioral contract, then implement within manifest scope. When touching files that lack MAID coverage, add focused behavioral or characterization coverage in the same change.
 
+Draft manifests under `manifests/drafts/` are planning inventory, not active
+contracts. Promote one implementation-sized draft into `manifests/`, implement
+and review the promoted manifest, then remove only the matching draft path.
+
+After implementation validation and implementation review, capture an Outcome
+record in the promoted active manifest before final handoff. Outcome capture is
+required for completed, partial, failed, superseded, archived, or abandoned MAID
+work. The Outcome must cite concrete validation evidence and review notes; it
+does not replace behavioral tests, declared artifacts, validation commands, or
+implementation review. See `docs/draft-manifest-workflow.md` and
+`docs/manifest-outcome-records.md`.
+
 ## Commit & Pull Request Guidelines
 
 History follows Conventional Commits, for example `feat: mint independent Supabase session` and `fix: address PR review issues`. Branch from the active `dev-vX.Y.Z` branch; reserve `main` for releases. PRs should target the active dev branch, describe behavior changes, list validation commands, link issues when applicable, and include screenshots or recordings for visible UI changes.
