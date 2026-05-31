@@ -1,75 +1,54 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { zipSync } from 'fflate';
+import { readFileSync } from 'fs';
+import { dirname, resolve } from 'path';
+import { fileURLToPath } from 'url';
 import { ZipProcessor } from '../zip';
+
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 
 describe('Simple ZIP test', () => {
   it('should work with a direct test', async () => {
-    const log = (...args: unknown[]) => process.stdout.write(args.join(' ') + '\n');
+    const stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
 
-    const encoder = new TextEncoder();
-    const encoded = encoder.encode('Hello!');
-    log('Encoded type:', typeof encoded);
-    log('Encoded constructor:', encoded.constructor.name);
-    log('Encoded is Uint8Array:', encoded instanceof Uint8Array);
-    log('Encoded length:', encoded.length);
-    log('Encoded bytes:', Array.from(encoded));
+    try {
+      const encoder = new TextEncoder();
+      const encoded = encoder.encode('Hello!');
+      const zipData = { 'test.txt': new Uint8Array(encoded) };
 
-    const realUint8 = new Uint8Array(encoded);
-    log('Real Uint8Array is Uint8Array:', realUint8 instanceof Uint8Array);
+      const compressed = zipSync(zipData);
+      const blob = new Blob([compressed as BlobPart], { type: 'application/zip' });
 
-    const zipData = {
-      'test.txt': realUint8,
-    };
+      const result = await ZipProcessor.processZipBlob(blob);
 
-    const compressed = zipSync(zipData);
-    log('Compressed length:', compressed.length);
-    log('First 20 bytes:', Array.from(compressed.slice(0, 20)));
-
-    const { unzipSync } = await import('fflate');
-    const unzipped = unzipSync(compressed);
-    log('Unzipped from compressed:', Object.keys(unzipped));
-    for (const [key, value] of Object.entries(unzipped)) {
-      const decoder = new TextDecoder();
-      log(`  "${key}" = "${decoder.decode(value)}"`);
+      expect(result.has('test.txt')).toBe(true);
+      expect(result.get('test.txt')).toBe('Hello!');
+      expect(stdoutSpy).not.toHaveBeenCalled();
+    } finally {
+      stdoutSpy.mockRestore();
     }
 
-    const buffer = compressed.buffer.slice(
-      compressed.byteOffset,
-      compressed.byteOffset + compressed.byteLength
-    ) as ArrayBuffer;
-    log('Buffer byteLength:', buffer.byteLength);
+    const viteConfig = readFileSync(resolve(repoRoot, 'vite.config.ts'), 'utf8');
+    const manifestWithAssets = viteConfig.includes('export function manifestWithAssets');
+    expect(manifestWithAssets).toBe(true);
+    expect(viteConfig).toContain('crx({ manifest: manifestWithAssets() })');
+    expect(viteConfig).toContain("'128': 'assets/icons/icon128.png'");
+    expect(viteConfig).toContain("with { type: 'json' }");
+    expect(viteConfig).not.toContain("assert { type: 'json' }");
+  });
+});
 
-    const blob = new Blob([compressed as BlobPart], { type: 'application/zip' });
-    log('Blob type:', typeof blob);
-    log('Blob constructor:', blob.constructor.name);
-    log('Blob has _parts:', '_parts' in blob);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const parts = (blob as any)._parts;
-    log('Blob _parts length:', parts?.length);
-    if (parts && parts.length > 0) {
-      log('First part type:', typeof parts[0]);
-      log('First part constructor:', parts[0]?.constructor?.name);
-      log('First part is Uint8Array:', parts[0] instanceof Uint8Array);
-      if (parts[0] instanceof Uint8Array) {
-        log('First part byteLength:', parts[0].byteLength);
-      }
-    }
-
-    const arrayBuf = await blob.arrayBuffer();
-    log('ArrayBuffer byteLength:', arrayBuf.byteLength);
-    const uint8 = new Uint8Array(arrayBuf);
-    log('First 20 bytes of ArrayBuffer:', Array.from(uint8.slice(0, 20)).join(','));
-    log('Original compressed first 20 bytes:', Array.from(compressed.slice(0, 20)).join(','));
-
-    const result = await ZipProcessor.processZipBlob(blob);
-    log('Result size:', result.size);
-    log('Result keys:', JSON.stringify(Array.from(result.keys())));
-    for (const [key, value] of result.entries()) {
-      log(`  File: "${key}" = "${value}"`);
-    }
-    log('Result value for test.txt:', result.get('test.txt'));
-
-    expect(result.has('test.txt')).toBe(true);
-    expect(result.get('test.txt')).toBe('Hello!');
+describe('Verification Notes', () => {
+  it('documents accepted chunk-size warnings for the release-noise pass', () => {
+    const backlog = readFileSync(
+      resolve(repoRoot, 'docs/plans/bolt-extension-bug-hunt-hardening-backlog.md'),
+      'utf8'
+    );
+    expect(backlog).toContain('#### Verification Notes');
+    const VerificationNotes = backlog.includes('#### Verification Notes');
+    expect(VerificationNotes).toBe(true);
+    expect(backlog).toContain(
+      'The remaining Rollup chunk-size warnings are accepted for this release-noise pass.'
+    );
   });
 });

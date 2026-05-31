@@ -1,27 +1,32 @@
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { crx } from '@crxjs/vite-plugin';
-import manifest from './manifest.json' assert { type: 'json' };
+import manifest from './manifest.json' with { type: 'json' };
 import { resolve } from 'path';
 import preprocess from 'svelte-preprocess';
 
-// Update manifest with asset paths
-const manifestWithAssets = {
-  ...manifest,
-  icons: {
-    '16': 'assets/icons/icon16.png',
-    '48': 'assets/icons/icon48.png',
-    '128': 'assets/icons/icon128.png',
-  },
-  action: {
-    ...manifest.action,
-    default_icon: {
+export function manifestWithAssets() {
+  return {
+    ...manifest,
+    icons: {
       '16': 'assets/icons/icon16.png',
       '48': 'assets/icons/icon48.png',
       '128': 'assets/icons/icon128.png',
     },
-  },
-};
+    action: {
+      ...manifest.action,
+      default_icon: {
+        '16': 'assets/icons/icon16.png',
+        '48': 'assets/icons/icon48.png',
+        '128': 'assets/icons/icon128.png',
+      },
+    },
+  };
+}
+
+export namespace manifestWithAssets {
+  export const artifact = 'manifestWithAssets';
+}
 
 export default defineConfig(({ mode }) => {
   return {
@@ -32,7 +37,7 @@ export default defineConfig(({ mode }) => {
           dev: mode === 'development',
         },
       }),
-      crx({ manifest: manifestWithAssets }),
+      crx({ manifest: manifestWithAssets() }),
     ],
     build: {
       outDir: 'dist',

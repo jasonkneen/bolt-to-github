@@ -162,6 +162,12 @@ artifact only; it does not implement runtime changes.
 - Validation gates: `pnpm build`, `pnpm exec vitest run src/lib/__tests__/zip-debug.test.ts`,
   `pnpm test:ci`.
 
+#### Verification Notes
+
+The remaining Rollup chunk-size warnings are accepted for this release-noise pass. Treat
+chunk splitting, manual chunk policy, or warning-threshold changes as a separate performance
+task so this fix stays limited to the JSON import warning and noisy ZIP regression output.
+
 ## Risk Lane Backlog
 
 - MV3 lifecycle: fix async runtime message response handling; verify service worker restart

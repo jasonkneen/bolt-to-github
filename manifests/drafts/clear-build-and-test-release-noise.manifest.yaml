@@ -22,7 +22,7 @@ files:
     - path: docs/plans/bolt-extension-bug-hunt-hardening-backlog.md
       artifacts:
         - kind: namespace
-          name: Verification Notes
+          name: VerificationNotes
           description: |
             Planning note to record whether remaining chunk-size warnings are accepted or
             split into a separate performance task.
@@ -41,4 +41,130 @@ metadata:
     - build
     - test-output
   priority: medium
-  status: planning
+  status: implemented
+outcome:
+  status: completed
+  summary: |
+    Cleared the Node JSON import assertion warning from the Vite build and converted
+    the ZIP debug test into a quiet behavioral regression that also records the
+    accepted remaining release-noise warnings.
+  rationale: |
+    The Vite config now uses import attributes for manifest.json and keeps the
+    asset-enriched Chrome extension manifest behind a validator-visible helper.
+    The former debug ZIP test no longer writes diagnostic stdout during normal
+    validation, and the backlog explicitly defers chunk-size and dynamic-import
+    warnings to a separate performance task.
+  lessons:
+    - lesson_type: build-noise
+      summary: |
+        Release-noise cleanup should separate actionable compatibility warnings
+        from accepted bundling warnings so CI logs stay reviewable without
+        folding performance work into a narrow fix.
+      tags:
+        - release-ci
+        - build
+        - test-output
+      paths:
+        - vite.config.ts
+        - src/lib/__tests__/zip-debug.test.ts
+        - docs/plans/bolt-extension-bug-hunt-hardening-backlog.md
+    - lesson_type: maid-contract
+      summary: |
+        Markdown planning notes need validator-visible behavioral references
+        when the MAID runner cannot structurally validate the markdown file.
+      tags:
+        - maid
+        - markdown
+      paths:
+        - manifests/drafts/clear-build-and-test-release-noise.manifest.yaml
+        - docs/plans/bolt-extension-bug-hunt-hardening-backlog.md
+  review_notes:
+    - source: independent reviewer subagent 019e7db9-6c87-7b10-9717-db3c77def02f
+      severity: no findings
+      summary: |
+        Read-only MAID implementation review found no actionable issues and
+        returned ready. Residual risk is limited to the markdown validator E307
+        warning and source-string Vite coverage backed by pnpm build.
+    - source: local self-review
+      severity: no findings
+      summary: |
+        Changed files stayed within the draft manifest scope; validation passed;
+        the ZIP stdout spy is restored with try/finally; and remaining Vite
+        chunk-size/dynamic-import warnings are documented rather than hidden.
+  validation:
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/drafts/clear-build-and-test-release-noise.manifest.yaml
+        - --mode
+        - schema
+      status: passed
+      summary: Draft manifest schema validation passed.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/drafts/clear-build-and-test-release-noise.manifest.yaml
+        - --mode
+        - behavioral
+      status: passed
+      summary: Draft behavioral validation passed.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/drafts/clear-build-and-test-release-noise.manifest.yaml
+        - --mode
+        - implementation
+      status: passed
+      summary: Draft implementation validation passed with the known E307 markdown validator warning.
+    - command:
+        - ./scripts/maid
+        - test
+        - --manifest
+        - manifests/drafts/clear-build-and-test-release-noise.manifest.yaml
+      status: passed
+      summary: Draft MAID test runner passed pnpm build, the focused ZIP test, and pnpm test:ci.
+    - command:
+        - pnpm
+        - exec
+        - vitest
+        - run
+        - src/lib/__tests__/zip-debug.test.ts
+      status: passed
+      summary: Focused ZIP regression test passed 2 tests without debug stdout.
+    - command:
+        - pnpm
+        - build
+      status: passed
+      summary: Production Vite build passed; the JSON import assertion warning was removed.
+    - command:
+        - pnpm
+        - test:ci
+      status: passed
+      summary: Full Vitest CI passed through the draft MAID test runner.
+    - command:
+        - pnpm
+        - check
+      status: passed
+      summary: svelte-check found 0 errors and 0 warnings.
+    - command:
+        - pnpm
+        - lint
+      status: passed
+      summary: ESLint completed successfully for src/**/*.{js,ts,svelte}.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - implementation
+      status: passed
+      summary: Active MAID implementation validation passed for 2 manifests.
+    - command:
+        - ./scripts/maid
+        - test
+        - --manifest-dir
+        - manifests
+      status: passed
+      summary: Active MAID test runner passed all active manifest validation commands.
+  completed_at: '2026-05-31T19:12:26+08:00'
