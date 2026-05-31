@@ -190,8 +190,6 @@ task so this fix stays limited to the JSON import warning and noisy ZIP regressi
 - `manifests/drafts/repair-e2e-error-flow-coverage.manifest.yaml`
 - `manifests/drafts/repair-e2e-lifecycle-storage-contracts.manifest.yaml`
 - `manifests/drafts/replace-logviewer-native-confirms.manifest.yaml`
-- `manifests/drafts/align-bolt-dom-capture-toolbar.manifest.yaml`
-- `manifests/drafts/clear-build-and-test-release-noise.manifest.yaml`
 
 ## Speculative Ideas
 
@@ -207,7 +205,8 @@ task so this fix stays limited to the JSON import warning and noisy ZIP regressi
 - Active MAID validation passed before draft manifests were created:
   `pnpm maid:behavioral` and `pnpm maid:implementation`.
 - Full E2E currently does not pass: `18 failed, 56 passed, 3 skipped` after retries.
-- Draft manifests are intentionally under `manifests/drafts/`, not active `manifests/`.
+- Remaining unimplemented draft manifests are intentionally under `manifests/drafts/`,
+  not active `manifests/`.
 - Subagent review completed after initial draft creation. The review found that draft schema
   validation passes, but draft behavioral validation is not green because these are planning
   drafts and do not yet include the behavioral tests required for promotion to active

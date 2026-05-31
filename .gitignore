@@ -22,6 +22,7 @@ vite.config.ts.timestamp*
 .history
 .qodo
 coverage/
+plan-revision.md
 .idea
 
 # Playwright E2E test artifacts

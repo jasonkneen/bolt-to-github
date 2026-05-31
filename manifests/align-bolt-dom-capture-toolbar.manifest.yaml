@@ -1,4 +1,3 @@
-# draft-kind: hardening-plan
 schema: '2'
 goal: 'Add regression coverage for Bolt DOM capture toolbar extraction'
 description: |
@@ -70,7 +69,7 @@ metadata:
     - selectors
     - tooling
   priority: high
-  status: implemented
+  status: completed
 outcome:
   status: completed
   summary: |
@@ -114,34 +113,34 @@ outcome:
     - command:
         - ./scripts/maid
         - validate
-        - manifests/drafts/align-bolt-dom-capture-toolbar.manifest.yaml
+        - manifests/align-bolt-dom-capture-toolbar.manifest.yaml
         - --mode
         - schema
       status: passed
-      summary: Draft manifest schema validation passed.
+      summary: Manifest schema validation passed.
     - command:
         - ./scripts/maid
         - validate
-        - manifests/drafts/align-bolt-dom-capture-toolbar.manifest.yaml
+        - manifests/align-bolt-dom-capture-toolbar.manifest.yaml
         - --mode
         - behavioral
       status: passed
-      summary: Draft behavioral validation passed.
+      summary: Behavioral validation passed.
     - command:
         - ./scripts/maid
         - validate
-        - manifests/drafts/align-bolt-dom-capture-toolbar.manifest.yaml
+        - manifests/align-bolt-dom-capture-toolbar.manifest.yaml
         - --mode
         - implementation
       status: passed
-      summary: Draft implementation validation passed.
+      summary: Implementation validation passed.
     - command:
         - ./scripts/maid
         - test
         - --manifest
-        - manifests/drafts/align-bolt-dom-capture-toolbar.manifest.yaml
+        - manifests/align-bolt-dom-capture-toolbar.manifest.yaml
       status: passed
-      summary: Draft MAID test runner passed all four validation commands.
+      summary: MAID test runner passed all four validation commands.
     - command:
         - pnpm
         - exec

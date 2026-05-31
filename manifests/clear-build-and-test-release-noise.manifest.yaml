@@ -1,4 +1,3 @@
-# draft-kind: hardening-plan
 schema: '2'
 goal: 'Clear avoidable build and test release noise'
 description: |
@@ -41,7 +40,7 @@ metadata:
     - build
     - test-output
   priority: medium
-  status: implemented
+  status: completed
 outcome:
   status: completed
   summary: |
@@ -76,7 +75,7 @@ outcome:
         - maid
         - markdown
       paths:
-        - manifests/drafts/clear-build-and-test-release-noise.manifest.yaml
+        - manifests/clear-build-and-test-release-noise.manifest.yaml
         - docs/plans/bolt-extension-bug-hunt-hardening-backlog.md
   review_notes:
     - source: independent reviewer subagent 019e7db9-6c87-7b10-9717-db3c77def02f
@@ -88,41 +87,41 @@ outcome:
     - source: local self-review
       severity: no findings
       summary: |
-        Changed files stayed within the draft manifest scope; validation passed;
+        Changed files stayed within the manifest scope; validation passed;
         the ZIP stdout spy is restored with try/finally; and remaining Vite
         chunk-size/dynamic-import warnings are documented rather than hidden.
   validation:
     - command:
         - ./scripts/maid
         - validate
-        - manifests/drafts/clear-build-and-test-release-noise.manifest.yaml
+        - manifests/clear-build-and-test-release-noise.manifest.yaml
         - --mode
         - schema
       status: passed
-      summary: Draft manifest schema validation passed.
+      summary: Manifest schema validation passed.
     - command:
         - ./scripts/maid
         - validate
-        - manifests/drafts/clear-build-and-test-release-noise.manifest.yaml
+        - manifests/clear-build-and-test-release-noise.manifest.yaml
         - --mode
         - behavioral
       status: passed
-      summary: Draft behavioral validation passed.
+      summary: Behavioral validation passed.
     - command:
         - ./scripts/maid
         - validate
-        - manifests/drafts/clear-build-and-test-release-noise.manifest.yaml
+        - manifests/clear-build-and-test-release-noise.manifest.yaml
         - --mode
         - implementation
       status: passed
-      summary: Draft implementation validation passed with the known E307 markdown validator warning.
+      summary: Implementation validation passed with the known E307 markdown validator warning.
     - command:
         - ./scripts/maid
         - test
         - --manifest
-        - manifests/drafts/clear-build-and-test-release-noise.manifest.yaml
+        - manifests/clear-build-and-test-release-noise.manifest.yaml
       status: passed
-      summary: Draft MAID test runner passed pnpm build, the focused ZIP test, and pnpm test:ci.
+      summary: MAID test runner passed pnpm build, the focused ZIP test, and pnpm test:ci.
     - command:
         - pnpm
         - exec
@@ -159,7 +158,7 @@ outcome:
         - --mode
         - implementation
       status: passed
-      summary: Active MAID implementation validation passed for 2 manifests.
+      summary: Active MAID implementation validation passed.
     - command:
         - ./scripts/maid
         - test

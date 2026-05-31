@@ -31,7 +31,6 @@ files:
     - vitest.config.ts
     - tsconfig.json
     - package.json
-    - plan-revision.md
 validate:
   - pnpm exec vitest run scripts/__tests__/vitest-script-harness.test.ts
   - pnpm check
@@ -86,7 +85,7 @@ outcome:
         - --mode
         - implementation
       status: passed
-      summary: Active MAID implementation validation passed for 2 manifests.
+      summary: Active MAID implementation validation passed.
     - command:
         - ./scripts/maid
         - test
