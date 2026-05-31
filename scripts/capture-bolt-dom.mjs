@@ -23,6 +23,10 @@ import { chromium } from 'playwright';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import readline from 'node:readline';
+import {
+  collectStructuredToolbarCandidates,
+  extractToolbarHtml,
+} from './capture-bolt-dom-helpers.js';
 
 const PROFILE_DIR = '/tmp/bolt-capture-profile';
 const OUT_DIR = '/tmp/bolt-dom-capture';
@@ -66,64 +70,8 @@ async function waitForEnter(prompt) {
 
   console.log('[capture] capturing toolbar / publish DOM...');
 
-  const toolbarSnapshot = await page.evaluate(() => {
-    const collect = (sel) =>
-      Array.from(document.querySelectorAll(sel)).map((el) => ({
-        tag: el.tagName,
-        id: el.id,
-        classes: el.className?.toString?.() ?? '',
-        ariaControls: el.getAttribute('aria-controls'),
-        ariaHaspopup: el.getAttribute('aria-haspopup'),
-        ariaLabel: el.getAttribute('aria-label'),
-        dataState: el.getAttribute('data-state'),
-        text: (el.textContent ?? '').trim().slice(0, 120),
-        outerHtmlPreview: el.outerHTML.slice(0, 600),
-      }));
-
-    const publishCandidates = Array.from(document.querySelectorAll('button')).filter(
-      (b) =>
-        /publish|deploy|share/i.test(b.textContent ?? '') ||
-        /publish|deploy/i.test(b.getAttribute('aria-controls') ?? '') ||
-        /publish|deploy/i.test(b.getAttribute('aria-label') ?? '')
-    );
-
-    return {
-      url: window.location.href,
-      mlAutoContainers: collect('div.ml-auto, [class*="ml-auto"]'),
-      gapContainers: collect('div.flex.gap-1, div.flex.gap-2, div.flex.gap-3'),
-      publishButtonByAriaControls: collect('button[aria-controls="publish-menu"]'),
-      publishCandidates: publishCandidates.map((b) => ({
-        text: (b.textContent ?? '').trim().slice(0, 120),
-        ariaControls: b.getAttribute('aria-controls'),
-        ariaHaspopup: b.getAttribute('aria-haspopup'),
-        ariaLabel: b.getAttribute('aria-label'),
-        classes: b.className,
-        outerHtml: b.outerHTML.slice(0, 1500),
-        parentClasses: b.parentElement?.className ?? '',
-        grandparentClasses: b.parentElement?.parentElement?.className ?? '',
-      })),
-      existingGitHubButton: collect('[data-github-upload]'),
-    };
-  });
-
-  const toolbarHtml = await page.evaluate(() => {
-    const publishOrShareButton =
-      document.querySelector('button[aria-controls="publish-menu"]') ??
-      Array.from(document.querySelectorAll('button')).find((button) =>
-        /^(publish|deploy|share)$/i.test((button.textContent ?? '').trim())
-      );
-
-    const candidates = [
-      publishOrShareButton?.closest('div.flex.gap-2, div.flex.gap-3'),
-      document.querySelector('div.ml-auto > div.flex.gap-2'),
-      document.querySelector('div.ml-auto > div.flex.gap-3'),
-      document.querySelector('div.ml-auto'),
-    ].filter(Boolean);
-    if (candidates.length === 0) return null;
-    const container =
-      candidates[0].closest('header, nav, [class*="toolbar"]') ?? candidates[0].parentElement;
-    return container?.outerHTML?.slice(0, 12000) ?? candidates[0].outerHTML.slice(0, 12000);
-  });
+  const toolbarSnapshot = await page.evaluate(collectStructuredToolbarCandidates);
+  const toolbarHtml = await page.evaluate(extractToolbarHtml);
 
   const toolbarHtmlPath = join(OUT_DIR, `toolbar-${ts}.html`);
   const toolbarJsonPath = join(OUT_DIR, `toolbar-${ts}.json`);
