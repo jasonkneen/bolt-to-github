@@ -40,7 +40,7 @@ export default mergeConfig(
           'src/**/__mocks__/**',
         ],
       },
-      include: ['src/**/*.{test,spec}.{js,ts}'],
+      include: ['src/**/*.{test,spec}.{js,ts}', 'scripts/**/*.{test,spec}.{js,ts}'],
       deps: {
         optimizer: {
           web: {

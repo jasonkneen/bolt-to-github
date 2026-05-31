@@ -1,0 +1,112 @@
+schema: '2'
+goal: 'Make script tests first-class Vitest targets'
+description: |
+  Update the shared Vitest harness so tests under scripts/__tests__ can be run
+  directly by manifest validation commands. This removes the need for src/** test
+  files to import script tests just to force collection, keeping script coverage
+  explicit and keeping type validation clean.
+temptations:
+  - risk: "Do not import scripts/__tests__ from a src/** test file to force Vitest collection."
+    instead: "Configure the shared Vitest include list so script test files are collected directly."
+  - risk: "Do not weaken the harness by replacing the existing src/** include with an over-broad glob."
+    instead: "Keep the existing src test glob and add the narrow scripts test glob alongside it."
+  - risk: "Do not treat this as fixing .mjs MAID artifact validation."
+    instead: "Limit this manifest to script-test collection; revise script artifacts separately if needed."
+type: fix
+files:
+  create:
+    - path: scripts/__tests__/vitest-script-harness.test.ts
+      artifacts:
+        - kind: test_function
+          name: runs script tests through the shared Vitest config when targeted directly
+          description: |
+            Verifies the shared Vitest include list admits scripts/__tests__ test
+            files without relying on a src/** import shim.
+        - kind: test_function
+          name: keeps src test discovery while adding the scripts test glob
+          description: |
+            Guards against broad replacement of the existing src test discovery
+            pattern when enabling script test discovery.
+  read:
+    - vitest.config.ts
+    - tsconfig.json
+    - package.json
+    - plan-revision.md
+validate:
+  - pnpm exec vitest run scripts/__tests__/vitest-script-harness.test.ts
+  - pnpm check
+created: '2026-05-31T18:34:00+08:00'
+metadata:
+  tags:
+    - maid
+    - vitest
+    - test-harness
+  priority: high
+outcome:
+  status: completed
+  summary: |
+    The shared Vitest harness now collects scripts/**/*.test.ts and
+    scripts/**/*.spec.ts files directly, so MAID validation commands can target
+    script tests without importing them from src/** tests.
+  rationale: |
+    Keeping script test discovery in the shared Vitest include list preserves
+    normal src/** discovery while removing the prior need for transitive test
+    imports that could break pnpm check.
+  lessons:
+    - lesson_type: harness
+      summary: |
+        Script-level MAID tests need direct Vitest discovery; src/** import
+        shims are fragile and can drag .mjs files into type validation.
+      tags:
+        - vitest
+        - maid
+      paths:
+        - vitest.config.ts
+        - scripts/__tests__/vitest-script-harness.test.ts
+  review_notes:
+    - source: local self-review
+      severity: no findings
+      summary: |
+        Confirmed the change preserves src/** discovery, adds only the narrow
+        scripts test glob, and does not use a transitive src/** test import.
+  validation:
+    - command:
+        - pnpm
+        - exec
+        - vitest
+        - run
+        - scripts/__tests__/vitest-script-harness.test.ts
+      status: passed
+      summary: Script harness test passed with 2 tests.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - implementation
+      status: passed
+      summary: Active MAID implementation validation passed for 2 manifests.
+    - command:
+        - ./scripts/maid
+        - test
+        - --manifest-dir
+        - manifests
+      status: passed
+      summary: MAID test runner passed 2 validation commands.
+    - command:
+        - pnpm
+        - test:ci
+      status: passed
+      summary: Vitest CI passed 173 files and 4204 tests.
+    - command:
+        - pnpm
+        - check
+      status: passed
+      summary: svelte-check found 0 errors and 0 warnings.
+    - command:
+        - pnpm
+        - lint
+      status: passed
+      summary: ESLint completed successfully for src/**/*.{js,ts,svelte}.
+  completed_at: '2026-05-31T18:31:28+08:00'
