@@ -27,6 +27,7 @@
     handleKeyboardNavigation,
     shouldShowDropdown,
     canSaveForm,
+    validateRepositoryName,
     getAuthenticationMethod,
     createGitHubServiceConfig,
     filterBranches,
@@ -58,6 +59,7 @@
   let isSaving = false;
   let showErrorModal = false;
   let errorMessage = '';
+  let repoNameTouched = false;
 
   // Branch-related state
   let isLoadingBranches = false;
@@ -73,6 +75,8 @@
   $: filteredRepos = filterRepositories(repositories, repoSearchQuery);
 
   $: repoExists = checkRepositoryExists(repositories, repoName);
+  $: repoNameValidation = validateRepositoryName(repoName);
+  $: showRepoNameValidationError = repoNameTouched && !repoNameValidation.isValid;
 
   // Branch-related reactive statements
   $: filteredBranches = filterBranches(branches, branch);
@@ -131,13 +135,16 @@
     }
   }
 
-  function handleRepoInput() {
+  function handleRepoInput(event: Event) {
+    repoName = (event.currentTarget as HTMLInputElement).value;
     repoSearchQuery = repoName;
+    repoNameTouched = true;
   }
 
   function selectRepo(repo: (typeof repositories)[0]) {
     repoName = repo.name;
     repoSearchQuery = repo.name;
+    repoNameTouched = true;
     showRepoDropdown = false;
 
     // Load branches immediately when selecting from dropdown (bypass debounce)
@@ -176,6 +183,8 @@
   }
 
   function handleRepoBlur() {
+    repoNameTouched = true;
+
     // Delay hiding dropdown to allow click events to register
     setTimeout(() => {
       showRepoDropdown = false;
@@ -257,6 +266,8 @@
   }
 
   async function saveSettings() {
+    repoNameTouched = true;
+
     if (!canSaveForm(repoName, branch, isSaving)) return;
 
     try {
@@ -399,7 +410,9 @@
               </div>
             {/if}
           </div>
-          {#if repoExists}
+          {#if showRepoNameValidationError}
+            <p class="text-sm text-red-400" role="alert">{repoNameValidation.error}</p>
+          {:else if repoExists}
             <p class="text-sm text-blue-400">
               ℹ️ Using existing repository. Make sure it is correct.
             </p>

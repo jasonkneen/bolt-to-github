@@ -113,6 +113,13 @@ describe('BackgroundService - Extension Reload Behavior', () => {
     sender: unknown,
     sendResponse: (response: { success: boolean; error?: string }) => void
   ) => boolean | void;
+  let runtimeConnectListener: (port: {
+    name: string;
+    sender?: { tab?: { id?: number } };
+    postMessage: ReturnType<typeof vi.fn>;
+    onDisconnect: { addListener: ReturnType<typeof vi.fn> };
+    onMessage: { addListener: ReturnType<typeof vi.fn> };
+  }) => void;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -128,6 +135,12 @@ describe('BackgroundService - Extension Reload Behavior', () => {
       throw new Error('Runtime message listener not registered');
     }
     runtimeMessageListener = listenerCall[0];
+
+    const connectListenerCall = mockRuntime.onConnect.addListener.mock.calls[0];
+    if (!connectListenerCall?.[0]) {
+      throw new Error('Runtime connect listener not registered');
+    }
+    runtimeConnectListener = connectListenerCall[0];
   });
 
   afterEach(() => {
@@ -324,6 +337,74 @@ describe('BackgroundService - Extension Reload Behavior', () => {
       expect(() => {
         alarmListener({ name: 'self-heal-reload' });
       }).not.toThrow();
+    });
+  });
+
+  describe('when Push to GitHub is requested', () => {
+    it('push message responds with failure when no active Bolt tab exists', async () => {
+      mockTabs.query.mockResolvedValueOnce([{ id: 7, url: 'https://example.com/' }]);
+      const sendResponse = vi.fn();
+
+      const returnValue = runtimeMessageListener(
+        { action: 'PUSH_TO_GITHUB', type: '' },
+        {},
+        sendResponse
+      );
+
+      expect(returnValue).toBe(true);
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: false,
+        error: 'No active Bolt tab found',
+      });
+    });
+
+    it('push message responds with failure when the Bolt tab has no connected port', async () => {
+      mockTabs.query.mockResolvedValueOnce([{ id: 7, url: 'https://bolt.new/~/test-project' }]);
+      const sendResponse = vi.fn();
+
+      const returnValue = runtimeMessageListener(
+        { action: 'PUSH_TO_GITHUB', type: '' },
+        {},
+        sendResponse
+      );
+
+      expect(returnValue).toBe(true);
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: false,
+        error: 'No connected Bolt content script',
+      });
+    });
+
+    it('push message responds successfully after dispatching to a connected Bolt port', async () => {
+      mockTabs.query.mockResolvedValueOnce([{ id: 7, url: 'https://bolt.new/~/test-project' }]);
+      const postMessage = vi.fn();
+      runtimeConnectListener({
+        name: 'bolt-content',
+        sender: { tab: { id: 7 } },
+        postMessage,
+        onDisconnect: { addListener: vi.fn() },
+        onMessage: { addListener: vi.fn() },
+      });
+      const sendResponse = vi.fn();
+
+      const returnValue = runtimeMessageListener(
+        { action: 'PUSH_TO_GITHUB', type: '' },
+        {},
+        sendResponse
+      );
+
+      expect(returnValue).toBe(true);
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(postMessage).toHaveBeenCalledWith({ type: 'PUSH_TO_GITHUB' });
+      expect(sendResponse).toHaveBeenCalledWith({ success: true });
     });
   });
 });

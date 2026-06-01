@@ -1170,4 +1170,40 @@ describe('RepoSettings.svelte - Component Tests', () => {
       expect(titleInput).toHaveValue('My Custom Title');
     });
   });
+
+  describe('Repository Name Validation', () => {
+    it('shows repository validation errors and disables save', async () => {
+      const user = userEvent.setup();
+      render(RepoSettings, { props: defaultProps });
+
+      const repoInput = screen.getByLabelText('Repository Name');
+      await user.clear(repoInput);
+      await user.type(repoInput, 'invalid repo name!');
+      await fireEvent.blur(repoInput);
+
+      expect(await screen.findByText(/invalid repository name/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /save settings/i })).toBeDisabled();
+    });
+
+    it('clears repository validation errors after correction', async () => {
+      const user = userEvent.setup();
+      render(RepoSettings, { props: defaultProps });
+
+      const repoInput = screen.getByLabelText('Repository Name');
+      await user.clear(repoInput);
+      await user.type(repoInput, 'invalid repo name!');
+      await fireEvent.blur(repoInput);
+
+      expect(await screen.findByText(/invalid repository name/i)).toBeInTheDocument();
+
+      await user.clear(repoInput);
+      await user.type(repoInput, 'valid-repo-name');
+      await fireEvent.blur(repoInput);
+
+      await waitFor(() => {
+        expect(screen.queryByText(/invalid repository name/i)).not.toBeInTheDocument();
+      });
+      expect(screen.getByRole('button', { name: /save settings/i })).toBeEnabled();
+    });
+  });
 });

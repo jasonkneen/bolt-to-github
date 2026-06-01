@@ -1,0 +1,338 @@
+schema: '2'
+goal: 'Repair E2E error-flow coverage with product-visible errors'
+description: |
+  Make browser-level error scenarios observable in the extension UI. Repository
+  settings must reject names outside the product repository-name policy before
+  saving, push dispatch failures must surface visible popup errors instead of
+  only background logs, and the E2E suite must interact with the current visible
+  popup UI rather than hidden duplicate controls.
+temptations:
+  - risk: 'Do not satisfy repository validation by hardcoding only the names used by tests.'
+    instead: 'Centralize GitHub repository-name rules in validateRepositoryName and use that policy from every repository settings surface.'
+  - risk: 'Do not make push buttons always enabled or report success before dispatch starts.'
+    instead: 'Return success only after an active Bolt tab and connected content-script port are available, and surface failed dispatch responses in the popup.'
+  - risk: 'Do not make E2E helpers pass by selecting hidden duplicate controls or injecting artificial errors.'
+    instead: 'Use visible locators for the current popup surface and assert UI emitted by production code.'
+type: fix
+files:
+  create:
+    - path: e2e/error-flow-product.spec.ts
+      artifacts:
+        - kind: test_function
+          name: should show error for invalid repository name
+        - kind: test_function
+          name: should show error for empty repository name
+        - kind: test_function
+          name: should validate repository name format
+        - kind: test_function
+          name: should show error when push fails
+        - kind: test_function
+          name: should allow retry after failed push
+  edit:
+    - path: src/lib/utils/repo-settings.ts
+      artifacts:
+        - kind: function
+          name: validateRepositoryName
+          args:
+            - name: repoName
+              type: string
+          returns: RepositoryNameValidationResult
+          description: |
+            Signature: validateRepositoryName(repoName: string) => { isValid: boolean; error?: string }.
+            Validates the product repository-name policy: required, 100-character
+            maximum, alphanumeric/underscore/hyphen/dot characters, plus the
+            product-specific readability rule that names cannot start/end with a
+            hyphen or contain double hyphens.
+        - kind: function
+          name: canSaveForm
+          args:
+            - name: repoName
+              type: string
+            - name: branch
+              type: string
+            - name: isSaving
+              type: boolean
+          returns: boolean
+          description: |
+            Signature: canSaveForm(repoName: string, branch: string, isSaving?: boolean) => boolean.
+            Preserves the existing save gate while also rejecting invalid repository
+            names so disabled save states match the visible validation message.
+    - path: src/lib/components/RepoSettings.svelte
+      artifacts:
+        - kind: function
+          name: RepoSettings
+          args:
+            - name: props
+              type: RepoSettings component props
+          returns: Svelte component instance
+          description: |
+            Shows repository-name validation feedback in the modal settings surface,
+            disables saving while invalid, and clears the error after correction.
+    - path: src/lib/components/GitHubSettings.svelte
+      artifacts:
+        - kind: function
+          name: GitHubSettings
+          args:
+            - name: props
+              type: GitHubSettings component props
+          returns: Svelte component instance
+          description: |
+            Shows repository-name validation feedback in the settings tab surface,
+            keeps editable project fields as local drafts until save, disables saving
+            while invalid, and clears the error after correction.
+    - path: src/background/BackgroundService.ts
+      artifacts:
+        - kind: class
+          name: BackgroundService
+          description: |
+            Push-to-GitHub runtime messages must respond with success only after a
+            Bolt tab and content-script port are available, and must return a visible
+            failure response when dispatch cannot start.
+    - path: src/lib/components/ProjectStatus.svelte
+      artifacts:
+        - kind: function
+          name: ProjectStatus
+          args:
+            - name: props
+              type: ProjectStatus component props
+          returns: Svelte component instance
+          description: |
+            Handles failed Push to GitHub responses from the background service with
+            a visible, retry-safe popup error state.
+    - path: src/popup/components/FileChangesModal.svelte
+      artifacts:
+        - kind: function
+          name: FileChangesModal
+          args:
+            - name: props
+              type: FileChangesModal component props
+          returns: Svelte component instance
+          description: |
+            Handles failed Push to GitHub responses from the background service with
+            a visible modal error state while preserving retry and confirmation flows.
+    - path: e2e/helpers/popup.ts
+      artifacts:
+        - kind: function
+          name: fillRepositorySettings
+          args:
+            - name: page
+              type: Page
+            - name: settings
+              type: RepositorySettingsInput
+          returns: Promise<void>
+          description: |
+            Signature: fillRepositorySettings(page: Page, settings: { repoName: string; branch?: string; visibility?: 'public' | 'private' }) => Promise<void>.
+            Accepts structured repository settings input for the active popup state
+            and fills only visible controls.
+        - kind: function
+          name: clickPushButton
+          args:
+            - name: page
+              type: Page
+            - name: beforeClick
+              type: (() => Promise<void>) | undefined
+          returns: Promise<void>
+          description: |
+            Signature: clickPushButton(page: Page, beforeClick?: () => Promise<void>) => Promise<void>.
+            Clicks the current visible Push to GitHub control and supports retry
+            after an error without relying on hidden duplicate buttons.
+        - kind: function
+          name: getValidationError
+          args:
+            - name: page
+              type: Page
+          returns: Promise<string | null>
+          description: |
+            Signature: getValidationError(page: Page) => Promise<string | null>.
+            Reads visible validation or alert text from the active popup surface.
+    - path: e2e/fixtures/extension.ts
+      artifacts:
+        - kind: attribute
+          name: test
+          type: Playwright test fixture
+          description: |
+            Signature: test = base.extend<ExtensionFixtures>({ context, extensionId }).
+            Provides the extension-loaded Playwright context used by
+            e2e/error-flow-product.spec.ts and prevents install onboarding pages
+            from stealing focus during E2E runs by closing only bolt2github.com
+            welcome/onboarding pages inside that context, and derives the
+            extension ID from the MV3 service worker instead of opening the
+            chrome://extensions management page.
+    - path: src/lib/components/__tests__/RepoSettings.logic.test.ts
+      artifacts:
+        - kind: test_function
+          name: validates GitHub repository names before save
+        - kind: test_function
+          name: rejects repository names outside the product policy
+    - path: src/lib/components/__tests__/RepoSettings.component.test.ts
+      artifacts:
+        - kind: test_function
+          name: shows repository validation errors and disables save
+        - kind: test_function
+          name: clears repository validation errors after correction
+    - path: src/lib/components/__tests__/GitHubSettings.component.test.ts
+      artifacts:
+        - kind: test_function
+          name: shows repository validation errors in GitHub settings
+        - kind: test_function
+          name: clears GitHub settings repository validation errors after correction
+        - kind: test_function
+          name: updates visible repository drafts after switching projects
+    - path: src/lib/components/__tests__/ProjectStatus.component.test.ts
+      artifacts:
+        - kind: test_function
+          name: shows an error when Push to GitHub cannot start
+        - kind: test_function
+          name: keeps the Push to GitHub control retryable after failure
+    - path: src/popup/components/__tests__/FileChangesModal.component.test.ts
+      artifacts:
+        - kind: test_function
+          name: displays push failure errors returned by the background service
+        - kind: test_function
+          name: keeps push retry available after a failed modal push
+    - path: src/background/__tests__/BackgroundService.reload.test.ts
+      artifacts:
+        - kind: test_function
+          name: push message responds with failure when no active Bolt tab exists
+        - kind: test_function
+          name: push message responds with failure when the Bolt tab has no connected port
+        - kind: test_function
+          name: push message responds successfully after dispatching to a connected Bolt port
+  read:
+    - e2e/helpers/storage.ts
+    - src/popup/App.svelte
+    - src/lib/components/ProjectsList.svelte
+    - src/lib/services/chromeMessaging.ts
+    - src/lib/components/ui/alert/Alert.svelte
+    - src/lib/components/ui/dialog/ConfirmationDialog.svelte
+validate:
+  - pnpm exec vitest run src/lib/components/__tests__/RepoSettings.logic.test.ts src/lib/components/__tests__/RepoSettings.component.test.ts src/lib/components/__tests__/GitHubSettings.component.test.ts src/lib/components/__tests__/ProjectStatus.component.test.ts src/popup/components/__tests__/FileChangesModal.component.test.ts src/background/__tests__/BackgroundService.reload.test.ts
+  - pnpm exec playwright test --project=chromium --reporter=list e2e/error-flow-product.spec.ts
+  - pnpm lint
+  - pnpm check
+created: '2026-05-31T22:20:00+08:00'
+metadata:
+  tags:
+    - e2e
+    - errors
+    - popup
+    - mv3
+    - release-ci
+  priority: critical
+  status: completed
+outcome:
+  status: completed
+  summary: |
+    Implemented product-visible repository validation and Push to GitHub dispatch
+    failures, added focused error-flow E2E coverage for visible popup behavior,
+    and suppressed external bolt2github.com onboarding pages during extension
+    E2E contexts.
+  rationale: |
+    MAID 2.16 validates the Svelte component artifacts, and the Playwright
+    fixture export is declared as an attribute to match the TypeScript artifact
+    model for exported const values produced by call expressions. The product
+    tests, E2E coverage, build, lint, check, and MAID validation all pass.
+  lessons:
+    - lesson_type: e2e-stability
+      summary: |
+        Extension E2E fixtures should close external install/onboarding pages
+        inside the test browser context so product pages cannot steal focus from
+        popup assertions.
+      tags:
+        - e2e
+        - playwright
+        - chrome-extension
+      paths:
+        - e2e/fixtures/extension.ts
+    - lesson_type: maid-contract
+      summary: |
+        Playwright fixtures exported as const values should be modeled as
+        TypeScript attributes rather than functions unless the exported syntax is
+        a function, arrow function, or function declaration.
+      tags:
+        - maid
+        - typescript
+        - playwright
+      paths:
+        - manifests/repair-e2e-error-flow-product-behavior.manifest.yaml
+        - e2e/fixtures/extension.ts
+  review_notes:
+    - source: local self-review
+      severity: fixed finding
+      summary: |
+        Review found that touched GitHubSettings repository draft fields could
+        stay stale after switching projects or receiving synchronized project
+        settings. The implementation now applies synchronized repository
+        settings through one helper that refreshes both committed and draft
+        values, with component coverage for project switching.
+    - source: local self-review
+      severity: no findings after fixes
+      summary: |
+        Changed files match the active manifest; the onboarding suppression is
+        limited to bolt2github.com welcome/onboarding URLs; push failures remain
+        visible and retryable; and repository-name validation is centralized
+        across the touched settings surfaces.
+  validation:
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/repair-e2e-error-flow-product-behavior.manifest.yaml
+        - --mode
+        - schema
+      status: passed
+      summary: Manifest schema validation passed.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/repair-e2e-error-flow-product-behavior.manifest.yaml
+        - --mode
+        - behavioral
+      status: passed
+      summary: Behavioral validation passed.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/repair-e2e-error-flow-product-behavior.manifest.yaml
+        - --mode
+        - implementation
+      status: passed
+      summary: Implementation validation passed under MAID 2.16.
+    - command:
+        - pnpm
+        - exec
+        - vitest
+        - run
+        - src/lib/components/__tests__/RepoSettings.logic.test.ts
+        - src/lib/components/__tests__/RepoSettings.component.test.ts
+        - src/lib/components/__tests__/GitHubSettings.component.test.ts
+        - src/lib/components/__tests__/ProjectStatus.component.test.ts
+        - src/popup/components/__tests__/FileChangesModal.component.test.ts
+        - src/background/__tests__/BackgroundService.reload.test.ts
+      status: passed
+      summary: Focused Vitest suite passed 261 tests across 6 files.
+    - command:
+        - pnpm
+        - exec
+        - playwright
+        - test
+        - --project=chromium
+        - --reporter=list
+        - e2e/error-flow-product.spec.ts
+      status: passed
+      summary: Focused product E2E error-flow suite passed 5 tests.
+    - command:
+        - pnpm
+        - build
+      status: passed
+      summary: Production extension build passed with pre-existing Vite chunk/dynamic-import warnings.
+    - command:
+        - pnpm
+        - lint
+      status: passed
+      summary: ESLint completed successfully for src/**/*.{js,ts,svelte}.
+    - command:
+        - pnpm
+        - check
+      status: passed
+      summary: svelte-check found 0 errors and 0 warnings.
+  completed_at: '2026-06-01T10:26:37+08:00'

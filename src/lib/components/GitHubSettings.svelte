@@ -34,6 +34,7 @@
     updateSettingsFromSyncStorage,
     type PermissionStatus,
   } from '$lib/utils/github-settings';
+  import { validateRepositoryName } from '$lib/utils/repo-settings';
 
   const logger = createLogger('GitHubSettings');
 
@@ -79,6 +80,11 @@
   let showRepoDropdown = false;
   let repoSearchQuery = '';
   let repoExists = false;
+  let repoNameDraft = repoName;
+  let branchDraft = branch;
+  let repoNameTouched = false;
+  let branchTouched = false;
+  let lastProjectId = projectId;
   let selectedIndex = -1;
   let isCheckingPermissions = false;
   let lastPermissionCheck: number | null = null;
@@ -179,9 +185,34 @@
     manuallyToggled = true; // Mark as manually toggled
   }
 
+  function applyRepositorySettings(repoNameValue: string, branchValue: string) {
+    repoName = repoNameValue;
+    branch = branchValue;
+    repoNameDraft = repoNameValue;
+    branchDraft = branchValue;
+    repoNameTouched = false;
+    branchTouched = false;
+  }
+
+  $: if (projectId !== lastProjectId) {
+    lastProjectId = projectId;
+    repoNameTouched = false;
+    branchTouched = false;
+  }
+
+  $: if (!repoNameTouched && repoNameDraft !== repoName) {
+    repoNameDraft = repoName;
+  }
+
+  $: if (!branchTouched && branchDraft !== branch) {
+    branchDraft = branch;
+  }
+
   $: filteredRepos = filterRepositories(repositories, repoSearchQuery, 10);
 
-  $: repoExists = repositoryExists(repositories, repoName);
+  $: repoExists = repositoryExists(repositories, repoNameDraft);
+  $: repoNameValidation = validateRepositoryName(repoNameDraft);
+  $: showRepoNameValidationError = !isOnboarding && repoNameTouched && !repoNameValidation.isValid;
 
   $: {
     const updatedState = setDefaultRepoNameFromProjectId({
@@ -267,15 +298,19 @@
     }
   }
 
-  function handleRepoInput() {
-    repoSearchQuery = repoName;
+  function handleRepoInput(event: Event) {
+    repoNameDraft = (event.currentTarget as HTMLInputElement).value;
+    repoSearchQuery = repoNameDraft;
+    repoNameTouched = true;
+    isRepoNameFromProjectId = false;
     onInput();
   }
 
   function selectRepo(repo: (typeof repositories)[0]) {
-    repoName = repo.name;
+    repoNameDraft = repo.name;
     showRepoDropdown = false;
     repoSearchQuery = repo.name;
+    repoNameTouched = true;
     onInput();
   }
 
@@ -306,10 +341,12 @@
 
   function handleRepoFocus() {
     showRepoDropdown = true;
-    repoSearchQuery = repoName;
+    repoSearchQuery = repoNameDraft;
   }
 
   function handleRepoBlur() {
+    repoNameTouched = true;
+
     // Delay hiding dropdown to allow click events to register
     setTimeout(() => {
       showRepoDropdown = false;
@@ -360,8 +397,7 @@
           },
           updateInfo
         );
-        repoName = updatedState.repoName;
-        branch = updatedState.branch;
+        applyRepositorySettings(updatedState.repoName, updatedState.branch);
         logger.info('Updated local state with new project settings:', repoName, branch);
       }
     }
@@ -386,8 +422,7 @@
         newSettings
       );
       if (updatedState.repoName !== repoName || updatedState.branch !== branch) {
-        repoName = updatedState.repoName;
-        branch = updatedState.branch;
+        applyRepositorySettings(updatedState.repoName, updatedState.branch);
         logger.info('Updated from sync storage:', repoName, branch);
       }
     }
@@ -513,6 +548,12 @@
     }
   }
 
+  function handleBranchInput(event: Event) {
+    branchDraft = (event.currentTarget as HTMLInputElement).value;
+    branchTouched = true;
+    onInput();
+  }
+
   async function checkTokenPermissions() {
     // Only check permissions for PAT authentication
     if (authenticationMethod !== 'pat' || !githubToken || isCheckingPermissions) return;
@@ -590,6 +631,14 @@
 
   const handleSave = async (event: Event) => {
     event.preventDefault();
+    repoNameTouched = true;
+
+    if (!isOnboarding && !repoNameValidation.isValid) {
+      return;
+    }
+
+    repoName = repoNameDraft;
+    branch = branchDraft;
 
     // Clear any previous storage errors
     storageQuotaError = null;
@@ -714,7 +763,7 @@
   });
 
   $: {
-    if (!isOnboarding && projectId && projectSettings[projectId]) {
+    if (!isOnboarding && !repoNameTouched && projectId && projectSettings[projectId]) {
       const updatedState = updateSettingsFromSyncStorage(
         {
           projectId,
@@ -729,8 +778,7 @@
         projectSettings
       );
       if (updatedState.repoName !== repoName || updatedState.branch !== branch) {
-        repoName = updatedState.repoName;
-        branch = updatedState.branch;
+        applyRepositorySettings(updatedState.repoName, updatedState.branch);
       }
     }
   }
@@ -1131,7 +1179,7 @@
                       <Input
                         type="text"
                         id="repoName"
-                        bind:value={repoName}
+                        bind:value={repoNameDraft}
                         on:input={handleRepoInput}
                         on:focus={handleRepoFocus}
                         on:blur={handleRepoBlur}
@@ -1176,10 +1224,10 @@
                           {/each}
                           {#if !repoExists}
                             <li class="px-3 py-2 text-sm text-slate-400">
-                              {#if repoName.length > 0}
+                              {#if repoNameDraft.length > 0}
                                 <p class="text-orange-400">
-                                  💡If the repository "{repoName}" doesn't exist, it will be created
-                                  automatically.
+                                  💡If the repository "{repoNameDraft}" doesn't exist, it will be
+                                  created automatically.
                                 </p>
                               {:else}
                                 <p>
@@ -1193,11 +1241,13 @@
                       </div>
                     {/if}
                   </div>
-                  {#if repoExists}
+                  {#if showRepoNameValidationError}
+                    <p class="text-sm text-red-400" role="alert">{repoNameValidation.error}</p>
+                  {:else if repoExists}
                     <p class="text-sm text-blue-400">
                       ℹ️ Using existing repository. Make sure it is correct.
                     </p>
-                  {:else if repoName}
+                  {:else if repoNameDraft}
                     <p class="text-sm text-emerald-400">
                       ✨ A new repository will be created if it doesn't exist yet.
                     </p>
@@ -1212,8 +1262,8 @@
                   <Input
                     type="text"
                     id="branch"
-                    bind:value={branch}
-                    on:input={onInput}
+                    bind:value={branchDraft}
+                    on:input={handleBranchInput}
                     placeholder="main"
                     class="bg-slate-800 border-slate-700 text-slate-200 placeholder:text-slate-500"
                   />
@@ -1249,7 +1299,7 @@
               (authenticationMethod === 'pat' && (!githubToken || isTokenValid === false)) ||
               (authenticationMethod === 'github_app' && !githubAppInstallationId) ||
               !repoOwner ||
-              (!isOnboarding && (!repoName || !branch))}
+              (!isOnboarding && (!repoNameValidation.isValid || !branchDraft))}
           >
             {#if isValidatingToken}
               Validating...

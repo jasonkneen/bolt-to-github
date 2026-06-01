@@ -103,36 +103,77 @@ export async function navigateToTab(
 /**
  * Fill repository settings in the Home tab
  */
+type RepositorySettingsInput = {
+  repoName: string;
+  branch?: string;
+  visibility?: 'public' | 'private';
+};
+
 export async function fillRepositorySettings(
   page: Page,
-  repoName: string,
-  branch: string = 'main'
+  settings: RepositorySettingsInput
 ): Promise<void> {
+  const { repoName, branch = 'main', visibility } = settings;
+
   // Fill in repository name
   const repoInput = page
-    .locator('input[placeholder*="repository" i], input[name*="repo" i]')
+    .locator(
+      'input[placeholder*="repository" i]:visible, input[name*="repo" i]:visible, #repoName:visible'
+    )
     .first();
   await repoInput.waitFor({ state: 'visible', timeout: 5000 });
   await repoInput.clear();
-  await repoInput.fill(repoName);
+  if (repoName) {
+    await repoInput.pressSequentially(repoName);
+  }
+  await page.keyboard.press('Tab');
 
   // Fill in branch name if there's a branch input
   const branchInput = page
-    .locator('input[placeholder*="branch" i], input[name*="branch" i]')
+    .locator(
+      'input[placeholder*="branch" i]:visible, input[name*="branch" i]:visible, #branch:visible'
+    )
     .first();
   if (await branchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
     await branchInput.clear();
     await branchInput.fill(branch);
+  }
+
+  if (visibility) {
+    const visibilityInput = page
+      .locator(`input[type="radio"][value="${visibility}"]:visible`)
+      .first();
+    if (await visibilityInput.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await visibilityInput.click();
+    }
   }
 }
 
 /**
  * Click the push button
  */
-export async function clickPushButton(page: Page): Promise<void> {
-  const pushButton = page.locator('button:has-text("Push"), button:has-text("Upload")').first();
+export async function clickPushButton(
+  page: Page,
+  beforeClick: (() => Promise<void>) | undefined = undefined
+): Promise<void> {
+  const pushButton = page
+    .locator(
+      'button[aria-label="Push to GitHub"]:visible, button:visible:has-text("Push to GitHub"), button:visible:has-text("Upload")'
+    )
+    .first();
   await pushButton.waitFor({ state: 'visible', timeout: 5000 });
+  if (beforeClick) {
+    await beforeClick();
+  }
   await pushButton.click();
+
+  for (const contextPage of page.context().pages()) {
+    const confirmButton = contextPage.getByRole('button', { name: /push changes/i }).first();
+    if (await confirmButton.isVisible({ timeout: 500 }).catch(() => false)) {
+      await confirmButton.click();
+      break;
+    }
+  }
 }
 
 /**
@@ -147,7 +188,12 @@ export async function waitForSuccessNotification(page: Page): Promise<void> {
  * Wait for error notification
  */
 export async function waitForErrorNotification(page: Page): Promise<string> {
-  const errorIndicator = page.locator('text=/Error|Failed|Invalid/i, [role="alert"]').first();
+  const errorIndicator = page
+    .locator(
+      '[role="alert"]:visible, [aria-live="assertive"]:visible, [aria-live="polite"]:visible'
+    )
+    .filter({ hasText: /Error|Failed|Invalid|No active Bolt tab|content script|no content/i })
+    .first();
   await errorIndicator.waitFor({ state: 'visible', timeout: 10000 });
   return errorIndicator.textContent() || 'Unknown error';
 }
@@ -157,7 +203,9 @@ export async function waitForErrorNotification(page: Page): Promise<string> {
  */
 export async function getValidationError(page: Page): Promise<string | null> {
   const errorMessage = page
-    .locator('[class*="error"], [role="alert"], .text-red-500, .text-destructive')
+    .locator(
+      '[role="alert"]:visible, [aria-live="assertive"]:visible, [aria-live="polite"]:visible'
+    )
     .first();
   if (await errorMessage.isVisible({ timeout: 2000 }).catch(() => false)) {
     return errorMessage.textContent();

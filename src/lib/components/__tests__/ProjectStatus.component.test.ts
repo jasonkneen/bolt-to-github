@@ -3,9 +3,21 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import ProjectStatus from '../ProjectStatus.svelte';
+
+const mockChromeStorageService = vi.hoisted(() => ({
+  getProjectSettingsWithMetadata: vi.fn(),
+  updateProjectMetadata: vi.fn(),
+}));
+
+const mockGitHubCacheService = vi.hoisted(() => ({
+  getRepoMetadata: vi.fn(),
+  isCacheStale: vi.fn(),
+  createEnhancedRepo: vi.fn(),
+  cacheRepoMetadata: vi.fn(),
+}));
 
 vi.mock('$lib/stores/issuesStore', () => ({
   issuesStore: {
@@ -63,20 +75,28 @@ vi.mock('../../services/UnifiedGitHubService', () => ({
   })),
 }));
 
+vi.mock('../../services/chromeStorage', () => ({
+  ChromeStorageService: mockChromeStorageService,
+}));
+
 vi.mock('../services/chromeStorage', () => ({
-  ChromeStorageService: {
-    getProjectSettingsWithMetadata: vi.fn().mockResolvedValue(null),
-    updateProjectMetadata: vi.fn(),
-  },
+  ChromeStorageService: mockChromeStorageService,
+}));
+
+vi.mock('$lib/services/chromeStorage', () => ({
+  ChromeStorageService: mockChromeStorageService,
+}));
+
+vi.mock('../../services/GitHubCacheService', () => ({
+  GitHubCacheService: mockGitHubCacheService,
 }));
 
 vi.mock('../services/GitHubCacheService', () => ({
-  GitHubCacheService: {
-    getRepoMetadata: vi.fn().mockResolvedValue(null),
-    isCacheStale: vi.fn().mockResolvedValue(true),
-    createEnhancedRepo: vi.fn(),
-    cacheRepoMetadata: vi.fn(),
-  },
+  GitHubCacheService: mockGitHubCacheService,
+}));
+
+vi.mock('$lib/services/GitHubCacheService', () => ({
+  GitHubCacheService: mockGitHubCacheService,
 }));
 
 const mockChrome = {
@@ -126,6 +146,12 @@ describe('ProjectStatus.svelte - Component Tests', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockChromeStorageService.getProjectSettingsWithMetadata.mockResolvedValue(null);
+    mockChromeStorageService.updateProjectMetadata.mockResolvedValue(undefined);
+    mockGitHubCacheService.getRepoMetadata.mockResolvedValue(null);
+    mockGitHubCacheService.isCacheStale.mockResolvedValue(true);
+    mockGitHubCacheService.createEnhancedRepo.mockReturnValue({});
+    mockGitHubCacheService.cacheRepoMetadata.mockResolvedValue(undefined);
     mockChrome.storage.local.get.mockResolvedValue({
       authenticationMethod: 'pat',
       storedFileChanges: null,
@@ -134,7 +160,26 @@ describe('ProjectStatus.svelte - Component Tests', () => {
     mockChrome.storage.sync.get.mockResolvedValue({
       projectSettings: {},
     });
+    mockChrome.runtime.sendMessage.mockReset();
   });
+
+  function mockReadyRepositoryStatus() {
+    mockChromeStorageService.getProjectSettingsWithMetadata.mockResolvedValue({
+      metadata_last_updated: Date.now(),
+      is_private: false,
+      default_branch: 'main',
+      open_issues_count: 0,
+    });
+    mockGitHubCacheService.getRepoMetadata.mockResolvedValue({
+      name: 'test-repo',
+      default_branch: 'main',
+    });
+    mockGitHubCacheService.isCacheStale.mockResolvedValue(false);
+  }
+
+  async function loadReadyProjectStatus(component: unknown) {
+    await (component as { getProjectStatus: () => Promise<void> }).getProjectStatus();
+  }
 
   afterEach(() => {
     vi.clearAllMocks();
@@ -329,6 +374,49 @@ describe('ProjectStatus.svelte - Component Tests', () => {
       render(ProjectStatus, { props: { ...defaultProps, projectTitle: undefined } });
 
       expect(screen.getByText('My Project')).toBeInTheDocument();
+    });
+
+    it('shows an error when Push to GitHub cannot start', async () => {
+      const user = userEvent.setup();
+      mockReadyRepositoryStatus();
+      mockChrome.runtime.sendMessage.mockResolvedValueOnce({
+        success: false,
+        error: 'No active Bolt tab found',
+      });
+
+      const { component } = render(ProjectStatus, { props: defaultProps });
+      await loadReadyProjectStatus(component);
+
+      const pushButton = screen.getByRole('button', { name: /push to github/i });
+      await screen.findByText('Repo/branch exists');
+      await waitFor(() => expect(pushButton).toBeEnabled());
+      await user.click(pushButton);
+
+      expect(await screen.findByText(/No active Bolt tab found/i)).toBeInTheDocument();
+    });
+
+    it('keeps the Push to GitHub control retryable after failure', async () => {
+      const user = userEvent.setup();
+      mockReadyRepositoryStatus();
+      mockChrome.runtime.sendMessage.mockResolvedValue({
+        success: false,
+        error: 'No connected Bolt content script',
+      });
+
+      const { component } = render(ProjectStatus, { props: defaultProps });
+      await loadReadyProjectStatus(component);
+
+      const pushButton = screen.getByRole('button', { name: /push to github/i });
+      await screen.findByText('Repo/branch exists');
+      await waitFor(() => expect(pushButton).toBeEnabled());
+      await user.click(pushButton);
+
+      expect(await screen.findByText(/No connected Bolt content script/i)).toBeInTheDocument();
+      expect(pushButton).toBeEnabled();
+
+      await user.click(pushButton);
+
+      expect(mockChrome.runtime.sendMessage).toHaveBeenCalledTimes(2);
     });
   });
 });

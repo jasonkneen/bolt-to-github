@@ -18,9 +18,11 @@
 
   let isRefreshing = false;
   let refreshError: string | null = null;
+  let isPushing = false;
+  let pushError: string | null = null;
   let showConfirmationDialog = false;
   let confirmationMessage = '';
-  let pendingPushAction: (() => void) | null = null;
+  let pendingPushAction: (() => Promise<void>) | null = null;
 
   // Count changes for confirmation logic
   $: changeCounts = fileChanges
@@ -33,6 +35,30 @@
     show = false;
   }
 
+  async function requestPushToGitHub() {
+    if (isPushing) return;
+
+    try {
+      isPushing = true;
+      pushError = null;
+      const response = (await chrome.runtime.sendMessage({ action: 'PUSH_TO_GITHUB' })) as {
+        success?: boolean;
+        error?: string;
+      };
+
+      if (!response?.success) {
+        pushError = response?.error || 'Failed to start Push to GitHub';
+        return;
+      }
+
+      show = false;
+    } catch (error) {
+      pushError = error instanceof Error ? error.message : 'Failed to start Push to GitHub';
+    } finally {
+      isPushing = false;
+    }
+  }
+
   async function pushToGitHub(event: MouseEvent | KeyboardEvent) {
     event.stopPropagation();
 
@@ -40,23 +66,18 @@
     if (shouldShowPushConfirmation(hasChanges)) {
       // Show confirmation dialog for no changes
       confirmationMessage = generateNoChangesConfirmationMessage(changeCounts.unchanged);
-      pendingPushAction = () => {
-        // Send a message to trigger the GitHub push action
-        chrome.runtime.sendMessage({ action: 'PUSH_TO_GITHUB' });
-        show = false; // Close the modal after initiating the push
-      };
+      pendingPushAction = requestPushToGitHub;
       showConfirmationDialog = true;
       return;
     }
 
     // Direct push for changes
-    chrome.runtime.sendMessage({ action: 'PUSH_TO_GITHUB' });
-    show = false; // Close the modal after initiating the push
+    await requestPushToGitHub();
   }
 
-  function handleConfirmPush() {
+  async function handleConfirmPush() {
     if (pendingPushAction) {
-      pendingPushAction();
+      await pendingPushAction();
       pendingPushAction = null;
     }
   }
@@ -151,7 +172,7 @@
             : ''}"
           on:click={pushToGitHub}
           on:keydown={(e) => e.key === 'Enter' && pushToGitHub(e)}
-          disabled={isRefreshing}
+          disabled={isRefreshing || isPushing}
           title={hasChanges
             ? `Push ${totalChanges} changes to GitHub`
             : 'No changes to push (will show confirmation)'}
@@ -182,6 +203,11 @@
         <p class="text-red-300/60 text-xs mt-1">
           This may be due to rate limiting. Please try again in a few moments.
         </p>
+      </div>
+    {/if}
+    {#if pushError}
+      <div class="bg-red-500/10 border border-red-500/30 rounded-md p-3 mb-2" role="alert">
+        <p class="text-red-400 text-xs">Push failed: {pushError}</p>
       </div>
     {/if}
 

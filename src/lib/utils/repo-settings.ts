@@ -17,6 +17,11 @@ export interface AuthSettings {
   authenticationMethod?: string;
 }
 
+export interface RepositoryNameValidationResult {
+  isValid: boolean;
+  error?: string;
+}
+
 /**
  * Filters repositories based on search query
  * @param repositories - Array of repositories to filter
@@ -93,6 +98,50 @@ export function shouldShowDropdown(
 }
 
 /**
+ * Validates repository names against the product policy for GitHub repositories.
+ * @param repoName - Repository name
+ * @returns Validation result and user-facing error when invalid
+ */
+export function validateRepositoryName(repoName: string): RepositoryNameValidationResult {
+  const trimmedRepoName = repoName?.trim() ?? '';
+
+  if (!trimmedRepoName) {
+    return { isValid: false, error: 'Invalid repository name: repository name is required.' };
+  }
+
+  if (trimmedRepoName.length > 100) {
+    return {
+      isValid: false,
+      error: 'Invalid repository name: use 100 characters or fewer.',
+    };
+  }
+
+  if (!/^[A-Za-z0-9._-]+$/.test(trimmedRepoName)) {
+    return {
+      isValid: false,
+      error:
+        'Invalid repository name: use only letters, numbers, periods, underscores, and hyphens.',
+    };
+  }
+
+  if (trimmedRepoName.startsWith('-') || trimmedRepoName.endsWith('-')) {
+    return {
+      isValid: false,
+      error: 'Invalid repository name: do not start or end with a hyphen.',
+    };
+  }
+
+  if (trimmedRepoName.includes('--')) {
+    return {
+      isValid: false,
+      error: 'Invalid repository name: double hyphens are not allowed.',
+    };
+  }
+
+  return { isValid: true };
+}
+
+/**
  * Validates if the form can be saved
  * @param repoName - Repository name
  * @param branch - Branch name
@@ -100,7 +149,7 @@ export function shouldShowDropdown(
  * @returns True if form can be saved
  */
 export function canSaveForm(repoName: string, branch: string, isSaving: boolean = false): boolean {
-  return !!(repoName?.trim() && branch?.trim()) && !isSaving;
+  return validateRepositoryName(repoName).isValid && !!branch?.trim() && !isSaving;
 }
 
 /**

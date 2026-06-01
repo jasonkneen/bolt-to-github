@@ -293,8 +293,10 @@ export class BackgroundService {
       };
 
       if (message.action === 'PUSH_TO_GITHUB') {
-        this.handlePushToGitHub();
-        sendResponse({ success: true });
+        return runAsync(async () => {
+          const response = await this.handlePushToGitHub();
+          sendResponse(response);
+        });
       } else if (message.type === 'FILE_CHANGES') {
         logger.info('📄 Received file changes, forwarding to popup');
         // Forward file changes to popup
@@ -1192,7 +1194,7 @@ export class BackgroundService {
     }
   }
 
-  private async handlePushToGitHub(): Promise<void> {
+  private async handlePushToGitHub(): Promise<{ success: boolean; error?: string }> {
     logger.info('🔄 Handling Push to GitHub action');
 
     try {
@@ -1202,7 +1204,7 @@ export class BackgroundService {
 
       if (!boltTab || !boltTab.id) {
         logger.error('No active Bolt tab found');
-        return;
+        return { success: false, error: 'No active Bolt tab found' };
       }
 
       const tabId = boltTab.id;
@@ -1210,7 +1212,7 @@ export class BackgroundService {
 
       if (!port) {
         logger.error('No connected port for tab:', tabId);
-        return;
+        return { success: false, error: 'No connected Bolt content script' };
       }
 
       // Send a message to the content script to trigger the GitHub push action
@@ -1219,8 +1221,13 @@ export class BackgroundService {
       });
 
       logger.info('✅ Push to GitHub message sent to content script');
+      return { success: true };
     } catch (error) {
       logger.error('Error handling Push to GitHub action:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to start Push to GitHub',
+      };
     }
   }
 
