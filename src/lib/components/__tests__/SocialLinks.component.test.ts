@@ -118,6 +118,67 @@ describe('SocialLinks', () => {
     });
   });
 
+  describe('ADC Fix engagement tracking', () => {
+    const DEFAULT_ADC_FIX_HELP_URL =
+      'https://fix.aidrivencoder.com?utm_source=extension&utm_medium=popup&utm_campaign=expert_help';
+
+    it('should send an adc_fix_link_clicked analytics event when help is clicked', async () => {
+      const sendMessage = vi.fn();
+      Object.defineProperty(window, 'chrome', {
+        value: {
+          tabs: { create: vi.fn() },
+          runtime: { sendMessage },
+        },
+        writable: true,
+        configurable: true,
+      });
+
+      const user = userEvent.setup();
+      render(SocialLinks, { props: mockProps });
+
+      await user.click(screen.getByRole('button', { name: /stuck\? get expert help/i }));
+
+      expect(sendMessage).toHaveBeenCalledWith({
+        type: 'ANALYTICS_EVENT',
+        eventType: 'extension_event',
+        eventData: {
+          eventType: 'adc_fix_link_clicked',
+          details: {
+            link_location: 'popup_home',
+            link_url: mockProps.HELP_LINK,
+          },
+        },
+      });
+      expect(chrome.tabs.create).toHaveBeenCalledWith({ url: mockProps.HELP_LINK });
+    });
+
+    it('should default the help link to the UTM-tagged ADC Fix URL', async () => {
+      const user = userEvent.setup();
+      render(SocialLinks, {
+        props: {
+          GITHUB_LINK: mockProps.GITHUB_LINK,
+          YOUTUBE_LINK: mockProps.YOUTUBE_LINK,
+          COFFEE_LINK: mockProps.COFFEE_LINK,
+        },
+      });
+
+      await user.click(screen.getByRole('button', { name: /stuck\? get expert help/i }));
+
+      expect(chrome.tabs.create).toHaveBeenCalledWith({ url: DEFAULT_ADC_FIX_HELP_URL });
+    });
+
+    it('should still open the help link when analytics messaging is unavailable', async () => {
+      // The file-level beforeEach chrome mock provides tabs.create only — no
+      // runtime — so this exercises the missing chrome.runtime path for real.
+      const user = userEvent.setup();
+      render(SocialLinks, { props: mockProps });
+
+      await user.click(screen.getByRole('button', { name: /stuck\? get expert help/i }));
+
+      expect(chrome.tabs.create).toHaveBeenCalledWith({ url: mockProps.HELP_LINK });
+    });
+  });
+
   describe('Customization', () => {
     it('should use custom links when provided', async () => {
       const user = userEvent.setup();

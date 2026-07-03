@@ -1,0 +1,161 @@
+schema: '2'
+goal: Instrument the popup's existing ADC Fix help button with an analytics event and UTM-tagged destination so extension-driven ADC Fix engagement becomes measurable.
+description: |
+  The popup already promotes ADC Fix prominently: SocialLinks renders a
+  full-width "Stuck? Get Expert Help" button on the home tab pointing at
+  fix.aidrivencoder.com, and the Help tab has a text link. Neither click is
+  tracked, and the destination carries no attribution, so ADC Fix visits from
+  the extension are invisible in GA (they land as direct/none on the ADC Fix
+  property). Rather than adding a duplicate link, this manifest instruments
+  the existing surface.
+
+  Rationale for design choices:
+  - Clicks send the existing ANALYTICS_EVENT runtime message with
+    eventType extension_event and a nested adc_fix_link_clicked event, so the
+    background AnalyticsService handles delivery with zero background changes.
+  - Analytics is fire-and-forget and guarded: a missing or failing
+    chrome.runtime must never prevent the help tab from opening (repo
+    philosophy: analytics must never break UX).
+  - Only the default HELP_LINK value gains UTM parameters
+    (utm_source=extension&utm_medium=popup&utm_campaign=expert_help);
+    caller-provided overrides are opened verbatim so existing behavioral
+    tests and customization semantics stay intact.
+  - The Help tab text link gains matching UTM parameters
+    (utm_campaign=help_tab) as an uncontracted touch; its tests pin other
+    hrefs but not this one.
+type: feature
+files:
+  edit:
+  - path: src/lib/components/SocialLinks.svelte
+    artifacts:
+    - kind: function
+      name: SocialLinks
+      args:
+      - name: props
+        type: SocialLinks component props
+      returns: Svelte component instance
+      description: |
+        Social action buttons for the popup. Clicking the expert-help button
+        sends a guarded fire-and-forget ANALYTICS_EVENT extension_event
+        runtime message (nested eventType adc_fix_link_clicked with
+        link_location popup_home and the resolved link_url) and then opens
+        HELP_LINK in a new tab. The HELP_LINK default is the UTM-tagged ADC
+        Fix URL; explicit HELP_LINK props are opened unchanged. All other
+        buttons keep their existing behavior.
+  - path: src/lib/components/__tests__/SocialLinks.component.test.ts
+    artifacts:
+    - kind: test_function
+      name: should send an adc_fix_link_clicked analytics event when help is clicked
+      description: Verifies the help click sends the ANALYTICS_EVENT extension_event message with adc_fix_link_clicked details and still opens the link.
+    - kind: test_function
+      name: should default the help link to the UTM-tagged ADC Fix URL
+      description: Verifies that without a HELP_LINK prop the opened URL is the ADC Fix URL with extension/popup/expert_help UTM parameters.
+    - kind: test_function
+      name: should still open the help link when analytics messaging is unavailable
+      description: Verifies the help tab opens even when chrome.runtime is missing so analytics can never block the CTA.
+  read:
+  - src/popup/components/HomeTabContent.svelte
+  - src/lib/components/Help.svelte
+  - src/background/BackgroundService.ts
+  - src/lib/utils/analytics.ts
+validate:
+- pnpm exec vitest run src/lib/components/__tests__/SocialLinks.component.test.ts
+created: '2026-07-03T09:50:10Z'
+metadata:
+  tags:
+  - analytics
+  - adc-fix
+  - popup
+  - conversion
+  priority: high
+temptations:
+- risk: Do not let analytics messaging block or delay opening the help tab.
+  instead: Send the runtime message fire-and-forget inside a try/catch with optional chaining before chrome.tabs.create.
+- risk: Do not append UTM parameters to caller-provided HELP_LINK overrides.
+  instead: Put the UTM-tagged URL only in the prop default so custom links open verbatim.
+- risk: Do not add a new background message type for this event.
+  instead: Reuse the existing ANALYTICS_EVENT extension_event path handled by BackgroundService.handleAnalyticsEvent.
+- risk: Do not weaken or rewrite the existing SocialLinks behavioral tests to make tracking fit.
+  instead: Keep all existing assertions green; add new tests for the tracking, UTM default, and degraded-runtime behaviors.
+outcome:
+  status: completed
+  summary: |
+    The popup's expert-help button now sends adc_fix_link_clicked through the
+    existing sendAnalyticsToBackground helper before opening the tab, and the
+    HELP_LINK default plus the Help tab service link carry UTM attribution
+    (utm_source=extension, utm_medium=popup, campaigns expert_help and
+    help_tab). Explicit HELP_LINK overrides still open verbatim and all
+    pre-existing SocialLinks behaviors are unchanged.
+  rationale: |
+    The popup already promoted ADC Fix prominently but clicks were untracked
+    and visits landed as direct/none on the ADC Fix GA property. Instrumenting
+    the existing surface instead of adding a duplicate link keeps the popup
+    uncluttered while making the extension-to-service funnel measurable end to
+    end (extension event + UTM source attribution).
+  lessons:
+    - lesson_type: reuse-analytics-boundary
+      summary: |
+        Popup components should send analytics through the existing
+        sendAnalyticsToBackground helper and the ANALYTICS_EVENT
+        extension_event envelope; the guard in the helper already makes a
+        missing chrome.runtime unable to block user-facing actions.
+      tags:
+        - analytics
+        - popup
+        - resilience
+      paths:
+        - src/lib/utils/analytics.ts
+        - src/lib/components/SocialLinks.svelte
+  review_notes:
+    - source: maid-plan-reviewer subagent
+      severity: approved
+      summary: |
+        Plan approved: genuine red phase (2 intended failures), purely additive
+        test changes, envelope verified against
+        BackgroundService.handleAnalyticsEvent, task-specific temptations.
+    - source: maid-implementation-reviewer subagent
+      severity: ready
+      summary: |
+        Ready to merge. Confirmed lock hash integrity, genuine degraded-runtime
+        coverage, UTM default reaching production via HomeTabContent, payload
+        shape matching the background handler, and CHANGELOG/README accuracy
+        against main..HEAD. Should-fix adopted: release-prep files land in a
+        separate chore commit. Noted the repo-wide maid verify file_tracking
+        stage fails with 241 pre-existing undeclared brownfield files (244 at
+        baseline; this change reduces the count) — pre-existing, not
+        attributable to this work.
+  validation:
+    - command:
+        - pnpm
+        - exec
+        - vitest
+        - run
+        - src/lib/components/__tests__/SocialLinks.component.test.ts
+      status: passed
+      summary: 11/11 SocialLinks behavioral tests pass, including the three new tracking tests.
+    - command:
+        - maid
+        - validate
+        - manifests/track-popup-adc-fix-help-clicks.manifest.yaml
+        - --mode
+        - implementation
+      status: passed
+      summary: Implementation validation passed.
+    - command:
+        - maid
+        - verify
+        - --base-ref
+        - main
+        - --include-tests
+      status: passed
+      summary: Schema, behavioral, implementation, and coherence stages passed; the file_tracking stage fails only on the pre-existing brownfield backlog (fewer undeclared files than baseline).
+    - command:
+        - pnpm
+        - lint-check
+      status: passed
+      summary: ESLint and svelte-check clean.
+    - command:
+        - pnpm
+        - build
+      status: passed
+      summary: Production extension build succeeded at version 1.3.19.
