@@ -188,11 +188,15 @@ export class AnalyticsService {
     if (!(await this.isAnalyticsEnabled())) return;
 
     try {
+      const normalizedPath = pagePath.startsWith('/') ? pagePath : `/${pagePath}`;
+      const resolvedTitle = pageTitle || 'Bolt to GitHub Extension';
+
       const eventData = {
         name: 'page_view',
         params: {
-          page_location: `chrome-extension://${chrome.runtime.id}${pagePath}`,
-          page_title: pageTitle || 'Bolt to GitHub Extension',
+          page_location: `chrome-extension://${chrome.runtime.id}${normalizedPath}`,
+          page_title: resolvedTitle,
+          page_path: normalizedPath,
           engagement_time_msec: 1,
         },
       };
@@ -301,6 +305,7 @@ export class AnalyticsService {
       const enhancedEventData = {
         ...eventData,
         params: {
+          platform: 'extension',
           ...eventData.params,
           app_version: version,
         },

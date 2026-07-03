@@ -603,6 +603,17 @@ describe('AnalyticsService Enhanced Features', () => {
       expect(callBody.events[0].params.page_location).toContain('chrome-extension://');
       expect(callBody.events[0].params.page_location).toContain('test-extension-id');
     });
+
+    it('should not attach stale page view context to later background events', async () => {
+      await analyticsService.trackPageView('/popup', 'Extension Popup');
+      await analyticsService.trackGitHubOperation('push', true);
+
+      const operationBody = JSON.parse(mockFetch.mock.calls[1][1].body);
+      expect(operationBody.events[0].name).toBe('push_success');
+      expect(operationBody.events[0].params.page_location).toBeUndefined();
+      expect(operationBody.events[0].params.page_path).toBeUndefined();
+      expect(operationBody.events[0].params.page_title).toBeUndefined();
+    });
   });
 
   describe('Service Worker Compatibility', () => {

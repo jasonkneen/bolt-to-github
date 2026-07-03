@@ -43,6 +43,7 @@ import {
   trackOperationPerformance,
   trackUserJourneyMilestone,
   trackOperationResult,
+  resolveExtensionPageTitle,
   trackFeatureUsageWithVersion,
   trackDailyActiveUser,
   withAnalytics,
@@ -56,6 +57,18 @@ describe('analytics utilities', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  describe('resolveExtensionPageTitle', () => {
+    it('returns metadata title when provided', () => {
+      expect(resolveExtensionPageTitle('popup', 'Custom Title')).toBe('Custom Title');
+    });
+
+    it('maps known extension pages to readable titles', () => {
+      expect(resolveExtensionPageTitle('popup')).toBe('Bolt to GitHub - Popup');
+      expect(resolveExtensionPageTitle('/logs')).toBe('Bolt to GitHub - Logs');
+      expect(resolveExtensionPageTitle('unknown')).toBe('Bolt to GitHub Extension');
+    });
   });
 
   describe('ANALYTICS_EVENTS constants', () => {

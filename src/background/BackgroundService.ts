@@ -16,6 +16,7 @@ import type {
 import { createLogger, getLogStorage } from '../lib/utils/logger';
 import { extractProjectIdFromUrl } from '../lib/utils/projectId';
 import { analytics } from '../services/AnalyticsService';
+import { resolveExtensionPageTitle } from '../lib/utils/analytics';
 import { BoltProjectSyncService } from '../services/BoltProjectSyncService';
 import { UnifiedGitHubService } from '../services/UnifiedGitHubService';
 import { ZipHandler } from '../services/zipHandler';
@@ -1166,8 +1167,11 @@ export class BackgroundService {
 
         case 'page_view':
           await analytics.trackPageView(
-            eventData.page || '/unknown',
-            String(eventData.metadata?.title || 'Extension Page')
+            eventData.page ? `/${String(eventData.page).replace(/^\//, '')}` : '/unknown',
+            resolveExtensionPageTitle(
+              String(eventData.page || 'unknown'),
+              eventData.metadata?.title ? String(eventData.metadata.title) : undefined
+            )
           );
           break;
 

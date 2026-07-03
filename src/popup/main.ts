@@ -11,7 +11,10 @@ chrome.runtime.sendMessage({
   eventType: 'page_view',
   eventData: {
     page: 'popup',
-    metadata: { timestamp: new Date().toISOString() },
+    metadata: {
+      title: 'Bolt to GitHub - Popup',
+      timestamp: new Date().toISOString(),
+    },
   },
 });
 
