@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-07-03 - Version 1.3.19
+
+### 📊 Analytics & Attribution
+
+- **Readable Extension Page Titles** - Popup, logs, options, and onboarding page views now report explicit titles (e.g. "Bolt to GitHub - Popup") instead of the generic "Extension Page" bucket, include normalized page paths, and tag every analytics event with `platform: extension`
+- **ADC Fix Engagement Tracking** - The "Stuck? Get Expert Help" button now sends an `adc_fix_link_clicked` event, and both it and the Help tab service link carry UTM attribution so extension-driven visits to fix.aidrivencoder.com are measurable
+
+### 🐛 Bug Fixes
+
+- **Repository Error Flows** - Consistent repository-name validation, retryable push errors surfaced in ProjectStatus and FileChangesModal, and GitHubSettings draft fields stay synchronized when project settings change
+- **MV3 Message Channel Hardening** - The runtime message listener no longer registers an async handler directly; async response branches return `true` synchronously, rejected async work surfaces through `sendResponse`, and unmatched messages release the response channel
+- **Release Validation Noise** - Vite manifest JSON import attributes, validator-visible CRX manifest asset overrides, and a quiet ZIP behavioral regression test
+
+### 🧪 Testing & Quality
+
+- **Bolt Toolbar Capture Coverage** - Script-level Vitest coverage for the toolbar DOM snapshot helpers (current Publish-anchored toolbar, legacy `ml-auto` fallback, structured candidate collection), with `scripts/__tests__` now first-class in the shared Vitest config
+- **E2E Error-Flow Coverage** - Focused end-to-end tests for invalid repository names and push retry behavior
+
+### 🛠️ Developer Experience
+
+- **MAID Workflow Onboarding** - Manifest-driven development with plan locks and outcome records now governs extension changes, plus extension maintenance skills and a hardening backlog
+
 ## 2026-05-30 - Version 1.3.18
 
 ### 🐛 Bug Fixes

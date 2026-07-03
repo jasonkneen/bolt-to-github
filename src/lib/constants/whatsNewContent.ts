@@ -6,6 +6,16 @@ export interface WhatsNewVersion {
 }
 
 export const whatsNewContent: Record<string, WhatsNewVersion> = {
+  '1.3.19': {
+    date: '2026-07-03',
+    highlights: [
+      '🛡️ Clearer Push Errors – Failed pushes now surface what went wrong with a retry option instead of failing silently',
+      '📝 Repository Name Validation – Invalid repository names are caught consistently before a push can fail',
+      '🔄 More Reliable Messaging – Hardened communication between the popup, content scripts, and background service',
+    ],
+    details: `This release focuses on reliability. Push failures now tell you what went wrong and let you retry right away, repository settings validate names consistently, and the extension's internal messaging was hardened so actions and responses are never silently dropped.`,
+    type: 'patch',
+  },
   '1.3.18': {
     date: '2026-05-30',
     highlights: [
