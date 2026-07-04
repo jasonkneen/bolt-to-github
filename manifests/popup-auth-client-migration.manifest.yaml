@@ -1,0 +1,259 @@
+# draft-kind: auth-lifecycle-refactor (6 of 8)
+schema: '2'
+goal: 'Popup consumes background auth via a message client, not its own instance'
+type: refactor
+description: |
+  The popup currently calls SupabaseAuthService.getInstance() (GitHubSettings
+  connect/refresh buttons, githubAppSync helpers), creating a full second auth
+  service in the popup context: its own timers, its own tab listeners, its own
+  token refreshes racing the background for the same rotating refresh token,
+  and its own view of auth state that dies with the popup window. This is why
+  "refresh the auth in the extension" repaired storage but never repaired the
+  background.
+
+  Fix contract: a new BackgroundAuthClient (src/lib/services/) wraps the draft-5
+  message endpoints; popup code paths use it exclusively. The popup must not
+  import or instantiate SupabaseAuthService in any code path. Existing exported
+  signatures of githubAppSync.ts are preserved — only their internal auth
+  access is rewired — so GitHubSettings.svelte and githubAppSync.ts are
+  touched-but-uncontracted call-site rewiring (files.read), per repo MAID
+  convention.
+
+  Rationale: a thin typed client (rather than scattering raw sendMessage calls)
+  gives one seam to fake in popup tests and one place to translate messaging
+  errors into visible failures (fail-loud policy: a dead background must
+  surface as an error state in the popup, not as silently stale data).
+temptations:
+  - risk: 'Do not leave a "temporary" SupabaseAuthService.getInstance() in any popup path for convenience — one leftover copy reintroduces the refresh-token race.'
+    instead: 'Rewire every popup call site to BackgroundAuthClient; keep the no-direct-import guard test from draft 7 in mind (it scans popup and lib paths too).'
+  - risk: 'Do not swallow sendMessage failures and return a default unauthenticated state as if it were real.'
+    instead: 'Reject/return explicit error results so the popup UI can render a visible degraded state; test the background-unreachable case explicitly.'
+  - risk: 'Do not mock chrome.runtime.sendMessage per-test with ad-hoc shapes.'
+    instead: 'Drive tests through the draft-5 AuthMessageResponse contract so client and router cannot drift apart.'
+files:
+  create:
+    - path: src/lib/services/BackgroundAuthClient.ts
+      artifacts:
+        - kind: class
+          name: BackgroundAuthClient
+          description: |
+            Message-based client for the background auth authority. Constructor
+            takes no arguments and performs no I/O; every method sends one
+            typed runtime message and translates the AuthMessageResponse,
+            throwing on transport failure or success=false.
+        - kind: method
+          name: getAuthState
+          of: BackgroundAuthClient
+          args: []
+          returns: Promise<AuthState>
+        - kind: method
+          name: forceCheck
+          of: BackgroundAuthClient
+          args: []
+          returns: Promise<void>
+        - kind: method
+          name: enterPostConnectionMode
+          of: BackgroundAuthClient
+          args: []
+          returns: Promise<void>
+        - kind: method
+          name: syncGitHubApp
+          of: BackgroundAuthClient
+          args: []
+          returns: Promise<boolean>
+        - kind: method
+          name: validateSubscription
+          of: BackgroundAuthClient
+          args: []
+          returns: Promise<boolean>
+        - kind: method
+          name: logout
+          of: BackgroundAuthClient
+          args: []
+          returns: Promise<void>
+    - path: src/lib/services/__tests__/BackgroundAuthClient.test.ts
+      artifacts:
+        - kind: test_function
+          name: getAuthState returns the auth state provided by the background
+        - kind: test_function
+          name: forceCheck resolves when background acknowledges
+        - kind: test_function
+          name: enterPostConnectionMode sends the post-connection message
+        - kind: test_function
+          name: syncGitHubApp and validateSubscription return background results
+        - kind: test_function
+          name: logout resolves on background acknowledgement
+        - kind: test_function
+          name: transport failure surfaces as a thrown error not a fake state
+        - kind: test_function
+          name: background error responses are thrown with the background message
+  read:
+    - src/lib/components/GitHubSettings.svelte
+    - src/lib/utils/githubAppSync.ts
+    - src/lib/utils/__tests__/githubAppSync.test.ts
+    - src/background/AuthMessageRouter.ts
+    - src/content/services/SupabaseAuthService.ts
+validate:
+  - pnpm exec vitest run src/lib/services/__tests__/BackgroundAuthClient.test.ts src/lib/utils/__tests__/githubAppSync.test.ts
+  - pnpm lint
+  - pnpm check
+created: '2026-07-04T01:08:46Z'
+metadata:
+  tags:
+    - auth
+    - popup
+    - architecture
+  priority: high
+  status: implementation
+  depends_on:
+    - background-auth-message-endpoints
+  promotion_ready: true
+  notes: |
+    Behavioral tests are added during promotion and red phase must be confirmed
+    before production implementation. GitHubSettings.svelte, githubAppSync.ts,
+    and the existing githubAppSync tests are call-site rewiring only
+    (files.read); if their public surface must change during implementation,
+    stop and evolve this manifest instead of widening scope silently.
+outcome:
+  status: completed
+  summary: |
+    Promoted and implemented the popup auth client migration. BackgroundAuthClient
+    now wraps the background auth runtime messages for auth state, force checks,
+    post-connection mode, GitHub App sync, subscription validation, and logout.
+    Popup GitHub App connection paths and githubAppSync helpers now use the
+    background client instead of instantiating SupabaseAuthService in the popup.
+  rationale: |
+    The popup now delegates auth authority to the background service worker,
+    removing the local popup auth singleton that could race the background for
+    rotating Supabase refresh tokens. Background transport and response errors
+    fail loudly through thrown client errors, utility result messages, and the
+    existing visible GitHub App connection error state.
+  lessons:
+    - lesson_type: popup-auth-boundary
+      summary: |
+        Popup auth migrations should introduce a typed runtime-message client
+        and rewire call sites through that client; type-only AuthState imports
+        are acceptable, but popup code must not instantiate SupabaseAuthService.
+      tags:
+        - auth
+        - popup
+        - architecture
+      paths:
+        - src/lib/services/BackgroundAuthClient.ts
+        - src/lib/components/GitHubSettings.svelte
+        - src/lib/utils/githubAppSync.ts
+    - lesson_type: fail-loud-popup-runtime-client
+      summary: |
+        Runtime auth clients should validate response shape and throw on
+        transport failure, success=false, or missing payload fields instead of
+        returning a fake unauthenticated/default state.
+      tags:
+        - auth
+        - error-handling
+        - testing
+      paths:
+        - src/lib/services/BackgroundAuthClient.ts
+        - src/lib/services/__tests__/BackgroundAuthClient.test.ts
+  review_notes:
+    - source: fallback self-review
+      severity: ready
+      summary: |
+        Independent subagent review was unavailable under the current tool
+        policy without explicit user authorization. The fallback review found
+        no implementation findings: changed files stayed within promoted
+        manifest scope, declared artifacts exist, direct popup/lib
+        SupabaseAuthService.getInstance() usage was removed, type-only AuthState
+        imports are the only remaining SupabaseAuthService references under
+        src/lib and src/popup, and manifest validation passed.
+    - source: local validation
+      severity: existing repo-level gate blocker
+      summary: |
+        Full active `./scripts/maid test --manifest-dir manifests` remains
+        blocked before running commands by the pre-existing
+        repair-e2e-error-flow-product-behavior E231 Playwright fast-gate issue.
+        Focused manifest testing, active schema/behavioral/implementation
+        validation, lint, check, and the full Vitest CI suite passed.
+  validation:
+    - command:
+        - pnpm
+        - exec
+        - vitest
+        - run
+        - src/lib/services/__tests__/BackgroundAuthClient.test.ts
+      status: failed-red-phase
+      summary: |
+        Pre-implementation red phase failed for the intended reason:
+        BackgroundAuthClient did not exist, so the test import could not
+        resolve.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/popup-auth-client-migration.manifest.yaml
+        - --mode
+        - behavioral
+      status: passed
+      summary: Promoted manifest behavioral validation passed.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/popup-auth-client-migration.manifest.yaml
+        - --mode
+        - implementation
+      status: passed
+      summary: Promoted manifest implementation validation passed.
+    - command:
+        - ./scripts/maid
+        - test
+        - --manifest
+        - manifests/popup-auth-client-migration.manifest.yaml
+      status: passed
+      summary: |
+        Promoted manifest test runner passed the focused BackgroundAuthClient
+        and githubAppSync Vitest tests, lint, and svelte-check.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - schema
+      status: passed
+      summary: Full active manifest schema validation passed for 14 manifests.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - behavioral
+      status: passed
+      summary: Full active manifest behavioral validation passed for 14 manifests.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - implementation
+      status: passed
+      summary: Full active manifest implementation validation passed for 14 manifests.
+    - command:
+        - ./scripts/maid
+        - test
+        - --manifest-dir
+        - manifests
+      status: failed-existing-blocker
+      summary: |
+        Full active manifest test runner executed zero commands because the
+        existing repair-e2e-error-flow-product-behavior manifest triggers E231
+        for a Playwright validate command in the fast behavioral gate.
+    - command:
+        - pnpm
+        - test:ci
+        - --
+        - src/lib/services/__tests__/BackgroundAuthClient.test.ts
+        - src/lib/utils/__tests__/githubAppSync.test.ts
+      status: passed
+      summary: |
+        Command expanded to the full Vitest suite; all 180 test files and 4265
+        tests passed.

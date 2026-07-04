@@ -3,7 +3,7 @@
  * Helper functions to sync GitHub App installation from web app to extension
  */
 
-import { SupabaseAuthService } from '../../content/services/SupabaseAuthService';
+import { BackgroundAuthClient } from '../services/BackgroundAuthClient';
 import { ChromeStorageService } from '../services/chromeStorage';
 import { createLogger } from './logger';
 
@@ -20,10 +20,10 @@ export async function syncGitHubAppFromWebApp(): Promise<{
   try {
     logger.info('🔄 Starting manual GitHub App sync...');
 
-    const authService = SupabaseAuthService.getInstance();
+    const authClient = new BackgroundAuthClient();
 
     // Check current authentication state
-    const authState = authService.getAuthState();
+    const authState = await authClient.getAuthState();
     if (!authState.isAuthenticated) {
       return {
         success: false,
@@ -33,7 +33,7 @@ export async function syncGitHubAppFromWebApp(): Promise<{
     }
 
     // Trigger the sync
-    const syncResult = await authService.syncGitHubApp();
+    const syncResult = await authClient.syncGitHubApp();
 
     if (!syncResult) {
       return {
@@ -44,7 +44,7 @@ export async function syncGitHubAppFromWebApp(): Promise<{
     }
 
     // Check if GitHub App is now configured
-    const hasGitHubApp = await authService.hasGitHubApp();
+    const hasGitHubApp = (await checkGitHubAppStatus()).isConfigured;
 
     if (hasGitHubApp) {
       return {
@@ -143,7 +143,7 @@ export async function refreshGitHubAppToken(): Promise<{
   message: string;
 }> {
   try {
-    const authService = SupabaseAuthService.getInstance();
+    const authClient = new BackgroundAuthClient();
 
     // Clear current token to force refresh
     await ChromeStorageService.saveGitHubAppConfig({
@@ -151,7 +151,7 @@ export async function refreshGitHubAppToken(): Promise<{
     });
 
     // Trigger sync to get fresh token
-    const syncResult = await authService.syncGitHubApp();
+    const syncResult = await authClient.syncGitHubApp();
 
     if (syncResult) {
       return {

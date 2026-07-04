@@ -16,6 +16,7 @@
   } from 'lucide-svelte';
   import { onMount, tick } from 'svelte';
   import { UnifiedGitHubService } from '../../services/UnifiedGitHubService';
+  import { BackgroundAuthClient } from '$lib/services/BackgroundAuthClient';
   import { GITHUB_APP_AUTH_URL } from '$lib/constants';
   import {
     hasRequiredSettings,
@@ -701,16 +702,17 @@
 
       // Enter aggressive detection mode for faster connection detection
       try {
-        const { SupabaseAuthService } = await import('../../content/services/SupabaseAuthService');
-        const authService = SupabaseAuthService.getInstance();
-        authService.enterPostConnectionMode();
+        const authClient = new BackgroundAuthClient();
+        await authClient.enterPostConnectionMode();
         logger.info('🚀 Entered post-connection detection mode for faster GitHub authentication');
-      } catch (importError) {
-        logger.warn('Could not enter post-connection mode:', importError);
+        githubAppConnectionError = null;
+      } catch (authError) {
+        logger.warn('Could not enter post-connection mode:', authError);
+        githubAppConnectionError =
+          authError instanceof Error
+            ? authError.message
+            : 'Could not start GitHub connection detection';
       }
-
-      // Show success message
-      githubAppConnectionError = null;
     } catch (error) {
       logger.error('Error connecting GitHub App:', error);
       githubAppConnectionError =
@@ -723,12 +725,14 @@
   // Manual refresh function for GitHub connection detection
   async function refreshGitHubConnection() {
     try {
-      const { SupabaseAuthService } = await import('../../content/services/SupabaseAuthService');
-      const authService = SupabaseAuthService.getInstance();
-      await authService.forceCheck();
+      const authClient = new BackgroundAuthClient();
+      await authClient.forceCheck();
+      githubAppConnectionError = null;
       logger.info('🔄 Manually triggered GitHub connection check');
     } catch (error) {
       logger.error('Error refreshing GitHub connection:', error);
+      githubAppConnectionError =
+        error instanceof Error ? error.message : 'Failed to refresh GitHub connection';
     }
   }
 
