@@ -1,4 +1,4 @@
-import { test as base, chromium, type BrowserContext } from '@playwright/test';
+import { test as base, chromium, type BrowserContext, type Page } from '@playwright/test';
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
@@ -15,6 +15,37 @@ type ExtensionFixtures = {
  * Path to the built extension
  */
 const extensionPath = path.join(process.cwd(), 'dist');
+
+const isExternalOnboardingPage = (url: string) =>
+  url.startsWith('https://bolt2github.com/welcome') ||
+  url.startsWith('https://bolt2github.com/onboarding');
+
+async function closeExternalOnboardingPage(page: Page) {
+  try {
+    if (isExternalOnboardingPage(page.url()) && !page.isClosed()) {
+      await page.close();
+    }
+  } catch {
+    // Ignore races with Chrome closing pages during test cleanup.
+  }
+}
+
+function suppressExternalOnboardingPages(context: BrowserContext) {
+  const watchPage = (page: Page) => {
+    page.on('framenavigated', () => {
+      void closeExternalOnboardingPage(page);
+    });
+    page.on('load', () => {
+      void closeExternalOnboardingPage(page);
+    });
+    void closeExternalOnboardingPage(page);
+  };
+
+  context.on('page', watchPage);
+  for (const page of context.pages()) {
+    watchPage(page);
+  }
+}
 
 /**
  * Playwright fixture for Chrome extension testing
@@ -48,6 +79,8 @@ export const test = base.extend<ExtensionFixtures>({
       ],
     });
 
+    suppressExternalOnboardingPages(context);
+
     await use(context);
     await context.close();
 
@@ -59,45 +92,17 @@ export const test = base.extend<ExtensionFixtures>({
     }
   },
 
-  // Extract extension ID from the chrome://extensions page
+  // Extract extension ID from the Manifest V3 service worker URL
   extensionId: async ({ context }, use) => {
-    // Navigate to chrome://extensions to find the extension ID
-    const page = await context.newPage();
+    let [serviceWorker] = context.serviceWorkers();
+    serviceWorker ??= await context.waitForEvent('serviceworker', { timeout: 30000 });
+    const extensionId = serviceWorker.url().split('/')[2];
 
-    try {
-      await page.goto('chrome://extensions', { timeout: 10000 });
-
-      // Enable developer mode by clicking the toggle
-      const devModeToggle = page.locator('cr-toggle#devMode');
-      await devModeToggle.waitFor({ state: 'visible', timeout: 5000 });
-
-      // Check if developer mode is already enabled
-      const isEnabled = await devModeToggle.evaluate((el: HTMLElement) => {
-        return el.hasAttribute('checked');
-      });
-
-      if (!isEnabled) {
-        await devModeToggle.click();
-        await page.waitForTimeout(500);
-      }
-
-      // Get the extension ID from the extension card
-      const extensionCard = page.locator('extensions-item').first();
-      await extensionCard.waitFor({ state: 'visible', timeout: 5000 });
-      const extensionId = await extensionCard.getAttribute('id');
-
-      if (!extensionId) {
-        throw new Error(
-          'Could not find extension ID. Make sure the extension is built in the dist folder.'
-        );
-      }
-
-      await page.close();
-      await use(extensionId);
-    } catch (error) {
-      await page.close();
-      throw error;
+    if (!extensionId) {
+      throw new Error('Could not find extension ID. Make sure the extension is built in dist/.');
     }
+
+    await use(extensionId);
   },
 });
 

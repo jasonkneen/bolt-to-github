@@ -686,6 +686,61 @@ describe('FileChangesModal.svelte', () => {
     });
   });
 
+  describe('Push Failure Handling', () => {
+    it('displays push failure errors returned by the background service', async () => {
+      const user = userEvent.setup();
+      const fileChanges = createFileChangesMap([
+        ['file1.ts', { status: 'added', path: 'file1.ts' }],
+      ]);
+      chromeMocks.runtime.sendMessage.mockResolvedValueOnce({
+        success: false,
+        error: 'No active Bolt tab found',
+      });
+
+      render(FileChangesModal, {
+        props: {
+          show: true,
+          fileChanges,
+        },
+      });
+
+      const pushButton = await screen.findByText(/Push \(1\)/);
+      await user.click(pushButton.closest('button')!);
+
+      expect(await screen.findByText(/Push failed: No active Bolt tab found/i)).toBeInTheDocument();
+    });
+
+    it('keeps push retry available after a failed modal push', async () => {
+      const user = userEvent.setup();
+      const fileChanges = createFileChangesMap([
+        ['file1.ts', { status: 'added', path: 'file1.ts' }],
+      ]);
+      chromeMocks.runtime.sendMessage.mockResolvedValue({
+        success: false,
+        error: 'No connected Bolt content script',
+      });
+
+      render(FileChangesModal, {
+        props: {
+          show: true,
+          fileChanges,
+        },
+      });
+
+      const pushButton = (await screen.findByText(/Push \(1\)/)).closest('button')!;
+      await user.click(pushButton);
+
+      expect(
+        await screen.findByText(/Push failed: No connected Bolt content script/i)
+      ).toBeInTheDocument();
+      expect(pushButton).toBeEnabled();
+
+      await user.click(pushButton);
+
+      expect(chromeMocks.runtime.sendMessage).toHaveBeenCalledTimes(2);
+    });
+  });
+
   describe('Close Modal', () => {
     it('should close modal when Close button is clicked', async () => {
       const user = userEvent.setup();

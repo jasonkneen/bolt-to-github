@@ -1,0 +1,96 @@
+{
+  "manifest_path": "manifests/extension-analytics-page-context.manifest.yaml",
+  "manifest_hash": "sha256:e190119e36c0f1cb62594f1f5c6d0efc02a57b818172d1271f7d4623449bdb80",
+  "test_hashes": {
+    "src/lib/utils/__tests__/analytics.test.ts": "sha256:fb78988a9299593e04ab48be674f78050fe49a34cf48111f89e19f319c4c4002",
+    "src/services/__tests__/AnalyticsService.enhanced.test.ts": "sha256:8300f87d74afd2ba43614f77f3082f2baff9d249d1ec74fc80f9c8640c4624fe"
+  },
+  "created_at": "2026-07-03T06:54:36.333811+00:00",
+  "revision": 4,
+  "revisions": [
+    {
+      "prior_manifest_hash": "sha256:e29876be67fe57ebabb7a1ef9f33951b2d72c3ef3afd733021895222a2366748",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/analytics.test.ts": "sha256:fb78988a9299593e04ab48be674f78050fe49a34cf48111f89e19f319c4c4002",
+        "src/services/__tests__/AnalyticsService.enhanced.test.ts": "sha256:8300f87d74afd2ba43614f77f3082f2baff9d249d1ec74fc80f9c8640c4624fe"
+      },
+      "revised_at": "2026-07-03T06:57:28.759571+00:00",
+      "reason": "Recapture red evidence after implementation-order recovery and validation command fix"
+    },
+    {
+      "prior_manifest_hash": "sha256:d6c6559f7e82c3d0498891c01956454a908254acbc693479c56a25077059fde5",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/analytics.test.ts": "sha256:fb78988a9299593e04ab48be674f78050fe49a34cf48111f89e19f319c4c4002",
+        "src/services/__tests__/AnalyticsService.enhanced.test.ts": "sha256:8300f87d74afd2ba43614f77f3082f2baff9d249d1ec74fc80f9c8640c4624fe",
+        "src/popup/__tests__/main.test.ts": "sha256:c2add7f79eee9457a3b54a48241012b3d31e5f8bb43fb2d8fd62e6fe0c35bc80"
+      },
+      "revised_at": "2026-07-03T07:00:54.395216+00:00",
+      "reason": "Narrow bootstrap wiring files to scope-only after implementation review"
+    },
+    {
+      "prior_manifest_hash": "sha256:1763290a055c107663758e05b59348dee2c93d4a4d3f3a9581fa2ebebf7e9eae",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/analytics.test.ts": "sha256:fb78988a9299593e04ab48be674f78050fe49a34cf48111f89e19f319c4c4002",
+        "src/services/__tests__/AnalyticsService.enhanced.test.ts": "sha256:8300f87d74afd2ba43614f77f3082f2baff9d249d1ec74fc80f9c8640c4624fe"
+      },
+      "revised_at": "2026-07-03T07:08:13.549628+00:00",
+      "reason": "Capture completed Outcome after implementation review"
+    }
+  ],
+  "red_evidence": {
+    "red": true,
+    "captured_at": "2026-07-03T06:57:49.562141+00:00",
+    "commands": [
+      {
+        "command": "pnpm exec vitest run src/services/__tests__/AnalyticsService.enhanced.test.ts src/services/__tests__/AnalyticsService.versioning.test.ts src/lib/utils/__tests__/analytics.test.ts src/popup/__tests__/main.test.ts",
+        "exit_code": 1,
+        "output_tail": "     63|     it('returns metadata title when provided', () => {\n     64|       expect(resolveExtensionPageTitle('popup', 'Custom Title')).toBe(\u2026\n       |              ^\n     65|     });\n     66| \n\n\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af[1/2]\u23af\n\n FAIL  src/lib/utils/__tests__/analytics.test.ts > analytics utilities > resolveExtensionPageTitle > maps known extension pages to readable titles\nTypeError: resolveExtensionPageTitle is not a function\n \u276f src/lib/utils/__tests__/analytics.test.ts:68:14\n     66| \n     67|     it('maps known extension pages to readable titles', () => {\n     68|       expect(resolveExtensionPageTitle('popup')).toBe('Bolt to GitHub \u2026\n       |              ^\n     69|       expect(resolveExtensionPageTitle('/logs')).toBe('Bolt to GitHub \u2026\n     70|       expect(resolveExtensionPageTitle('unknown')).toBe('Bolt to GitHu\u2026\n\n\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af[2/2]\u23af\n",
+        "classification": "red"
+      },
+      {
+        "command": "pnpm check",
+        "exit_code": 1,
+        "output_tail": "\n> bolt-to-github@1.3.18 check /home/atomrem/projects/codefrost-dev/bolt-to-github\n> svelte-check --tsconfig ./tsconfig.json\n\n\n====================================\nLoading svelte-check in workspace: /home/atomrem/projects/codefrost-dev/bolt-to-github\nGetting Svelte diagnostics...\n\n/home/atomrem/projects/codefrost-dev/bolt-to-github/src/lib/utils/__tests__/analytics.test.ts:46:3\nError: Module '\"../analytics\"' has no exported member 'resolveExtensionPageTitle'. \n  trackOperationResult,\n  resolveExtensionPageTitle,\n  trackFeatureUsageWithVersion,\n\n\n====================================\nsvelte-check found 1 error and 0 warnings in 1 file\n\u2009ELIFECYCLE\u2009 Command failed with exit code 1.",
+        "classification": "red"
+      },
+      {
+        "command": "pnpm build",
+        "exit_code": 0,
+        "output_tail": "dist/assets/input-hfojewKS.js                                72.30 kB \u2502 gzip:  25.10 kB\ndist/assets/GitHubComparisonService-CdQUOy_e.js              78.77 kB \u2502 gzip:  21.91 kB\ndist/content/content.js                                     240.23 kB \u2502 gzip:  70.53 kB\ndist/assets/index.html-DtH_x6IO.js                          509.97 kB \u2502 gzip: 131.12 kB\n\u2713 built in 10.46s\n\n[plugin:vite:reporter] [plugin vite:reporter] \n(!) /home/atomrem/projects/codefrost-dev/bolt-to-github/src/lib/constants/supabase.ts is dynamically imported by /home/atomrem/projects/codefrost-dev/bolt-to-github/src/services/UnifiedGitHubService.ts but also statically imported by /home/atomrem/projects/codefrost-dev/bolt-to-github/src/content/services/SupabaseAuthService.ts, /home/atomrem/projects/codefrost-dev/bolt-to-github/src/services/BoltProjectSyncService.ts, /home/atomrem/projects/codefrost-dev/bolt-to-github/src/services/GitHubAppService.ts, /home/atomrem/projects/codefrost-dev/bolt-to-github/src/services/SubscriptionService.ts, dynamic import will not move module into another chunk.\n\n[plugin:vite:reporter] [plugin vite:reporter] \n(!) /home/atomrem/projects/codefrost-dev/bolt-to-github/src/content/handlers/FileChangeHandler.ts is dynamically imported by /home/atomrem/projects/codefrost-dev/bolt-to-github/src/content/handlers/GitHubUploadHandler.ts, /home/atomrem/projects/codefrost-dev/bolt-to-github/src/content/services/PushReminderService.ts, /home/atomrem/projects/codefrost-dev/bolt-to-github/src/content/services/PushReminderService.ts but also statically imported by /home/atomrem/projects/codefrost-dev/bolt-to-github/src/content/UIManager.ts, dynamic import will not move module into another chunk.\n\n[plugin:vite:reporter] [plugin vite:reporter] \n(!) /home/atomrem/projects/codefrost-dev/bolt-to-github/src/lib/utils/upgradeModal.ts is dynamically imported by /home/atomrem/projects/codefrost-dev/bolt-to-github/src/popup/App.svelte but also statically imported by /home/atomrem/projects/codefrost-dev/bolt-to-github/src/popup/App.svelte, dynamic import will not move module into another chunk.\n\n\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.",
+        "classification": "not_red"
+      }
+    ]
+  },
+  "_manifest_contract": {
+    "artifacts": [
+      "src/lib/utils/__tests__/analytics.test.ts:maps known extension pages to readable titles",
+      "src/lib/utils/__tests__/analytics.test.ts:maps known extension pages to readable titles:kind=test_function",
+      "src/lib/utils/__tests__/analytics.test.ts:returns metadata title when provided",
+      "src/lib/utils/__tests__/analytics.test.ts:returns metadata title when provided:kind=test_function",
+      "src/lib/utils/analytics.ts:function:resolveExtensionPageTitle",
+      "src/lib/utils/analytics.ts:function:resolveExtensionPageTitle:arg=metadataTitle:type=string:default=None",
+      "src/lib/utils/analytics.ts:function:resolveExtensionPageTitle:arg=page:type=string:default=None",
+      "src/lib/utils/analytics.ts:function:resolveExtensionPageTitle:kind=function",
+      "src/lib/utils/analytics.ts:function:resolveExtensionPageTitle:returns=string",
+      "src/lib/utils/analytics.ts:function:trackPageView",
+      "src/lib/utils/analytics.ts:function:trackPageView:arg=metadata:type=AnalyticsMetadata:default=None",
+      "src/lib/utils/analytics.ts:function:trackPageView:arg=page:type='popup' | 'options' | 'onboarding' | 'logs':default=None",
+      "src/lib/utils/analytics.ts:function:trackPageView:async=true",
+      "src/lib/utils/analytics.ts:function:trackPageView:kind=function",
+      "src/lib/utils/analytics.ts:function:trackPageView:returns=Promise<void>",
+      "src/services/AnalyticsService.ts:class:AnalyticsService",
+      "src/services/AnalyticsService.ts:class:AnalyticsService:kind=class",
+      "src/services/__tests__/AnalyticsService.enhanced.test.ts:should not attach stale page view context to later background events",
+      "src/services/__tests__/AnalyticsService.enhanced.test.ts:should not attach stale page view context to later background events:kind=test_function"
+    ],
+    "test_files": [
+      "src/lib/utils/__tests__/analytics.test.ts",
+      "src/services/__tests__/AnalyticsService.enhanced.test.ts"
+    ],
+    "validate_commands": [
+      "pnpm exec vitest run src/services/__tests__/AnalyticsService.enhanced.test.ts src/services/__tests__/AnalyticsService.versioning.test.ts src/lib/utils/__tests__/analytics.test.ts src/popup/__tests__/main.test.ts",
+      "pnpm check",
+      "pnpm build"
+    ]
+  }
+}

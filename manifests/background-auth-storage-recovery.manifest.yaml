@@ -1,0 +1,232 @@
+# draft-kind: auth-lifecycle-fix (2 of 8)
+schema: '2'
+goal: 'Background recovers immediately when auth tokens are restored in storage'
+type: fix
+description: |
+  Root cause: BackgroundService.setupStorageListener() only reacts to the
+  'sync' storage namespace (githubToken/repoOwner/repoName/branch), but every
+  authentication artifact — supabaseToken, supabaseAuthState,
+  authenticationMethod, githubAppInstallationId — lives in the 'local'
+  namespace. When auth is restored by any other context (popup "refresh"
+  button, website tab extraction) the long-lived background service worker
+  never notices: its GitHub service stays null/PAT-defaulted and its auth state
+  stays failed until the extension is manually toggled.
+
+  Fix contract: the background storage listener also watches
+  chrome.storage.local changes for the auth key set (supabaseToken,
+  supabaseTokenExpiry, authenticationMethod, githubAppInstallationId). On a
+  relevant change it (debounced, ~1s) forces a SupabaseAuthService check and
+  re-runs initializeGitHubService(), rebuilding the ZipHandler and
+  TempRepoManager exactly as the existing sync-namespace path does.
+
+  Rationale: reacting to storage restoration makes recovery independent of
+  WHICH context restored the tokens, removing the need for reloads in the
+  common recovery path. The self-heal reload (draft 1) remains as last resort.
+temptations:
+  - risk: 'Do not re-initialize the GitHub service on EVERY local storage write — keepAlive writes keepAliveTimestamp every 25s and would thrash it.'
+    instead: 'Filter to the explicit auth key set and debounce; add a test that unrelated local keys (keepAliveTimestamp, lastKeepAlive) trigger nothing.'
+  - risk: 'Do not create a feedback loop: forceCheck() itself writes supabaseToken/supabaseAuthState to local storage.'
+    instead: 'Only trigger when the watched value actually changed (compare oldValue/newValue) and cover the loop-prevention case with a behavioral test.'
+  - risk: 'Do not assert internal call order of private methods in tests.'
+    instead: 'Assert observable outcomes: after a simulated storage change, a subsequent push path has a working GitHub service, and checkAuthStatus was driven through public forceCheck behavior (e.g. fetch to the auth endpoint occurs).'
+files:
+  edit:
+    - path: src/background/BackgroundService.ts
+      artifacts:
+        - kind: class
+          name: BackgroundService
+          description: |
+            Storage listener additionally handles namespace 'local' for the
+            auth key set {supabaseToken, supabaseTokenExpiry,
+            authenticationMethod, githubAppInstallationId}: on a real value
+            change it debounces ~1s, then re-initializes the GitHub service,
+            ZipHandler, and TempRepoManager and forces a Supabase auth check.
+            Existing 'sync' namespace behavior is unchanged.
+  create:
+    - path: src/background/__tests__/BackgroundService.storage-recovery.test.ts
+      artifacts:
+        - kind: test_function
+          name: reinitializes GitHub service when auth tokens are restored in local storage
+        - kind: test_function
+          name: forces auth check when authenticationMethod is restored to github_app
+        - kind: test_function
+          name: ignores unrelated local storage keys such as keepAliveTimestamp
+        - kind: test_function
+          name: does not loop when its own auth check writes token state back to storage
+        - kind: test_function
+          name: debounces rapid successive auth storage changes into one recovery pass
+  read:
+    - src/background/test-fixtures/BackgroundServiceMocks.ts
+    - src/background/__tests__/BackgroundService.auth-lifecycle.test.ts
+    - src/content/services/SupabaseAuthService.ts
+validate:
+  - pnpm exec vitest run src/background/__tests__/BackgroundService.storage-recovery.test.ts src/background/__tests__/BackgroundService.auth-lifecycle.test.ts
+  - pnpm lint
+  - pnpm check
+created: '2026-07-04T01:08:42Z'
+metadata:
+  tags:
+    - auth
+    - mv3
+    - storage
+    - recovery
+  priority: critical
+  status: implementation
+  depends_on: []
+  promotion_ready: true
+  notes: |
+    Promoted on 2026-07-04 for focused behavioral test creation and
+    implementation. Independent of draft 1; the two together remove the toggle
+    requirement for the background side.
+outcome:
+  status: completed
+  summary: |
+    BackgroundService now reacts to real chrome.storage.local auth-key changes,
+    debounces recovery for about one second, forces a Supabase auth check, and
+    rebuilds the GitHub service, ZipHandler, and TempRepoManager through the
+    same dependency path used by sync settings changes.
+  rationale: |
+    Auth restoration from the popup or website tab writes to local storage, not
+    sync storage. Listening only to sync settings left the long-lived background
+    worker with stale in-memory auth and GitHub dependencies until a manual
+    extension toggle. The local auth-key listener restores the background side
+    without reacting to unrelated keep-alive storage writes or same-value token
+    writes created by auth checks.
+  lessons:
+    - lesson_type: mv3-storage-recovery
+      summary: |
+        Background service workers that cache auth-dependent collaborators must
+        listen to the same storage namespace used by the auth writers; otherwise
+        cross-context recovery can update storage while leaving the worker stale.
+      tags:
+        - auth
+        - mv3
+        - storage
+      paths:
+        - src/background/BackgroundService.ts
+    - lesson_type: debounce-loop-prevention
+      summary: |
+        Storage-change recovery should filter to the explicit contract keys,
+        compare oldValue and newValue, and debounce before rebuilding expensive
+        collaborators so keep-alive writes and auth-service echo writes do not
+        create recovery loops.
+      tags:
+        - auth
+        - storage
+        - reliability
+      paths:
+        - src/background/BackgroundService.ts
+        - src/background/__tests__/BackgroundService.storage-recovery.test.ts
+  review_notes:
+    - source: independent reviewer subagent Maxwell
+      severity: ready
+      summary: |
+        Read-only MAID implementation review found no findings. The reviewer
+        confirmed scope, declared artifacts, local auth-key filtering, changed
+        value checks, debounce behavior, forceCheck plus dependency rebuild, and
+        cleanup fidelity, then reran implementation validation and the manifest
+        test runner successfully.
+    - source: local validation
+      severity: unrelated full-suite blocker
+      summary: |
+        Full active-manifest MAID test did not execute commands because the
+        unrelated active manifest repair-e2e-error-flow-product-behavior has a
+        Playwright E2E validate command rejected by the fast gate with E231.
+        MAID verify also failed its file_tracking gate by listing broad
+        repo-wide undeclared files, while schema, behavioral, implementation,
+        and coherence stages passed.
+  validation:
+    - command:
+        - pnpm
+        - exec
+        - vitest
+        - run
+        - src/background/__tests__/BackgroundService.storage-recovery.test.ts
+      status: failed-red-phase
+      summary: |
+        Pre-implementation red phase failed 4 of 5 tests for the intended
+        missing storage.local recovery behavior; the unrelated local-key guard
+        already passed.
+    - command:
+        - pnpm
+        - exec
+        - vitest
+        - run
+        - src/background/__tests__/BackgroundService.storage-recovery.test.ts
+        - src/background/__tests__/BackgroundService.auth-lifecycle.test.ts
+      status: passed
+      summary: Focused background auth recovery command passed 11 tests across 2 files.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/background-auth-storage-recovery.manifest.yaml
+        - --mode
+        - schema
+      status: passed
+      summary: Promoted active manifest schema validation passed.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/background-auth-storage-recovery.manifest.yaml
+        - --mode
+        - behavioral
+      status: passed
+      summary: Promoted active manifest behavioral validation passed.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/background-auth-storage-recovery.manifest.yaml
+        - --mode
+        - implementation
+      status: passed
+      summary: Promoted active manifest implementation validation passed.
+    - command:
+        - ./scripts/maid
+        - test
+        - --manifest
+        - manifests/background-auth-storage-recovery.manifest.yaml
+      status: passed
+      summary: Manifest test runner passed all 3 declared validate commands.
+    - command:
+        - pnpm
+        - lint
+      status: passed
+      summary: ESLint completed successfully for src/**/*.{js,ts,svelte}.
+    - command:
+        - pnpm
+        - check
+      status: passed
+      summary: svelte-check found 0 errors and 0 warnings.
+    - command:
+        - pnpm
+        - test:ci
+      status: passed
+      summary: Full Vitest CI suite passed 176 test files and 4241 tests.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - schema
+      status: passed
+      summary: Full active-manifest schema validation passed for 10 manifests.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - behavioral
+      status: passed
+      summary: Full active-manifest behavioral validation passed for 10 manifests.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - implementation
+      status: passed
+      summary: Full active-manifest implementation validation passed for 10 manifests.
+  completed_at: '2026-07-04T05:15:00Z'

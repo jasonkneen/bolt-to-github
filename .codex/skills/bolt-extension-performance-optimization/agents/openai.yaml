@@ -1,0 +1,6 @@
+interface:
+  display_name: 'Bolt Extension Performance'
+  short_description: 'Find measured extension speed and size wins'
+  default_prompt: 'Use $bolt-extension-performance-optimization to profile this Chrome extension and draft safe performance improvements.'
+policy:
+  allow_implicit_invocation: true

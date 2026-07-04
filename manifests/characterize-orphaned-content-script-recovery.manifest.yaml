@@ -1,0 +1,298 @@
+# draft-kind: auth-lifecycle-hardening (8 of 8)
+schema: '2'
+goal: 'Characterize and harden orphaned content-script recovery on bolt.new'
+type: fix
+description: |
+  When the extension reloads (self-heal from draft 1, update, or manual
+  toggle), content scripts on open bolt.new tabs are orphaned ("extension
+  context invalidated") and the injected UI dies — the reason the manual
+  recovery ritual includes refreshing bolt.new. ContentManager already contains
+  recovery logic (reconnect attempts, handleUnrecoverableContextInvalidation,
+  a fallback banner), but it has no behavioral test coverage, so we cannot
+  trust it fires in the self-heal path that draft 1 makes real.
+
+  Fix contract (characterize first, then close gaps found):
+  - Characterization tests pin the existing recovery ladder: service-worker
+    disconnect -> reconnect attempts -> unrecoverable invalidation -> a
+    persistent, non-intrusive "refresh this page to reconnect" banner that
+    never auto-refreshes the tab (user decision: banner, not auto-reload,
+    to protect in-progress bolt.new work).
+  - The banner path must trigger when chrome.runtime.id disappears, including
+    when UIManager is unavailable (fallback DOM banner).
+  - Gaps discovered while characterizing (e.g. banner missing after the
+    SHOW_EXTENSION_RELOAD_NOTIFICATION countdown, recovery flag stuck) are
+    fixed within ContentManager only; anything larger becomes a new manifest.
+
+  Rationale: this is legacy code under Feathers' rules — pin current behavior
+  before changing it. The draft is explicitly characterization-first; its red
+  phase applies only to the gap fixes, not the pinned behavior.
+temptations:
+  - risk: 'Do not rewrite the recovery ladder while adding tests — mixing structural and behavioral changes in untested legacy code.'
+    instead: 'Land characterization tests green against current behavior first; make gap fixes as separate minimal commits inside this manifest scope.'
+  - risk: 'Do not assert on private recovery flags (isInRecovery, reconnectAttempts).'
+    instead: 'Assert observable outcomes: banner element present in the DOM, port reconnection attempted, no automatic location.reload of the tab.'
+files:
+  create:
+    - path: src/content/__tests__/ContentManager.orphan-recovery.test.ts
+      artifacts:
+        - kind: test_function
+          name: unrecoverable context invalidation shows a persistent refresh banner
+        - kind: test_function
+          name: fallback banner appears when UIManager is unavailable
+        - kind: test_function
+          name: recovery never reloads the bolt.new tab automatically
+        - kind: test_function
+          name: service worker restart with valid runtime reconnects without banner
+        - kind: test_function
+          name: extension reload notification precedes orphaning during self-heal
+  edit:
+    - path: src/content/ContentManager.ts
+      artifacts:
+        - kind: class
+          name: ContentManager
+          description: |
+            Recovery behavior contract: on unrecoverable context invalidation
+            a persistent refresh-prompt banner is shown (via UIManager when
+            alive, fallback DOM node otherwise) and the tab is never reloaded
+            automatically. Only gap fixes to honor this contract are in scope;
+            the recovery ladder structure is preserved.
+  read:
+    - src/content/UIManager.ts
+    - src/content/MessageHandler.ts
+    - src/background/BackgroundService.ts
+validate:
+  - pnpm exec vitest run src/content/__tests__/ContentManager.orphan-recovery.test.ts
+  - pnpm lint
+  - pnpm check
+created: '2026-07-04T08:53:00Z'
+metadata:
+  tags:
+    - content-script
+    - mv3
+    - recovery
+    - characterization
+  priority: medium
+  status: implementation
+  depends_on:
+    - fix-auth-self-heal-reload-execution
+  promotion_ready: true
+  notes: |
+    Red phase confirmed on 2026-07-04 with:
+    pnpm exec vitest run src/content/__tests__/ContentManager.orphan-recovery.test.ts
+    Three tests failed for the intended recovery gaps: unrecoverable runtime
+    invalidation never reached the fallback banner after cleanup marked the
+    manager destroyed, UIManager-unavailable startup never showed the fallback
+    banner, and SHOW_EXTENSION_RELOAD_NOTIFICATION was not handled by
+    ContentManager. The service-worker restart and no-auto-reload
+    characterization tests already passed.
+outcome:
+  status: completed
+  summary: |
+    Promoted and implemented the orphaned content-script recovery contract.
+    ContentManager now surfaces the background self-heal reload notification,
+    reaches the fallback refresh banner after true context invalidation, and
+    shows the same fallback when initialization starts after chrome.runtime.id
+    is already unavailable.
+  rationale: |
+    Extension reloads orphan existing bolt.new content scripts, so the content
+    script must fail visibly and ask the user to refresh instead of silently
+    dying or reloading the tab automatically. The implementation keeps the
+    existing recovery ladder intact while removing the destroyed-state guard
+    that prevented recovery retries from reaching the unrecoverable banner.
+  lessons:
+    - lesson_type: mv3-content-script-orphan-recovery
+      summary: |
+        Recovery callbacks scheduled after cleanup must key off the explicit
+        recovery state, not the general destroyed flag, because cleanup marks
+        the manager destroyed before the final runtime-availability retries.
+      tags:
+        - content-script
+        - mv3
+        - recovery
+      paths:
+        - src/content/ContentManager.ts
+        - src/content/__tests__/ContentManager.orphan-recovery.test.ts
+    - lesson_type: visible-degraded-state
+      summary: |
+        Background tab notifications such as SHOW_EXTENSION_RELOAD_NOTIFICATION
+        need an explicit content-script onMessage branch; otherwise the only
+        user-visible warning can be lost before the script is orphaned.
+      tags:
+        - content-script
+        - degraded-state
+      paths:
+        - src/content/ContentManager.ts
+  review_notes:
+    - source: Gauss read-only subagent review
+      severity: fixed
+      summary: |
+        The missing independent implementation review was run after commit
+        02e9b669ae2c1ab818a2cb06870344a4a56b9c35 as if the implementation had
+        not yet been committed. The reviewer confirmed changed files stayed
+        within manifest scope, declared artifacts existed, tests asserted
+        observable DOM/reconnect/no-reload behavior rather than private flags,
+        and no automatic bolt.new tab reload was introduced. The reviewer found
+        two behavior gaps: startup-time runtime invalidation skipped the retry
+        ladder by calling the unrecoverable path from handleInitializationError,
+        and SHOW_EXTENSION_RELOAD_NOTIFICATION ignored the background countdown
+        payload. Both findings were fixed before final handoff.
+    - source: Bacon read-only follow-up review
+      severity: ready
+      summary: |
+        A fresh follow-up reviewer found no remaining findings after the
+        post-review fixes. The reviewer confirmed the startup retry ladder now
+        remains active before the fallback banner appears, the content script
+        displays the background-provided reload countdown payload, and the
+        outcome records the independent review findings and post-review
+        validation evidence.
+    - source: local validation
+      severity: unrelated full-suite blocker
+      summary: |
+        Full active-manifest validation passed in schema, behavioral, and
+        implementation modes. Full maid test across all active manifests did
+        not execute commands because the existing
+        repair-e2e-error-flow-product-behavior manifest has an E2E/browser
+        validate command that the fast behavioral gate rejects with E231.
+  validation:
+    - command:
+        - pnpm
+        - exec
+        - vitest
+        - run
+        - src/content/__tests__/ContentManager.orphan-recovery.test.ts
+      status: failed-red-phase
+      summary: |
+        Pre-implementation red phase failed 3 of 5 tests for the intended
+        fallback-banner and reload-notification gaps; the service-worker
+        restart and no-auto-reload characterization tests already passed.
+    - command:
+        - pnpm
+        - exec
+        - vitest
+        - run
+        - src/content/__tests__/ContentManager.orphan-recovery.test.ts
+      status: passed
+      summary: Focused orphan-recovery suite passed 5 tests.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/characterize-orphaned-content-script-recovery.manifest.yaml
+        - --mode
+        - schema
+      status: passed
+      summary: Promoted active manifest schema validation passed.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/characterize-orphaned-content-script-recovery.manifest.yaml
+        - --mode
+        - behavioral
+      status: passed
+      summary: Promoted active manifest behavioral validation passed.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/characterize-orphaned-content-script-recovery.manifest.yaml
+        - --mode
+        - implementation
+      status: passed
+      summary: Promoted active manifest implementation validation passed.
+    - command:
+        - ./scripts/maid
+        - test
+        - --manifest
+        - manifests/characterize-orphaned-content-script-recovery.manifest.yaml
+      status: passed
+      summary: MAID test runner passed all three declared validation commands.
+    - command:
+        - pnpm
+        - lint
+      status: passed
+      summary: ESLint completed successfully for src/**/*.{js,ts,svelte}.
+    - command:
+        - pnpm
+        - check
+      status: passed
+      summary: svelte-check found 0 errors and 0 warnings.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - schema
+      status: passed
+      summary: Full active-manifest schema validation passed for 16 manifests.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - behavioral
+      status: passed
+      summary: Full active-manifest behavioral validation passed for 16 manifests.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - implementation
+      status: passed
+      summary: Full active-manifest implementation validation passed for 16 manifests.
+    - command:
+        - ./scripts/maid
+        - test
+        - --manifest-dir
+        - manifests
+      status: blocked-unrelated
+      summary: |
+        Full active-manifest MAID test command reported E231 for the existing
+        repair-e2e-error-flow-product-behavior E2E/browser validate command
+        before running manifest commands.
+    - command:
+        - pnpm
+        - exec
+        - vitest
+        - run
+        - src/content/__tests__/ContentManager.orphan-recovery.test.ts
+      status: passed-post-review-fix
+      summary: |
+        Post-review focused orphan-recovery tests passed after preserving the
+        startup retry ladder before the fallback banner appears and displaying
+        the background-provided self-heal countdown notification payload.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/characterize-orphaned-content-script-recovery.manifest.yaml
+        - --mode
+        - schema
+      status: passed-post-review-fix
+      summary: Post-review schema validation passed for the updated manifest.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/characterize-orphaned-content-script-recovery.manifest.yaml
+        - --mode
+        - behavioral
+      status: passed-post-review-fix
+      summary: Post-review behavioral validation passed for the updated manifest.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/characterize-orphaned-content-script-recovery.manifest.yaml
+        - --mode
+        - implementation
+      status: passed-post-review-fix
+      summary: Post-review implementation validation passed for the updated manifest.
+    - command:
+        - ./scripts/maid
+        - test
+        - --manifest
+        - manifests/characterize-orphaned-content-script-recovery.manifest.yaml
+      status: passed-post-review-fix
+      summary: |
+        Post-review manifest test runner passed the focused orphan-recovery
+        Vitest command, lint, and svelte-check.
+  completed_at: '2026-07-04T08:55:49Z'

@@ -1,0 +1,130 @@
+schema: '2'
+goal: 'Update v1.3.19 release notes for auth recovery and reconnect reliability'
+description: |
+  Bring the v1.3.19 release notes up to date with the auth lifecycle and
+  orphaned content-script recovery changes that landed after the release-prep
+  snapshot. The developer changelog should include engineering details and
+  validation coverage, while the in-extension what's-new modal should contain
+  only user-facing outcomes.
+type: fix
+files:
+  edit:
+    - path: CHANGELOG.md
+      artifacts:
+        - kind: namespace
+          name: Version_1_3_19_Changelog
+          description: |
+            The v1.3.19 changelog entry documents the auth self-healing,
+            background storage recovery, GitHub App preservation, background
+            auth authority migration, alarm-backed checks, orphaned content
+            script recovery, and related validation work.
+    - path: src/lib/constants/whatsNewContent.ts
+      artifacts:
+        - kind: interface
+          name: WhatsNewVersion
+        - kind: attribute
+          name: date
+          of: WhatsNewVersion
+          type: string
+        - kind: attribute
+          name: highlights
+          of: WhatsNewVersion
+          type: string[]
+        - kind: attribute
+          name: details
+          of: WhatsNewVersion
+          type: string | undefined
+        - kind: attribute
+          name: type
+          of: WhatsNewVersion
+          type: "'major' | 'minor' | 'patch'"
+    - path: src/lib/constants/__tests__/whatsNewContent.test.ts
+      artifacts:
+        - kind: test_function
+          name: keeps the 1.3.19 modal entry focused on user-facing release notes
+          description: |
+            Verifies the v1.3.19 what's-new data includes the user-facing
+            release outcomes and excludes developer-only implementation terms.
+        - kind: test_function
+          name: keeps the v1.3.19 changelog as the developer-facing release record
+          description: |
+            Verifies CHANGELOG.md contains the missing v1.3.19 engineering
+            entries for auth recovery, reconnect reliability, and MAID outcomes.
+validate:
+  - pnpm exec vitest run src/lib/constants/__tests__/whatsNewContent.test.ts
+  - pnpm check
+  - pnpm lint
+created: '2026-07-04T10:48:00Z'
+metadata:
+  tags:
+    - release-notes
+    - whats-new
+    - auth
+  priority: medium
+  status: completed
+temptations:
+  - risk: Do not copy every developer changelog item into the what's-new modal.
+    instead: Keep the modal limited to user-visible outcomes and cover that boundary with a focused constants test.
+  - risk: Do not omit post-release-prep auth recovery work from the developer changelog.
+    instead: Summarize the missing auth lifecycle, reconnect recovery, and validation details under v1.3.19.
+outcome:
+  status: completed
+  summary: |
+    Updated the v1.3.19 changelog with the missing auth lifecycle,
+    background recovery, GitHub App preservation, content-script reconnect,
+    and validation entries. Updated the in-extension what's-new entry with
+    only user-facing outcomes and added a constants test to keep implementation
+    details out of the modal copy.
+  rationale: |
+    The changelog is the engineering-facing historical record, so it should
+    include the concrete auth architecture and validation work. The what's-new
+    modal is shown to extension users, so it should describe observable
+    reliability improvements without naming internal classes, MAID workflow,
+    or test tooling.
+  review_notes:
+    - source: local self-review
+      severity: no findings
+      summary: |
+        Subagent review was not used because the available delegation tool is
+        restricted to explicit user-requested delegation. Read-only self-review
+        found the change scoped to release-note content and tests, with no
+        runtime behavior changes, the developer changelog containing the
+        missing auth lifecycle details, and the what's-new modal excluding
+        internal implementation/tooling terms.
+  validation:
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/release-notes-v1-3-19-auth-recovery.manifest.yaml
+        - --mode
+        - behavioral
+      status: passed
+      summary: MAID behavioral validation passed.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/release-notes-v1-3-19-auth-recovery.manifest.yaml
+        - --mode
+        - implementation
+      status: passed
+      summary: |
+        MAID implementation validation passed with the expected E307 warning
+        that no structural validator is available for CHANGELOG.md.
+    - command:
+        - pnpm
+        - exec
+        - vitest
+        - run
+        - src/lib/constants/__tests__/whatsNewContent.test.ts
+      status: passed
+      summary: Focused what's-new content contract passed.
+    - command:
+        - pnpm
+        - check
+      status: passed
+      summary: Svelte/TypeScript diagnostics passed with 0 errors and 0 warnings.
+    - command:
+        - pnpm
+        - lint
+      status: passed
+      summary: ESLint completed with no reported errors.

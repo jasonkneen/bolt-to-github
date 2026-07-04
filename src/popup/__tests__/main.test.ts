@@ -19,7 +19,10 @@ describe('popup/main.ts', () => {
         eventType: 'page_view',
         eventData: {
           page: 'popup',
-          metadata: { timestamp: new Date().toISOString() },
+          metadata: {
+            title: 'Bolt to GitHub - Popup',
+            timestamp: new Date().toISOString(),
+          },
         },
       });
 
@@ -29,6 +32,7 @@ describe('popup/main.ts', () => {
         eventData: {
           page: 'popup',
           metadata: expect.objectContaining({
+            title: 'Bolt to GitHub - Popup',
             timestamp: expect.any(String),
           }),
         },

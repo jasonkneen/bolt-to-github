@@ -270,16 +270,34 @@ export async function trackConversionFunnel(
  * Track page views for different parts of the extension
  */
 export async function trackPageView(
-  page: 'popup' | 'options' | 'onboarding',
+  page: 'popup' | 'options' | 'onboarding' | 'logs',
   metadata?: AnalyticsMetadata
 ): Promise<void> {
-  await analytics.trackPageView(
-    `/${page}`,
-    `Bolt to GitHub - ${page.charAt(0).toUpperCase() + page.slice(1)}`
-  );
+  await analytics.trackPageView(`/${page}`, resolveExtensionPageTitle(page));
 
   if (metadata) {
     await analytics.trackExtensionEvent(`page_view_${page}`, metadata);
+  }
+}
+
+export function resolveExtensionPageTitle(page: string, metadataTitle?: string): string {
+  if (metadataTitle) {
+    return metadataTitle;
+  }
+
+  const normalized = page.replace(/^\//, '');
+
+  switch (normalized) {
+    case 'popup':
+      return 'Bolt to GitHub - Popup';
+    case 'logs':
+      return 'Bolt to GitHub - Logs';
+    case 'options':
+      return 'Bolt to GitHub - Options';
+    case 'onboarding':
+      return 'Bolt to GitHub - Onboarding';
+    default:
+      return 'Bolt to GitHub Extension';
   }
 }
 

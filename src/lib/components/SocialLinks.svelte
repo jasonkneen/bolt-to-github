@@ -2,16 +2,29 @@
   import { Coffee, GithubIcon, YoutubeIcon, HelpCircle, MessageSquare } from 'lucide-svelte';
   import { Button } from '$lib/components/ui/button';
   import { createEventDispatcher } from 'svelte';
+  import { sendAnalyticsToBackground } from '$lib/utils/analytics';
 
   export let GITHUB_LINK: string;
   export let YOUTUBE_LINK: string;
   export let COFFEE_LINK: string;
-  export let HELP_LINK: string = 'https://fix.aidrivencoder.com';
+  export let HELP_LINK: string =
+    'https://fix.aidrivencoder.com?utm_source=extension&utm_medium=popup&utm_campaign=expert_help';
 
   const dispatch = createEventDispatcher();
 
   function openLink(url: string) {
     chrome.tabs.create({ url });
+  }
+
+  function handleHelpClick() {
+    sendAnalyticsToBackground('extension_event', {
+      eventType: 'adc_fix_link_clicked',
+      details: {
+        link_location: 'popup_home',
+        link_url: HELP_LINK,
+      },
+    });
+    openLink(HELP_LINK);
   }
 
   function handleFeedbackClick() {
@@ -56,7 +69,7 @@
   <Button
     variant="outline"
     class="border-indigo-500/70 hover:bg-indigo-500/10 text-indigo-300 hover:text-indigo-200 flex items-center gap-2 w-full font-medium transition-colors duration-200"
-    on:click={() => openLink(HELP_LINK)}
+    on:click={handleHelpClick}
   >
     <HelpCircle class="w-4 h-4" />
     <span class="whitespace-nowrap">Stuck? Get Expert Help →</span>

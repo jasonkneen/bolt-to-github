@@ -137,6 +137,11 @@ describe('GitHubSettings.svelte - Component Tests', () => {
       writable: true,
       configurable: true,
     });
+    Object.defineProperty(globalThis, 'chrome', {
+      value: chromeMocks,
+      writable: true,
+      configurable: true,
+    });
   });
 
   afterEach(() => {
@@ -806,6 +811,42 @@ describe('GitHubSettings.svelte - Component Tests', () => {
 
       expect(screen.getByText(/Default settings/i)).toBeInTheDocument();
     });
+
+    it('updates visible repository drafts after switching projects', async () => {
+      const user = userEvent.setup();
+      const props = {
+        ...defaultProps,
+        projectId: 'project-a',
+        projectSettings: {
+          'project-a': {
+            repoName: 'stored-repo',
+            branch: 'main',
+          },
+        },
+      };
+
+      const { component } = render(GitHubSettings, { props });
+
+      const repoInput = await screen.findByLabelText(/Repository Name/i);
+      const branchInput = screen.getByLabelText(/Branch/i);
+
+      await waitFor(() => expect(repoInput).toHaveValue('stored-repo'));
+      await user.clear(repoInput);
+      await user.type(repoInput, 'unsaved-draft');
+
+      component.$set({
+        projectId: 'project-b',
+        projectSettings: {
+          'project-b': {
+            repoName: 'synced-repo',
+            branch: 'develop',
+          },
+        },
+      });
+
+      await waitFor(() => expect(repoInput).toHaveValue('synced-repo'));
+      expect(branchInput).toHaveValue('develop');
+    });
   });
 
   describe('Visual Feedback', () => {
@@ -878,6 +919,61 @@ describe('GitHubSettings.svelte - Component Tests', () => {
       await waitFor(() => {
         expect(screen.getByText(/Connect with GitHub App to get started/i)).toBeInTheDocument();
       });
+    });
+  });
+
+  describe('Repository Name Validation', () => {
+    it('shows repository validation errors in GitHub settings', async () => {
+      const user = userEvent.setup();
+      const props = {
+        ...defaultProps,
+        githubToken: 'ghp_test',
+        repoOwner: 'testuser',
+        repoName: 'valid-repo',
+      };
+
+      render(GitHubSettings, { props });
+
+      await user.click(screen.getByRole('button', { name: /GitHub Settings/i }));
+
+      const repoInput = screen.getByLabelText('Repository Name');
+      await user.clear(repoInput);
+      await user.type(repoInput, 'invalid repo name!');
+      await user.tab();
+
+      expect(await screen.findByText(/invalid repository name/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /save settings/i })).toBeDisabled();
+    });
+
+    it('clears GitHub settings repository validation errors after correction', async () => {
+      const user = userEvent.setup();
+      const props = {
+        ...defaultProps,
+        githubToken: 'ghp_test',
+        repoOwner: 'testuser',
+        repoName: 'valid-repo',
+      };
+
+      render(GitHubSettings, { props });
+
+      await user.click(screen.getByRole('button', { name: /GitHub Settings/i }));
+
+      const repoInput = screen.getByLabelText('Repository Name');
+      await user.clear(repoInput);
+      await user.type(repoInput, 'invalid repo name!');
+      await user.tab();
+
+      expect(await screen.findByText(/invalid repository name/i)).toBeInTheDocument();
+
+      await user.click(repoInput);
+      await user.clear(repoInput);
+      await user.type(repoInput, 'valid-repo-name');
+      await user.tab();
+
+      await waitFor(() => {
+        expect(screen.queryByText(/invalid repository name/i)).not.toBeInTheDocument();
+      });
+      expect(screen.getByRole('button', { name: /save settings/i })).toBeEnabled();
     });
   });
 });

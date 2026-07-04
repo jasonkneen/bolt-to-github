@@ -4,7 +4,7 @@
 
 Bolt to GitHub is a Chrome Extension (Manifest v3) that automatically captures ZIP file downloads from bolt.new, extracts them, and pushes contents to GitHub repositories. Built with Svelte v4.2.x, TypeScript v5.9.x, and TailwindCSS.
 
-**Current Version**: v1.3.18
+**Current Version**: v1.3.19
 **Repository**: mamertofabian/bolt-to-github  
 **Package Manager**: pnpm (required)
 
@@ -146,6 +146,37 @@ When working on GitHub issues, follow this structured approach:
 - Test Watch: `pnpm run test:watch` - Run tests in watch mode
 - Test UI: `pnpm run test:ui` - Run tests with Vitest UI
 - Test Failed Files: `pnpm run test:failed-files` - Extract and display only the filenames of failing test files (useful for debugging test failures)
+
+### MAID
+
+This repository uses MAID for AI-assisted feature, bug-fix, and refactor work.
+Use the checked-in wrapper so local agents and hooks run the same runner:
+
+```bash
+./scripts/maid validate --manifest-dir manifests --mode schema
+./scripts/maid validate --manifest-dir manifests --mode behavioral
+./scripts/maid validate --manifest-dir manifests --mode implementation
+./scripts/maid test --manifest-dir manifests
+./scripts/maid files --manifest-dir manifests
+```
+
+Wrapper aliases are also available through `pnpm maid:*` scripts. Keep active
+manifests directly under `manifests/`. Start new features, bug fixes, and
+refactors with a manifest or intentional manifest evolution. When touching files
+that lack MAID coverage, add focused behavioral or characterization coverage in
+the same change.
+
+Draft manifests under `manifests/drafts/` are planning inventory, not active
+contracts. Promote one implementation-sized draft into `manifests/`, implement
+and review the promoted manifest, then remove only the matching draft path.
+
+After implementation validation and implementation review, capture an Outcome
+record in the promoted active manifest before final handoff. Outcome capture is
+required for completed, partial, failed, superseded, archived, or abandoned MAID
+work. The Outcome must cite concrete validation evidence and review notes; it
+does not replace behavioral tests, declared artifacts, validation commands, or
+implementation review. See `docs/draft-manifest-workflow.md` and
+`docs/manifest-outcome-records.md`.
 
 ### Git Hooks
 

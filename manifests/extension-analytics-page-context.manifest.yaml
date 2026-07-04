@@ -1,0 +1,172 @@
+schema: '2'
+goal: Track extension page views with correct titles without polluting background events
+description: |
+  Normalize extension page_view paths and titles for popup/logs pages while
+  keeping page metadata scoped to page_view events. Background GitHub operation
+  and error events must keep extension platform/version metadata without
+  inheriting stale UI page context.
+type: fix
+files:
+  edit:
+  - path: src/lib/utils/analytics.ts
+    artifacts:
+    - kind: function
+      name: resolveExtensionPageTitle
+      args:
+      - name: page
+        type: string
+      - name: metadataTitle
+        type: string
+      returns: string
+      description: Maps extension page identifiers and optional metadata titles to GA4 page titles.
+    - kind: function
+      name: trackPageView
+      args:
+      - name: page
+        type: '''popup'' | ''options'' | ''onboarding'' | ''logs'''
+      - name: metadata
+        type: AnalyticsMetadata
+      returns: Promise<void>
+      async: true
+      description: Sends extension page_view events with normalized paths and readable titles.
+  - path: src/services/AnalyticsService.ts
+    artifacts:
+    - kind: class
+      name: AnalyticsService
+      description: |
+        Sends GA4 Measurement Protocol events for the extension. Page title,
+        location, and path metadata must be present on page_view events only,
+        while all events retain platform and app_version metadata.
+  - path: src/lib/utils/__tests__/analytics.test.ts
+    artifacts:
+    - kind: test_function
+      name: returns metadata title when provided
+      description: Verifies metadata titles override resolver defaults.
+    - kind: test_function
+      name: maps known extension pages to readable titles
+      description: Verifies popup/logs/default title mapping.
+  - path: src/services/__tests__/AnalyticsService.enhanced.test.ts
+    artifacts:
+    - kind: test_function
+      name: should not attach stale page view context to later background events
+      description: Verifies background events do not inherit page_view context.
+  scope:
+  - path: src/background/BackgroundService.ts
+    reason: Normalize page_view message paths and titles before delegating to AnalyticsService.
+  - path: src/pages/logs.ts
+    reason: Emit logs page_view messages with an explicit readable title.
+  - path: src/popup/main.ts
+    reason: Emit popup page_view messages with an explicit readable title.
+  - path: src/popup/__tests__/main.test.ts
+    reason: Assert popup page_view messages include title metadata without contracting popup bootstrap internals.
+validate:
+- pnpm exec vitest run src/services/__tests__/AnalyticsService.enhanced.test.ts src/services/__tests__/AnalyticsService.versioning.test.ts src/lib/utils/__tests__/analytics.test.ts src/popup/__tests__/main.test.ts
+- pnpm check
+- pnpm build
+created: '2026-07-03T06:54:30Z'
+metadata:
+  tags:
+  - analytics
+  - ga4
+  - chrome-extension
+  - privacy
+  priority: high
+temptations:
+- risk: Do not store last page_view metadata as global defaults for all extension analytics events.
+  instead: Include page_title, page_location, and page_path only on explicit page_view payloads.
+- risk: Do not use generic 'Extension Page' titles for popup and logs routes.
+  instead: Resolve known extension page identifiers to readable Bolt to GitHub titles.
+outcome:
+  status: completed
+  summary: |
+    Normalized extension popup/logs page_view titles and paths while preventing
+    stale page_view context from being attached to later background analytics
+    events. Popup and logs entries now send explicit readable titles, and
+    generic extension events retain platform/app_version metadata only.
+  rationale: |
+    GA4 page titles for extension surfaces should be readable, but storing the
+    last page title/path on the analytics singleton would incorrectly attribute
+    background GitHub operations and errors to whichever UI page opened most
+    recently. The implementation scopes page metadata to page_view payloads and
+    covers that behavior with service-level regression tests.
+  lessons:
+    - lesson_type: analytics-context-boundary
+      summary: |
+        Page metadata in an extension analytics singleton must not become global
+        default event context. Background events need source-specific metadata,
+        not the last opened popup/logs page.
+      tags:
+        - analytics
+        - chrome-extension
+        - privacy
+      paths:
+        - src/services/AnalyticsService.ts
+        - src/services/__tests__/AnalyticsService.enhanced.test.ts
+    - lesson_type: extension-page-titles
+      summary: |
+        Extension page_view events should resolve known routes such as popup and
+        logs to readable product titles instead of generic fallback labels.
+      tags:
+        - analytics
+        - ga4
+        - extension-ui
+      paths:
+        - src/lib/utils/analytics.ts
+        - src/lib/utils/__tests__/analytics.test.ts
+  review_notes:
+    - source: independent reviewer subagent Poincare
+      severity: P2 finding fixed
+      summary: |
+        Found stale singleton page context being injected into all later
+        extension analytics events. The service now includes page metadata only
+        in page_view event payloads and has a regression test.
+    - source: independent reviewer subagent Popper
+      severity: ready
+      summary: |
+        Final review found no P0/P1/P2 findings. It confirmed page metadata
+        stays on page_view events, worktree-scope implementation validation
+        passed, and the plan lock is revision 3 with red evidence.
+    - source: local MAID review
+      severity: brownfield verify limitation
+      summary: |
+        `./scripts/maid verify --summary --require-plan-lock --require-red-evidence`
+        passes schema, behavioral, implementation, and coherence for this
+        manifest but fails repository-wide file_tracking on 244 untouched
+        pre-existing files. Bug report written to
+        ~/.maid/bug-report/20260703-150353-brownfield-verify-file-tracking.md.
+  validation:
+    - command:
+        - ./scripts/maid
+        - plan
+        - status
+        - manifests/extension-analytics-page-context.manifest.yaml
+      status: passed
+      summary: Plan lock revision 3 matched manifest/test hashes and recorded red evidence.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/extension-analytics-page-context.manifest.yaml
+        - --mode
+        - implementation
+        - --worktree-scope
+        - --include-tests
+      status: passed
+      summary: Worktree-scope implementation validation passed for current dirty files.
+    - command:
+        - ./scripts/maid
+        - test
+        - --manifest
+        - manifests/extension-analytics-page-context.manifest.yaml
+      status: passed
+      summary: Manifest validation commands passed focused Vitest analytics tests, pnpm check, and pnpm build.
+    - command:
+        - ./scripts/maid
+        - verify
+        - --summary
+        - --require-plan-lock
+        - --require-red-evidence
+      status: failed
+      summary: |
+        Repo-wide verify failed only on brownfield file_tracking for untouched
+        undeclared files; schema, behavioral, implementation, and coherence
+        stages passed for this manifest.

@@ -9,6 +9,7 @@ import {
   calculateNextSelectedIndex,
   shouldShowDropdown,
   canSaveForm,
+  validateRepositoryName,
   getAuthenticationMethod,
   createGitHubServiceConfig,
   handleKeyboardNavigation,
@@ -290,6 +291,28 @@ describe('RepoSettings Business Logic', () => {
       const result = canSaveForm('   ', 'main');
 
       expect(result).toBe(false);
+    });
+
+    it('validates GitHub repository names before save', () => {
+      expect(validateRepositoryName('valid-repo')).toEqual({ isValid: true });
+      expect(canSaveForm('valid-repo', 'main')).toBe(true);
+    });
+
+    it('rejects repository names outside the product policy', () => {
+      const invalidNames = [
+        '',
+        'repo with spaces',
+        'repo@special',
+        '-starts-with-hyphen',
+        'ends-with-hyphen-',
+        'double--hyphen',
+        'a'.repeat(101),
+      ];
+
+      for (const repoName of invalidNames) {
+        expect(validateRepositoryName(repoName).isValid).toBe(false);
+        expect(canSaveForm(repoName, 'main')).toBe(false);
+      }
     });
   });
 

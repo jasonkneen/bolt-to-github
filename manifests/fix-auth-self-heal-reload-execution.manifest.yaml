@@ -1,0 +1,239 @@
+# draft-kind: auth-lifecycle-fix (1 of 8)
+schema: '2'
+goal: 'Execute auth self-heal reload directly from the background context'
+type: fix
+description: |
+  Root cause: SupabaseAuthService.requestExtensionReload() and the
+  OPEN_REAUTHENTICATION trigger use chrome.runtime.sendMessage, but the primary
+  SupabaseAuthService instance runs INSIDE the background service worker, and
+  Chrome never delivers a runtime message back to its sending context. With no
+  other receiver, the self-heal reload (the code equivalent of manually toggling
+  the extension) silently never fires, and the guided re-auth tab never opens.
+  The reloadRequested flag is then left true, permanently short-circuiting
+  triggerReAuthentication() in a service worker that keepAlive keeps alive for
+  days. This is the direct mechanism behind "only disabling/enabling the
+  extension recovers auth".
+
+  Fix contract:
+  - When privileged APIs are available (chrome.alarms for the self-heal alarm,
+    chrome.tabs for the re-auth tab), SupabaseAuthService performs the action
+    directly instead of messaging itself.
+  - When they are not available (content-script context, until the
+    single-auth-authority migration in drafts 5-7 removes those instances),
+    fall back to the existing runtime message so behavior there is unchanged.
+  - reloadRequested must be reset to false whenever the reload is NOT actually
+    scheduled (throttled by MIN_TIME_BETWEEN_RELOADS, alarm creation failure,
+    message-send failure), so the re-auth flow can retry instead of being
+    permanently disabled.
+
+  Rationale: direct execution is chosen over a self-addressed message bus or an
+  injected delegate because after drafts 5-7 land, SupabaseAuthService only ever
+  runs in the background, where direct execution is always correct; the
+  capability fallback is a transitional bridge, not the architecture.
+temptations:
+  - risk: 'Do not "fix" this by adding a second onMessage listener in the background to catch self-sent messages — Chrome will still not deliver them to the sending context.'
+    instead: 'Feature-detect the privileged API (chrome.alarms.create / chrome.tabs.create) and call it directly; keep sendMessage only as the unprivileged-context fallback.'
+  - risk: 'Do not leave reloadRequested=true on any early-return path of requestExtensionReload.'
+    instead: 'Treat reloadRequested as "a reload is actually scheduled"; reset it on throttle, alarm failure, and message failure, and cover each path with a behavioral test.'
+  - risk: 'Do not assert on private fields (reloadRequested, consecutiveAuthFailures) in tests.'
+    instead: 'Assert observable behavior: chrome.alarms.create("self-heal-reload", ...) invoked, re-auth modal messages re-sent after a throttled reload, chrome.tabs.create called for the re-auth URL.'
+files:
+  edit:
+    - path: src/content/services/SupabaseAuthService.ts
+      artifacts:
+        - kind: class
+          name: SupabaseAuthService
+          description: |
+            Self-heal and re-auth triggering become context-aware: after
+            MAX_AUTH_FAILURES_BEFORE_RELOAD consecutive failures, the service
+            schedules the 'self-heal-reload' alarm directly when chrome.alarms
+            is available (falling back to the RELOAD_EXTENSION runtime message
+            otherwise), opens the bolt2github.com re-auth tab directly when
+            chrome.tabs is available (falling back to OPEN_REAUTHENTICATION),
+            and re-enables the re-auth flow whenever a requested reload was not
+            actually scheduled. No public API surface changes.
+    - path: src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts
+      artifacts:
+        - kind: test_function
+          name: schedules self-heal reload alarm directly after max auth failures in background context
+        - kind: test_function
+          name: falls back to RELOAD_EXTENSION runtime message when alarms API is unavailable
+        - kind: test_function
+          name: re-auth flow retries after a throttled reload instead of staying disabled
+        - kind: test_function
+          name: re-auth flow retries after reload scheduling fails
+        - kind: test_function
+          name: re-auth flow retries after reload message send fails
+        - kind: test_function
+          name: opens re-authentication tab directly when tabs API is available
+  read:
+    - src/background/BackgroundService.ts
+    - src/content/services/__tests__/SupabaseAuthService.reload.test.ts
+    - src/content/services/__tests__/SupabaseAuthService.auth-recovery.test.ts
+validate:
+  - pnpm exec vitest run src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts src/content/services/__tests__/SupabaseAuthService.reload.test.ts src/content/services/__tests__/SupabaseAuthService.auth-recovery.test.ts
+  - pnpm lint
+  - pnpm check
+created: '2026-07-04T01:08:41Z'
+metadata:
+  tags:
+    - auth
+    - mv3
+    - self-healing
+  priority: critical
+  status: implementation
+  depends_on: []
+  promotion_ready: true
+  notes: |
+    Red phase confirmed on 2026-07-04 with:
+    pnpm exec vitest run src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts
+    Four tests failed for the intended direct-execution and retry reasons; the
+    unprivileged RELOAD_EXTENSION fallback already passed.
+outcome:
+  status: completed
+  summary: |
+    SupabaseAuthService now executes self-heal reload and guided re-auth actions
+    directly when the current Chrome context exposes the privileged APIs, while
+    preserving runtime-message fallbacks for unprivileged contexts.
+  rationale: |
+    The background service worker cannot receive its own runtime messages, so
+    self-heal reload and re-auth tab opening must not depend on self-addressed
+    RELOAD_EXTENSION or OPEN_REAUTHENTICATION messages. Direct alarm/tab
+    execution removes the stuck background path, and failed or throttled reload
+    requests now clear the in-memory reload gate so later auth failures can
+    guide the user back through re-authentication.
+  lessons:
+    - lesson_type: mv3-runtime-messaging
+      summary: |
+        Background-owned services should call available privileged Chrome APIs
+        directly instead of sending runtime messages back to their own context.
+      tags:
+        - auth
+        - mv3
+        - runtime-messaging
+      paths:
+        - src/content/services/SupabaseAuthService.ts
+    - lesson_type: auth-self-healing
+      summary: |
+        Treat reloadRequested as evidence that reload work was actually
+        scheduled. Clear it, and reset the failure threshold, when reload
+        scheduling is throttled or fails so the user-visible re-auth path can
+        retry.
+      tags:
+        - auth
+        - self-healing
+      paths:
+        - src/content/services/SupabaseAuthService.ts
+        - src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts
+  review_notes:
+    - source: independent reviewer subagent Hooke
+      severity: process gap fixed
+      summary: |
+        Initial implementation review found no code behavior findings but
+        correctly blocked final handoff because the promoted active manifest was
+        missing this required outcome record.
+    - source: independent reviewer subagent Peirce
+      severity: coverage gap fixed
+      summary: |
+        Second implementation review found the alarm-failure test did not
+        exercise the unprivileged fallback message-send failure path. A focused
+        behavioral test now removes chrome.alarms, rejects the RELOAD_EXTENSION
+        fallback message, and verifies the visible re-auth flow can retry.
+    - source: local validation
+      severity: unrelated full-suite blocker
+      summary: |
+        Full MAID test across all active manifests did not execute commands
+        because an unrelated existing manifest,
+        repair-e2e-error-flow-product-behavior, has an E2E/browser validate
+        command that the fast behavioral gate rejects with E231.
+  validation:
+    - command:
+        - pnpm
+        - exec
+        - vitest
+        - run
+        - src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts
+      status: failed-red-phase
+      summary: |
+        Pre-implementation red phase failed 4 of 5 tests for the intended
+        direct self-heal alarm, re-auth retry, and direct tab-opening contract;
+        the unprivileged runtime-message fallback already passed.
+    - command:
+        - pnpm
+        - exec
+        - vitest
+        - run
+        - src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts
+        - src/content/services/__tests__/SupabaseAuthService.reload.test.ts
+        - src/content/services/__tests__/SupabaseAuthService.auth-recovery.test.ts
+      status: passed
+      summary: Focused SupabaseAuthService regression command passed 38 tests across 3 files.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/fix-auth-self-heal-reload-execution.manifest.yaml
+        - --mode
+        - schema
+      status: passed
+      summary: Promoted active manifest schema validation passed.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/fix-auth-self-heal-reload-execution.manifest.yaml
+        - --mode
+        - behavioral
+      status: passed
+      summary: Promoted active manifest behavioral validation passed.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/fix-auth-self-heal-reload-execution.manifest.yaml
+        - --mode
+        - implementation
+      status: passed
+      summary: Promoted active manifest implementation validation passed.
+    - command:
+        - ./scripts/maid
+        - test
+        - --manifest
+        - manifests/fix-auth-self-heal-reload-execution.manifest.yaml
+      status: passed
+      summary: MAID test runner passed all three declared validation commands.
+    - command:
+        - pnpm
+        - lint
+      status: passed
+      summary: ESLint completed successfully for src/**/*.{js,ts,svelte}.
+    - command:
+        - pnpm
+        - check
+      status: passed
+      summary: svelte-check found 0 errors and 0 warnings.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - schema
+      status: passed
+      summary: Full active-manifest schema validation passed for 9 manifests.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - behavioral
+      status: passed
+      summary: Full active-manifest behavioral validation passed for 9 manifests.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - implementation
+      status: passed
+      summary: Full active-manifest implementation validation passed for 9 manifests.
+  completed_at: '2026-07-04T04:18:28Z'

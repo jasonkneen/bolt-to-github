@@ -6,6 +6,16 @@ import { createLogger } from '../../lib/utils/logger';
 
 const logger = createLogger('SupabaseAuthService');
 
+const SUPABASE_SESSION_STORAGE_KEYS = [
+  'supabaseToken',
+  'supabaseRefreshToken',
+  'supabaseTokenExpiry',
+  'supabaseAuthState',
+  'refreshTokenIssuedAt',
+  'extensionSessionMinted',
+  'extensionSessionMintedAt',
+];
+
 export interface SupabaseUser {
   id: string;
   email: string;
@@ -177,10 +187,9 @@ export class SupabaseAuthService {
   /**
    * Start periodic authentication checks with aggressive detection during onboarding.
    *
-   * Uses chrome.alarms for long-running intervals (authenticated/premium modes)
-   * since they survive service worker termination in MV3. Falls back to setInterval
-   * for short aggressive detection modes (1-2s) where alarms aren't practical
-   * (chrome.alarms minimum is 1 minute) and the modes only last ~60 seconds anyway.
+   * Uses chrome.alarms wherever available because alarms survive service worker
+   * termination in MV3. Unauthenticated and aggressive detection modes also keep
+   * their short setInterval checks for awake responsiveness.
    */
   private startPeriodicChecks(): void {
     /* Clear any existing interval timer */
@@ -234,24 +243,46 @@ export class SupabaseAuthService {
       useAlarm = true;
     }
 
-    if (useAlarm && typeof chrome.alarms?.create === 'function') {
+    const canUseAlarm = typeof chrome.alarms?.create === 'function';
+    const shouldUseAlarm = canUseAlarm && (useAlarm || !this.authState.isAuthenticated);
+    const shouldUseInterval = !useAlarm || !canUseAlarm;
+
+    let alarmScheduled = false;
+
+    if (shouldUseAlarm) {
       /* chrome.alarms survives service worker termination — reliable for long intervals.
-       * The alarm handler in BackgroundService.setupAlarms() dispatches to checkAuthStatus(). */
+       * The alarm handler in BackgroundService.setupAlarms() dispatches to checkAuthStatus().
+       * Unauthenticated modes keep their short interval for awake responsiveness and also
+       * register the minimum one-minute alarm so a dead MV3 worker can wake and recover. */
       const periodInMinutes = Math.max(interval / 60000, 1); // chrome.alarms minimum is 1 minute
-      chrome.alarms.create('auth-periodic-check', { periodInMinutes });
-      logger.info(`🔄 Started auth checks via chrome.alarms every ${periodInMinutes}min (${mode})`);
-    } else {
+      try {
+        const alarmCreateResult = chrome.alarms.create('auth-periodic-check', { periodInMinutes });
+        alarmScheduled = true;
+        if (alarmCreateResult && typeof (alarmCreateResult as Promise<void>).catch === 'function') {
+          void (alarmCreateResult as Promise<void>).catch((error) => {
+            logger.warn('Failed to schedule auth periodic alarm:', error);
+            if (useAlarm && !this.checkInterval) {
+              this.checkInterval = setInterval(() => {
+                this.checkAuthStatus();
+              }, interval);
+              logger.info(`🔄 Started auth checks every ${interval / 1000}s (${mode})`);
+            }
+          });
+        }
+        logger.info(
+          `🔄 Started auth checks via chrome.alarms every ${periodInMinutes}min (${mode})`
+        );
+      } catch (error) {
+        logger.warn('Failed to schedule auth periodic alarm:', error);
+      }
+    }
+
+    if (shouldUseInterval || (useAlarm && !alarmScheduled)) {
       /* Fallback to setInterval when alarms API is unavailable or for short-interval modes.
        * Short intervals for aggressive detection only last ~60s and don't need alarm persistence. */
       this.checkInterval = setInterval(() => {
         this.checkAuthStatus();
       }, interval);
-      /* Clear any existing alarm when switching to setInterval mode */
-      if (typeof chrome.alarms?.clear === 'function') {
-        chrome.alarms.clear('auth-periodic-check').catch(() => {
-          /* Alarm might not exist — ignore */
-        });
-      }
       logger.info(`🔄 Started auth checks every ${interval / 1000}s (${mode})`);
     }
   }
@@ -630,12 +661,15 @@ export class SupabaseAuthService {
           `⚠️ Reached maximum auth failures (${this.MAX_AUTH_FAILURES_BEFORE_RELOAD}). ` +
             `Requesting extension reload to clear stale state.`
         );
-        await this.requestExtensionReload();
+        const reloadScheduled = await this.requestExtensionReload();
+        if (!reloadScheduled) {
+          this.reloadRequested = false;
+          this.consecutiveAuthFailures = 0;
+        }
         return; // Don't proceed with normal re-auth flow - reload will handle it
       }
 
-      // Ensure we start from a clean state
-      await this.logout();
+      await this.clearExpiredSession();
 
       // Aggressive detection for fast token pickup once user connects
       this.enterPostConnectionMode();
@@ -643,9 +677,15 @@ export class SupabaseAuthService {
       // Show in-page modal prompting sign-in
       await this.showReauthenticationModal();
 
-      // Ask background to open bolt2github.com (service-worker context handles window/tab)
+      // Open bolt2github.com directly when this context can create tabs; content scripts fall back.
       try {
-        if (chrome.runtime?.id) {
+        if (typeof chrome.tabs?.create === 'function') {
+          await chrome.tabs.create({
+            url: 'https://bolt2github.com/login',
+            active: true,
+          });
+          logger.info('✅ Opened re-authentication page directly');
+        } else if (chrome.runtime?.id) {
           await chrome.runtime.sendMessage({
             type: 'OPEN_REAUTHENTICATION',
             data: {
@@ -738,15 +778,7 @@ export class SupabaseAuthService {
               refreshTokenAge / (24 * 60 * 60 * 1000)
             )} days). Likely expired. Clearing tokens to force re-authentication.`
           );
-          /* Clear tokens immediately if refresh token is too old */
-          await chrome.storage.local.remove([
-            'supabaseToken',
-            'supabaseRefreshToken',
-            'supabaseTokenExpiry',
-            'refreshTokenIssuedAt',
-            'extensionSessionMinted',
-            'extensionSessionMintedAt',
-          ]);
+          await this.clearExpiredSession();
           return null;
         }
 
@@ -1225,15 +1257,7 @@ export class SupabaseAuthService {
           );
         }
 
-        /* If refresh failed, clear stored tokens and independent session flag */
-        await chrome.storage.local.remove([
-          'supabaseToken',
-          'supabaseRefreshToken',
-          'supabaseTokenExpiry',
-          'refreshTokenIssuedAt',
-          'extensionSessionMinted',
-          'extensionSessionMintedAt',
-        ]);
+        await this.clearExpiredSession();
         return null;
       }
     } catch (error) {
@@ -1396,8 +1420,7 @@ export class SupabaseAuthService {
    * Handle session invalidation by clearing tokens and showing re-auth modal
    */
   private async handleSessionInvalidation(): Promise<void> {
-    /* Clear all stored tokens (reuses clearStoredTokens to avoid key list duplication) */
-    await this.clearStoredTokens();
+    await this.clearExpiredSession();
     /* Notify listeners and persist auth state via updateAuthState (not direct mutation)
      * so that storage, premium service, and periodic-check reconfiguration all update */
     this.updateAuthState({
@@ -1623,16 +1646,15 @@ export class SupabaseAuthService {
    * Clear all stored authentication tokens
    */
   private async clearStoredTokens(): Promise<void> {
+    await this.clearExpiredSession();
+  }
+
+  /**
+   * Clear only expired Supabase session artifacts while preserving GitHub App configuration.
+   */
+  public async clearExpiredSession(): Promise<void> {
     try {
-      await chrome.storage.local.remove([
-        'supabaseToken',
-        'supabaseRefreshToken',
-        'supabaseTokenExpiry',
-        'supabaseAuthState',
-        'refreshTokenIssuedAt',
-        'extensionSessionMinted',
-        'extensionSessionMintedAt',
-      ]);
+      await chrome.storage.local.remove(SUPABASE_SESSION_STORAGE_KEYS);
 
       /* Reset internal auth state */
       this.authState = {
@@ -1641,9 +1663,9 @@ export class SupabaseAuthService {
         subscription: { isActive: false, plan: 'free' },
       };
 
-      logger.info('🧹 Cleared all stored tokens and auth state');
+      logger.info('🧹 Cleared expired Supabase session and auth state');
     } catch (error) {
-      logger.warn('Failed to clear stored tokens:', error);
+      logger.warn('Failed to clear expired Supabase session:', error);
     }
   }
 
@@ -2147,7 +2169,7 @@ export class SupabaseAuthService {
    * This is a "nuclear option" when authentication repeatedly fails after user has logged in
    * Replicates the effect of manually disabling/enabling the extension
    */
-  private async requestExtensionReload(): Promise<void> {
+  private async requestExtensionReload(): Promise<boolean> {
     try {
       // Check if minimum time has passed since last reload (prevent reload loops)
       const timeSinceLastReload = Date.now() - this.lastReloadTimestamp;
@@ -2156,27 +2178,34 @@ export class SupabaseAuthService {
           `⏸️ Reload requested too soon after previous reload (${Math.round(timeSinceLastReload / 1000)}s ago). ` +
             `Minimum interval: ${this.MIN_TIME_BETWEEN_RELOADS / 1000}s. Skipping reload to prevent loops.`
         );
-        return;
+        this.reloadRequested = false;
+        return false;
       }
 
       logger.info(
         '🔄 Requesting extension reload to clear stale authentication state (after multiple failures)'
       );
 
-      // Record reload timestamp BEFORE sending message (to prevent race conditions)
-      this.lastReloadTimestamp = Date.now();
+      const reloadTimestamp = Date.now();
 
-      // Persist timestamp to storage to survive extension restarts and prevent reload loops
-      try {
-        await chrome.storage.local.set({ lastExtensionReloadTimestamp: this.lastReloadTimestamp });
-        logger.debug('💾 Persisted reload timestamp to storage');
-      } catch (storageError) {
-        logger.warn('Failed to persist reload timestamp:', storageError);
-        // Continue anyway - timestamp in memory is better than nothing
+      if (typeof chrome.alarms?.create === 'function') {
+        try {
+          const RELOAD_DELAY_MINUTES = 3 / 60; // 3 seconds = 0.05 minutes
+          await chrome.alarms.create('self-heal-reload', {
+            delayInMinutes: RELOAD_DELAY_MINUTES,
+          });
+          this.lastReloadTimestamp = reloadTimestamp;
+          await this.persistLastReloadTimestamp();
+          logger.info('✅ Scheduled extension reload directly via chrome.alarms');
+          return true;
+        } catch (alarmError) {
+          logger.error('❌ Failed to schedule extension reload alarm:', alarmError);
+          this.reloadRequested = false;
+          return false;
+        }
       }
 
-      // Send message to background service to handle the reload
-      // The background service will show a notification and then call chrome.runtime.reload()
+      // Fall back to messaging for unprivileged contexts where chrome.alarms is unavailable.
       try {
         if (chrome.runtime?.id) {
           await chrome.runtime.sendMessage({
@@ -2185,14 +2214,31 @@ export class SupabaseAuthService {
               reason: 'Multiple authentication failures - clearing stale state',
             },
           });
+          this.lastReloadTimestamp = reloadTimestamp;
+          await this.persistLastReloadTimestamp();
           logger.info('✅ Extension reload requested successfully');
+          return true;
         }
       } catch (error) {
         logger.error('❌ Failed to send extension reload message:', error);
-        // Don't throw - this is best effort
       }
+
+      this.reloadRequested = false;
+      return false;
     } catch (error) {
       logger.error('❌ Error requesting extension reload:', error);
+      this.reloadRequested = false;
+      return false;
+    }
+  }
+
+  private async persistLastReloadTimestamp(): Promise<void> {
+    try {
+      await chrome.storage.local.set({ lastExtensionReloadTimestamp: this.lastReloadTimestamp });
+      logger.debug('💾 Persisted reload timestamp to storage');
+    } catch (storageError) {
+      logger.warn('Failed to persist reload timestamp:', storageError);
+      // Continue anyway - timestamp in memory is better than nothing
     }
   }
 }

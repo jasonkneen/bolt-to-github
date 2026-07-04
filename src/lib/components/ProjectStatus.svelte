@@ -28,6 +28,8 @@
   let showQuickIssueForm = false;
   let showCommitsModal = false;
   let effectiveToken = '';
+  let pushError: string | null = null;
+  let isPushing = false;
 
   // Premium status
   $: isUserPremium = $isPremium;
@@ -370,10 +372,31 @@
     chrome.tabs.create({ url: `https://github.com/${gitHubUsername}/${repoName}/tree/${branch}` });
   }
 
-  function pushToGitHub(event: MouseEvent | KeyboardEvent) {
+  async function pushToGitHub(event: MouseEvent | KeyboardEvent) {
     event.stopPropagation();
-    // Send a message to trigger the GitHub push action
-    chrome.runtime.sendMessage({ action: 'PUSH_TO_GITHUB' });
+
+    if (isPushing) return;
+
+    try {
+      isPushing = true;
+      pushError = null;
+      const response = (await chrome.runtime.sendMessage({ action: 'PUSH_TO_GITHUB' })) as {
+        success?: boolean;
+        error?: string;
+      };
+
+      if (!response?.success) {
+        const errorMessage = response?.error || 'Failed to start Push to GitHub';
+        pushError =
+          errorMessage === 'No active Bolt tab found'
+            ? 'Not on bolt.new: No active Bolt tab found'
+            : errorMessage;
+      }
+    } catch (error) {
+      pushError = error instanceof Error ? error.message : 'Failed to start Push to GitHub';
+    } finally {
+      isPushing = false;
+    }
   }
 
   function viewFileChanges(event: MouseEvent | KeyboardEvent) {
@@ -709,7 +732,7 @@
         <button
           class="tooltip-container w-8 h-8 flex items-center justify-center border border-green-700 bg-green-900/30 rounded-full text-green-400 hover:bg-green-800/50 hover:text-green-300 transition-colors"
           on:click|stopPropagation={pushToGitHub}
-          disabled={isLoading.repoStatus}
+          disabled={isLoading.repoStatus || isPushing}
           aria-label="Push to GitHub"
         >
           <svg
@@ -729,6 +752,14 @@
           <span class="tooltip">Push to GitHub</span>
         </button>
       </div>
+      {#if pushError}
+        <div
+          class="rounded-sm border border-red-700 bg-red-950/50 px-3 py-2 text-sm text-red-200"
+          role="alert"
+        >
+          {pushError}
+        </div>
+      {/if}
     </div>
   </div>
 </div>

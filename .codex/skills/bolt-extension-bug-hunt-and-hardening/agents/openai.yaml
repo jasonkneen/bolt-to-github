@@ -1,0 +1,6 @@
+interface:
+  display_name: 'Bolt Extension Bug Hunt'
+  short_description: 'Find production reliability and safety risks'
+  default_prompt: 'Use $bolt-extension-bug-hunt-and-hardening to audit this deployed Chrome extension for production bugs and hardening work.'
+policy:
+  allow_implicit_invocation: true

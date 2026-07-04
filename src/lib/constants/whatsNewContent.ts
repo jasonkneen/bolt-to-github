@@ -6,6 +6,18 @@ export interface WhatsNewVersion {
 }
 
 export const whatsNewContent: Record<string, WhatsNewVersion> = {
+  '1.3.19': {
+    date: '2026-07-03',
+    highlights: [
+      '🛡️ Clearer Push Errors - Failed pushes now surface what went wrong with a retry option instead of failing silently',
+      '🔐 More Reliable Auth Recovery - The extension can recover from stale sign-ins without requiring a manual disable/enable cycle',
+      '🔗 GitHub App Stays Connected - Re-authentication preserves your GitHub App connection instead of making you reconnect it',
+      '📝 Repository Name Validation - Invalid repository names are caught consistently before a push can fail',
+      '🔄 Reconnect Notices - Open Bolt tabs show a refresh-to-reconnect notice if an extension reload or update disconnects the injected UI',
+    ],
+    details: `This release focuses on reliability. Push failures now tell you what went wrong and let you retry right away, authentication recovers more reliably after stale sessions or extension reloads, GitHub App connections survive normal re-authentication, and open Bolt tabs show a clear reconnect notice when a page refresh is needed.`,
+    type: 'patch',
+  },
   '1.3.18': {
     date: '2026-05-30',
     highlights: [

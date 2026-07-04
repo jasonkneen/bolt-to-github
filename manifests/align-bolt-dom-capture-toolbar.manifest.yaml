@@ -1,0 +1,180 @@
+schema: '2'
+goal: 'Add regression coverage for Bolt DOM capture toolbar extraction'
+description: |
+  Add regression coverage for the Bolt DOM capture script's current Publish/Share-first
+  toolbar extraction and legacy ml-auto fallback so future selector recovery keeps using
+  the same strategy as runtime injection. The reusable DOM extraction behavior is
+  contracted in a validator-supported JavaScript helper module; the interactive
+  .mjs capture script delegates to that helper.
+temptations:
+  - risk: "Do not declare descriptive .mjs inline blocks as public MAID function artifacts."
+    instead: "Expose exact exported helper symbols from scripts/capture-bolt-dom-helpers.js and test those symbols directly."
+  - risk: "Do not import script tests from src/** tests to force Vitest collection."
+    instead: "Use the shared Vitest script-test harness and run scripts/__tests__/capture-bolt-dom.test.ts directly."
+  - risk: "Do not drop the legacy div.ml-auto fallback while extracting helpers."
+    instead: "Keep current Publish/Share-first lookup and the legacy ml-auto fallback in extractToolbarHtml."
+type: fix
+files:
+  create:
+    - path: scripts/capture-bolt-dom-helpers.js
+      artifacts:
+        - kind: function
+          name: collectStructuredToolbarCandidates
+          args:
+            - name: documentRef
+            - name: url
+          description: |
+            Collects structured toolbar candidates, including Publish/Share anchors,
+            legacy ml-auto containers, gap containers, and existing GitHub buttons.
+        - kind: function
+          name: extractToolbarHtml
+          args:
+            - name: documentRef
+          description: |
+            Extracts toolbar HTML by preferring the current Publish/Share anchored
+            toolbar group before falling back to the legacy ml-auto toolbar DOM.
+    - path: scripts/__tests__/capture-bolt-dom.test.ts
+      artifacts:
+        - kind: test_function
+          name: extracts toolbar HTML from the current Publish anchored Bolt DOM
+          description: Required new behavioral test before promotion.
+        - kind: test_function
+          name: falls back to legacy ml-auto toolbar DOM
+          description: Required new behavioral test before promotion.
+        - kind: test_function
+          name: records structured toolbar candidates for current and existing GitHub buttons
+          description: Required behavioral coverage for structured candidate collection.
+  edit:
+    - path: src/content/managers/__tests__/GitHubButtonManager.test.ts
+      artifacts:
+        - kind: test_function
+          name: finds the current toolbar group via the Publish button when not under div.ml-auto
+        - kind: test_function
+          name: finds the legacy container when the toolbar sits under div.ml-auto
+  read:
+    - scripts/capture-bolt-dom.mjs
+    - src/content/managers/GitHubButtonManager.ts
+    - bolt-publish-button.html
+    - bolt-download-button-v3.html
+    - docs/e2e-testing-rules.md
+validate:
+  - pnpm exec vitest run scripts/__tests__/capture-bolt-dom.test.ts src/content/managers/__tests__/GitHubButtonManager.test.ts
+  - pnpm check
+  - pnpm lint
+  - pnpm build
+created: '2026-05-30T20:41:28+08:00'
+metadata:
+  tags:
+    - bolt-dom
+    - selectors
+    - tooling
+  priority: high
+  status: completed
+outcome:
+  status: completed
+  summary: |
+    Added validator-supported helper coverage for Bolt toolbar DOM capture and
+    delegated the interactive capture script's toolbar snapshot extraction to
+    those helpers.
+  rationale: |
+    MAID could not validate descriptive inline .mjs artifacts, so the reusable
+    extraction behavior now lives in scripts/capture-bolt-dom-helpers.js with
+    direct script-level Vitest coverage. The .mjs script remains the Playwright
+    CLI wrapper and delegates to the contracted helper functions.
+  lessons:
+    - lesson_type: maid-contract
+      summary: |
+        Contract script DOM behavior through validator-supported helper modules
+        instead of descriptive inline .mjs blocks.
+      tags:
+        - maid
+        - scripts
+        - bolt-dom
+      paths:
+        - scripts/capture-bolt-dom-helpers.js
+        - scripts/capture-bolt-dom.mjs
+    - lesson_type: regression-coverage
+      summary: |
+        Script tests can now run directly under scripts/__tests__, so selector
+        regression coverage no longer needs src/** import shims.
+      tags:
+        - vitest
+        - selectors
+      paths:
+        - scripts/__tests__/capture-bolt-dom.test.ts
+  review_notes:
+    - source: local self-review
+      severity: no findings
+      summary: |
+        Changed files stayed within manifest scope; the .mjs edit is narrow
+        delegation through declared helper artifacts; no src/** import shim was
+        introduced; legacy ml-auto fallback remains covered.
+  validation:
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/align-bolt-dom-capture-toolbar.manifest.yaml
+        - --mode
+        - schema
+      status: passed
+      summary: Manifest schema validation passed.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/align-bolt-dom-capture-toolbar.manifest.yaml
+        - --mode
+        - behavioral
+      status: passed
+      summary: Behavioral validation passed.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/align-bolt-dom-capture-toolbar.manifest.yaml
+        - --mode
+        - implementation
+      status: passed
+      summary: Implementation validation passed.
+    - command:
+        - ./scripts/maid
+        - test
+        - --manifest
+        - manifests/align-bolt-dom-capture-toolbar.manifest.yaml
+      status: passed
+      summary: MAID test runner passed all four validation commands.
+    - command:
+        - pnpm
+        - exec
+        - vitest
+        - run
+        - scripts/__tests__/capture-bolt-dom.test.ts
+        - src/content/managers/__tests__/GitHubButtonManager.test.ts
+      status: passed
+      summary: Focused Vitest command passed 36 tests across 2 files.
+    - command:
+        - pnpm
+        - check
+      status: passed
+      summary: svelte-check found 0 errors and 0 warnings.
+    - command:
+        - pnpm
+        - lint
+      status: passed
+      summary: ESLint completed successfully for src/**/*.{js,ts,svelte}.
+    - command:
+        - pnpm
+        - build
+      status: passed
+      summary: Production Vite build completed; existing chunk and import-assert warnings were emitted.
+    - command:
+        - node
+        - --check
+        - scripts/capture-bolt-dom.mjs
+      status: passed
+      summary: Capture script syntax check passed.
+    - command:
+        - node
+        - --check
+        - scripts/capture-bolt-dom-helpers.js
+      status: passed
+      summary: Helper module syntax check passed.
+  completed_at: '2026-05-31T18:48:27+08:00'

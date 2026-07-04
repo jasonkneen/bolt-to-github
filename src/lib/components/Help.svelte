@@ -254,7 +254,7 @@
       </li>
       <li>
         • Need professional help? Try our <a
-          href="https://fix.aidrivencoder.com"
+          href="https://fix.aidrivencoder.com?utm_source=extension&utm_medium=popup&utm_campaign=help_tab"
           target="_blank"
           class="text-blue-400 hover:underline">AI Dev fixing services</a
         > for expert assistance with your development challenges

@@ -16,15 +16,24 @@ import type {
 import { createLogger, getLogStorage } from '../lib/utils/logger';
 import { extractProjectIdFromUrl } from '../lib/utils/projectId';
 import { analytics } from '../services/AnalyticsService';
+import { resolveExtensionPageTitle } from '../lib/utils/analytics';
 import { BoltProjectSyncService } from '../services/BoltProjectSyncService';
 import { UnifiedGitHubService } from '../services/UnifiedGitHubService';
 import { ZipHandler } from '../services/zipHandler';
+import { AuthMessageRouter, type AuthMessageType } from './AuthMessageRouter';
 import { StateManager } from './StateManager';
 import { BackgroundTempRepoManager } from './TempRepoManager';
 import { UsageTracker } from './UsageTracker';
 import { WindowManager } from './WindowManager';
 
 const logger = createLogger('BackgroundService');
+const AUTH_STORAGE_RECOVERY_DEBOUNCE_MS = 1000;
+const AUTH_STORAGE_RECOVERY_KEYS = new Set([
+  'supabaseToken',
+  'supabaseTokenExpiry',
+  'authenticationMethod',
+  'githubAppInstallationId',
+]);
 
 export class BackgroundService {
   private stateManager: StateManager;
@@ -34,6 +43,7 @@ export class BackgroundService {
   private tempRepoManager: BackgroundTempRepoManager | null = null;
   private pendingCommitMessage: string;
   private supabaseAuthService: SupabaseAuthService;
+  private authMessageRouter: AuthMessageRouter;
   private operationStateManager: OperationStateManager;
   private usageTracker: UsageTracker;
   private syncService: BoltProjectSyncService;
@@ -44,6 +54,7 @@ export class BackgroundService {
   private storageListener:
     | ((changes: { [key: string]: chrome.storage.StorageChange }, namespace: string) => void)
     | null = null;
+  private authStorageRecoveryTimeout: NodeJS.Timeout | null = null;
   private syncAlarmHandler: ((alarm: chrome.alarms.Alarm) => void) | null = null;
   // Tab-based project tracking to prevent wrong project pushes
   private tabProjectMap: Map<number, string> = new Map();
@@ -69,6 +80,7 @@ export class BackgroundService {
     this.zipHandler = null;
     this.pendingCommitMessage = 'Commit from Bolt to GitHub';
     this.supabaseAuthService = SupabaseAuthService.getInstance();
+    this.authMessageRouter = new AuthMessageRouter(this.supabaseAuthService);
     this.operationStateManager = OperationStateManager.getInstance();
     this.usageTracker = new UsageTracker();
     this.syncService = new BoltProjectSyncService();
@@ -244,6 +256,27 @@ export class BackgroundService {
     this.zipHandler = new ZipHandler(githubService, (status) => this.broadcastStatus(status));
   }
 
+  private async reinitializeGitHubDependencies(): Promise<void> {
+    const githubService = await this.initializeGitHubService();
+    if (githubService) {
+      logger.info('🔄 GitHub service reinitialized, reinitializing ZipHandler...');
+      this.setupZipHandler(githubService);
+
+      const settings = await this.stateManager.getGitHubSettings();
+      if (settings?.gitHubSettings?.repoOwner) {
+        logger.info('🔄 Reinitializing TempRepoManager with updated settings...');
+        this.tempRepoManager = new BackgroundTempRepoManager(
+          githubService,
+          settings.gitHubSettings.repoOwner,
+          (status) => this.broadcastStatus(status)
+        );
+      } else {
+        logger.warn('⚠️ No repoOwner found, TempRepoManager will remain uninitialized');
+        this.tempRepoManager = null;
+      }
+    }
+  }
+
   private broadcastStatus(status: UploadStatusState) {
     for (const [, port] of this.ports) {
       this.sendResponse(port, {
@@ -277,122 +310,144 @@ export class BackgroundService {
     });
 
     // Setup runtime message listener for direct messages (not using ports)
-    chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       logger.info('📥 Received runtime message:', message);
       this.updateLastActivity();
 
+      const runAsync = (operation: () => Promise<void>): true => {
+        operation().catch((error) => {
+          logger.error('❌ Runtime message handler failed:', error);
+          sendResponse({
+            success: false,
+            error: error instanceof Error ? error.message : 'Runtime message failed',
+          });
+        });
+        return true;
+      };
+
+      const authMessageHandled = this.authMessageRouter.handleMessage(
+        message as { type: AuthMessageType },
+        sendResponse
+      );
+      if (authMessageHandled) {
+        return authMessageHandled;
+      }
+
       if (message.action === 'PUSH_TO_GITHUB') {
-        this.handlePushToGitHub();
-        sendResponse({ success: true });
+        return runAsync(async () => {
+          const response = await this.handlePushToGitHub();
+          sendResponse(response);
+        });
       } else if (message.type === 'FILE_CHANGES') {
         logger.info('📄 Received file changes, forwarding to popup');
         // Forward file changes to popup
         chrome.runtime.sendMessage(message);
         sendResponse({ success: true });
       } else if (message.type === 'CHECK_PREMIUM_FEATURE') {
-        this.handleCheckPremiumFeature(message.feature, sendResponse);
-        return true; // Will respond asynchronously
+        return runAsync(() => this.handleCheckPremiumFeature(message.feature, sendResponse));
       } else if (message.type === 'FORCE_AUTH_CHECK') {
         logger.info('🔐 Forcing auth check via message');
-        this.supabaseAuthService.forceCheck();
-        sendResponse({ success: true });
+        return runAsync(async () => {
+          await this.supabaseAuthService.forceCheck();
+          sendResponse({ success: true });
+        });
       } else if (message.type === 'FORCE_SUBSCRIPTION_REFRESH') {
         logger.info('💰 Forcing subscription refresh via message');
-        this.supabaseAuthService.forceSubscriptionRevalidation();
-        sendResponse({ success: true });
+        return runAsync(async () => {
+          await this.supabaseAuthService.forceSubscriptionRevalidation();
+          sendResponse({ success: true });
+        });
       } else if (message.type === 'FORCE_POPUP_SYNC') {
         logger.info('🔄 Forcing popup sync via message');
-        await this.supabaseAuthService.forceSyncToPopup();
-        sendResponse({ success: true });
+        return runAsync(async () => {
+          await this.supabaseAuthService.forceSyncToPopup();
+          sendResponse({ success: true });
+        });
       } else if (message.type === 'USER_LOGOUT') {
         logger.info('🚪 User logout requested from popup');
-        await analytics.trackEvent({
-          category: 'user_action',
-          action: 'user_logout',
-          label: JSON.stringify({ context: 'popup' }),
+        return runAsync(async () => {
+          await analytics.trackEvent({
+            category: 'user_action',
+            action: 'user_logout',
+            label: JSON.stringify({ context: 'popup' }),
+          });
+          await this.supabaseAuthService.logout();
+          sendResponse({ success: true });
         });
-        await this.supabaseAuthService.logout();
-        sendResponse({ success: true });
       } else if (message.type === 'ANALYTICS_EVENT') {
         logger.info('📊 Received analytics event:', message.eventType, message.eventData);
         this.handleAnalyticsEvent(message.eventType, message.eventData);
         sendResponse({ success: true });
       } else if (message.type === 'SHOW_UPGRADE_MODAL') {
         logger.info('🔊 Received SHOW_UPGRADE_MODAL message:', message.feature);
-        await analytics.trackEvent({
-          category: 'user_action',
-          action: 'upgrade_modal_requested',
-          label: JSON.stringify({ feature: message.feature, context: 'content_script' }),
+        return runAsync(async () => {
+          await analytics.trackEvent({
+            category: 'user_action',
+            action: 'upgrade_modal_requested',
+            label: JSON.stringify({ feature: message.feature, context: 'content_script' }),
+          });
+          // Store the upgrade modal context and open popup
+          await chrome.storage.local.set({
+            popupContext: 'upgrade',
+            upgradeModalFeature: message.feature,
+          });
+          await chrome.action.openPopup();
+          sendResponse({ success: true });
         });
-        // Store the upgrade modal context and open popup
-        await chrome.storage.local.set({
-          popupContext: 'upgrade',
-          upgradeModalFeature: message.feature,
-        });
-        chrome.action.openPopup();
-        sendResponse({ success: true });
       } else if (message.type === 'NOTIFY_GITHUB_APP_SYNC') {
         const syncMessage = message as NotifyGitHubAppSyncMessage;
         logger.info('📢 Received NOTIFY_GITHUB_APP_SYNC message:', syncMessage.data);
-        await this.handleGitHubAppSyncNotification(syncMessage.data);
-        sendResponse({ success: true });
+        return runAsync(async () => {
+          await this.handleGitHubAppSyncNotification(syncMessage.data);
+          sendResponse({ success: true });
+        });
       } else if (
         message.type === 'getExtensionStatus' &&
         sender.tab &&
         this.isValidBolt2GitHubOrigin(sender.url)
       ) {
         // Handle welcome page status request
-        this.handleGetExtensionStatus(sendResponse);
-        return true; // Will respond asynchronously
+        return runAsync(() => this.handleGetExtensionStatus(sendResponse));
       } else if (
         message.type === 'completeOnboardingStep' &&
         sender.tab &&
         this.isValidBolt2GitHubOrigin(sender.url)
       ) {
         // Handle onboarding step completion
-        this.handleCompleteOnboardingStep(message.step, sendResponse);
-        return true; // Will respond asynchronously
+        return runAsync(() => this.handleCompleteOnboardingStep(message.step, sendResponse));
       } else if (
         message.type === 'initiateGitHubAuth' &&
         sender.tab &&
         this.isValidBolt2GitHubOrigin(sender.url)
       ) {
         // Handle GitHub authentication initiation
-        this.handleInitiateGitHubAuth(message.method, sendResponse);
-        return true; // Will respond asynchronously
+        return runAsync(() => this.handleInitiateGitHubAuth(message.method, sendResponse));
       } else if (message.type === 'SYNC_BOLT_PROJECTS') {
         // Handle manual sync trigger
-        this.handleManualSync(sendResponse);
-        return true; // Will respond asynchronously
+        return runAsync(() => this.handleManualSync(sendResponse));
       } else if (message.type === 'OPEN_REAUTHENTICATION') {
         // Handle re-authentication request (self-healing)
         logger.info('🔐 Opening re-authentication page for token renewal');
-        this.handleOpenReauthentication(message.data, sendResponse);
-        return true; // Will respond asynchronously
+        return runAsync(() => this.handleOpenReauthentication(message.data, sendResponse));
       } else if (message.type === 'OPEN_POPUP_WINDOW') {
         // Handle popup window opening request
         logger.info('🪟 Opening popup in window mode');
-        this.handleOpenPopupWindow(sendResponse);
-        return true; // Will respond asynchronously
+        return runAsync(() => this.handleOpenPopupWindow(sendResponse));
       } else if (message.type === 'CLOSE_POPUP_WINDOW') {
         // Handle popup window closing request
         logger.info('🔄 Closing popup window and opening regular popup');
-        this.handleClosePopupWindow(sendResponse);
-        return true; // Will respond asynchronously
+        return runAsync(() => this.handleClosePopupWindow(sendResponse));
       } else if (message.type === 'CLEAR_LOGS_EMERGENCY') {
         // Handle emergency log clearing when storage quota is exceeded
         logger.info('🧹 Emergency log clearing requested');
-        this.handleEmergencyLogClear(sendResponse);
-        return true; // Will respond asynchronously
+        return runAsync(() => this.handleEmergencyLogClear(sendResponse));
       } else if (message.type === 'RELOAD_EXTENSION') {
         // Handle extension reload request (self-healing for auth failures)
         logger.info('🔄 Extension reload requested for authentication recovery');
-        this.handleExtensionReload(message.data, sendResponse);
-        return true; // Will respond asynchronously
+        return runAsync(() => this.handleExtensionReload(message.data, sendResponse));
       }
 
-      // Return true to indicate we'll send a response asynchronously
-      return true;
+      return false;
     });
 
     // Clean up when tabs are closed
@@ -470,31 +525,48 @@ export class BackgroundService {
 
         if (settingsChanged) {
           logger.info('🔄 GitHub settings changed, reinitializing GitHub service...');
-          const githubService = await this.initializeGitHubService();
-          if (githubService) {
-            logger.info('🔄 GitHub service reinitialized, reinitializing ZipHandler...');
-            this.setupZipHandler(githubService);
-
-            // Also reinitialize TempRepoManager with new settings
-            const settings = await this.stateManager.getGitHubSettings();
-            if (settings?.gitHubSettings?.repoOwner) {
-              logger.info('🔄 Reinitializing TempRepoManager with updated settings...');
-              this.tempRepoManager = new BackgroundTempRepoManager(
-                githubService,
-                settings.gitHubSettings.repoOwner,
-                (status) => this.broadcastStatus(status)
-              );
-            } else {
-              logger.warn('⚠️ No repoOwner found, TempRepoManager will remain uninitialized');
-              this.tempRepoManager = null;
-            }
-          }
+          await this.reinitializeGitHubDependencies();
         }
+      } else if (namespace === 'local' && this.hasRelevantAuthStorageChange(changes)) {
+        this.scheduleAuthStorageRecovery();
       }
     };
 
     // Add the listener
     chrome.storage.onChanged.addListener(this.storageListener);
+  }
+
+  private hasRelevantAuthStorageChange(changes: {
+    [key: string]: chrome.storage.StorageChange;
+  }): boolean {
+    return Object.entries(changes).some(([key, change]) => {
+      return AUTH_STORAGE_RECOVERY_KEYS.has(key) && !Object.is(change.oldValue, change.newValue);
+    });
+  }
+
+  private scheduleAuthStorageRecovery(): void {
+    if (this.authStorageRecoveryTimeout) {
+      clearTimeout(this.authStorageRecoveryTimeout);
+    }
+
+    this.authStorageRecoveryTimeout = setTimeout(() => {
+      this.authStorageRecoveryTimeout = null;
+      this.recoverFromAuthStorageChange().catch((error) => {
+        logger.error('Failed to recover from auth storage change:', error);
+      });
+    }, AUTH_STORAGE_RECOVERY_DEBOUNCE_MS);
+  }
+
+  private async recoverFromAuthStorageChange(): Promise<void> {
+    logger.info('🔐 Auth storage changed, forcing auth check and reinitializing GitHub service');
+
+    try {
+      await this.supabaseAuthService.forceCheck();
+    } catch (error) {
+      logger.error('Failed to force auth check after auth storage change:', error);
+    }
+
+    await this.reinitializeGitHubDependencies();
   }
 
   private async handlePortMessage(tabId: number, message: Message): Promise<void> {
@@ -540,7 +612,7 @@ export class BackgroundService {
           logger.info('Setting commit message:', commitMessage.data.message);
           const hasCustomMessage = Boolean(
             commitMessage.data?.message &&
-              commitMessage.data.message !== 'Commit from Bolt to GitHub'
+            commitMessage.data.message !== 'Commit from Bolt to GitHub'
           );
           await analytics.trackEvent({
             category: 'user_action',
@@ -1152,8 +1224,11 @@ export class BackgroundService {
 
         case 'page_view':
           await analytics.trackPageView(
-            eventData.page || '/unknown',
-            String(eventData.metadata?.title || 'Extension Page')
+            eventData.page ? `/${String(eventData.page).replace(/^\//, '')}` : '/unknown',
+            resolveExtensionPageTitle(
+              String(eventData.page || 'unknown'),
+              eventData.metadata?.title ? String(eventData.metadata.title) : undefined
+            )
           );
           break;
 
@@ -1180,7 +1255,7 @@ export class BackgroundService {
     }
   }
 
-  private async handlePushToGitHub(): Promise<void> {
+  private async handlePushToGitHub(): Promise<{ success: boolean; error?: string }> {
     logger.info('🔄 Handling Push to GitHub action');
 
     try {
@@ -1190,7 +1265,7 @@ export class BackgroundService {
 
       if (!boltTab || !boltTab.id) {
         logger.error('No active Bolt tab found');
-        return;
+        return { success: false, error: 'No active Bolt tab found' };
       }
 
       const tabId = boltTab.id;
@@ -1198,7 +1273,7 @@ export class BackgroundService {
 
       if (!port) {
         logger.error('No connected port for tab:', tabId);
-        return;
+        return { success: false, error: 'No connected Bolt content script' };
       }
 
       // Send a message to the content script to trigger the GitHub push action
@@ -1207,8 +1282,13 @@ export class BackgroundService {
       });
 
       logger.info('✅ Push to GitHub message sent to content script');
+      return { success: true };
     } catch (error) {
       logger.error('Error handling Push to GitHub action:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to start Push to GitHub',
+      };
     }
   }
 
@@ -1849,6 +1929,11 @@ export class BackgroundService {
     if (this.storageListener) {
       chrome.storage.onChanged.removeListener(this.storageListener);
       this.storageListener = null;
+    }
+
+    if (this.authStorageRecoveryTimeout) {
+      clearTimeout(this.authStorageRecoveryTimeout);
+      this.authStorageRecoveryTimeout = null;
     }
 
     // Clean up auth state listener

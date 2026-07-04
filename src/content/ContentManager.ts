@@ -232,7 +232,7 @@ export class ContentManager {
         // Try once more in case it's a timing issue
         this.reconnectAttempts++;
         setTimeout(() => {
-          if (!this.isDestroyed && this.isInRecovery) {
+          if (this.isInRecovery) {
             logger.info('🔄 Final retry attempt for context recovery...');
             this.attemptRecovery();
           }
@@ -284,7 +284,7 @@ export class ContentManager {
         this.reconnectAttempts++;
         logger.info(`🔄 Scheduling recovery retry ${this.reconnectAttempts}/3 in 5 seconds...`);
         setTimeout(() => {
-          if (!this.isDestroyed && this.isInRecovery) {
+          if (this.isInRecovery) {
             this.attemptRecovery();
           }
         }, 5000);
@@ -481,15 +481,23 @@ export class ContentManager {
 
   private handleInitializationError(error: unknown): void {
     logger.error('Initialization error:', error);
+    if (!chrome.runtime?.id) {
+      if (!this.isInRecovery) {
+        this.handleExtensionContextInvalidated();
+      }
+      return;
+    }
+
     this.notifyUserOfError();
   }
 
-  private notifyUserOfExtensionReload(): void {
+  private notifyUserOfExtensionReload(options: { message?: string; duration?: number } = {}): void {
     this.uiManager?.showNotification({
       type: 'info',
       message:
+        options.message ||
         'Bolt to GitHub extension has been updated or reloaded. Please refresh the page to continue.',
-      duration: 10000,
+      duration: options.duration ?? 10000,
     });
   }
 
@@ -648,6 +656,22 @@ export class ContentManager {
         try {
           if (message.type === 'REFRESH_FILE_CHANGES') {
             await this.uiManager?.handleShowChangedFiles();
+            sendResponse({ success: true });
+            return;
+          }
+
+          if (message.type === 'SHOW_EXTENSION_RELOAD_NOTIFICATION') {
+            const reloadMessage =
+              typeof message.data?.message === 'string' ? message.data.message : undefined;
+            const reloadDuration =
+              typeof message.data?.countdown === 'number'
+                ? Math.max(message.data.countdown, 1) * 1000
+                : undefined;
+
+            this.notifyUserOfExtensionReload({
+              message: reloadMessage,
+              duration: reloadDuration,
+            });
             sendResponse({ success: true });
             return;
           }

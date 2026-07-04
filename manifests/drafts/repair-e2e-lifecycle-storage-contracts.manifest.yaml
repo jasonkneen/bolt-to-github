@@ -1,0 +1,53 @@
+# draft-kind: hardening-plan
+schema: '2'
+goal: 'Repair E2E lifecycle storage contracts'
+description: |
+  Align lifecycle E2E tests and helpers with the current extension URLs and storage schema
+  so service worker restart, extension reload, auth persistence, and cross-context storage
+  checks protect deployed MV3 behavior instead of stale assumptions such as authType,
+  installationId, and popup.html.
+type: fix
+files:
+  edit:
+    - path: e2e/lifecycle.spec.ts
+      artifacts:
+        - kind: test_function
+          name: should persist settings after extension reload
+        - kind: test_function
+          name: should maintain GitHub App authentication after update
+        - kind: test_function
+          name: should preserve repository settings across sessions
+        - kind: test_function
+          name: should handle service worker restart
+        - kind: test_function
+          name: should maintain extension state across tab switches
+        - kind: test_function
+          name: should handle storage changes from other contexts
+    - path: e2e/helpers/storage.ts
+      artifacts:
+        - kind: function
+          name: setupPATAuth
+        - kind: function
+          name: setupGitHubAppAuth
+        - kind: function
+          name: getGitHubSettings
+    - path: e2e/helpers/popup.ts
+      artifacts:
+        - kind: function
+          name: openPopup
+  read:
+    - manifest.json
+    - src/lib/services/chromeStorage.ts
+    - src/background/BackgroundService.ts
+    - src/popup/index.html
+validate:
+  - pnpm exec playwright test e2e/lifecycle.spec.ts --project=chromium --reporter=list
+  - pnpm exec playwright test --project=chromium --reporter=list
+created: '2026-05-30T20:41:28+08:00'
+metadata:
+  tags:
+    - e2e
+    - storage
+    - mv3
+  priority: high
+  status: planning
