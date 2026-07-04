@@ -232,7 +232,7 @@ export class ContentManager {
         // Try once more in case it's a timing issue
         this.reconnectAttempts++;
         setTimeout(() => {
-          if (!this.isDestroyed && this.isInRecovery) {
+          if (this.isInRecovery) {
             logger.info('🔄 Final retry attempt for context recovery...');
             this.attemptRecovery();
           }
@@ -284,7 +284,7 @@ export class ContentManager {
         this.reconnectAttempts++;
         logger.info(`🔄 Scheduling recovery retry ${this.reconnectAttempts}/3 in 5 seconds...`);
         setTimeout(() => {
-          if (!this.isDestroyed && this.isInRecovery) {
+          if (this.isInRecovery) {
             this.attemptRecovery();
           }
         }, 5000);
@@ -481,6 +481,11 @@ export class ContentManager {
 
   private handleInitializationError(error: unknown): void {
     logger.error('Initialization error:', error);
+    if (!chrome.runtime?.id) {
+      this.handleUnrecoverableContextInvalidation();
+      return;
+    }
+
     this.notifyUserOfError();
   }
 
@@ -648,6 +653,12 @@ export class ContentManager {
         try {
           if (message.type === 'REFRESH_FILE_CHANGES') {
             await this.uiManager?.handleShowChangedFiles();
+            sendResponse({ success: true });
+            return;
+          }
+
+          if (message.type === 'SHOW_EXTENSION_RELOAD_NOTIFICATION') {
+            this.notifyUserOfExtensionReload();
             sendResponse({ success: true });
             return;
           }
