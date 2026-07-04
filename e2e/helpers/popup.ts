@@ -195,7 +195,7 @@ export async function waitForErrorNotification(page: Page): Promise<string> {
     .filter({ hasText: /Error|Failed|Invalid|No active Bolt tab|content script|no content/i })
     .first();
   await errorIndicator.waitFor({ state: 'visible', timeout: 10000 });
-  return errorIndicator.textContent() || 'Unknown error';
+  return (await errorIndicator.textContent()) || 'Unknown error';
 }
 
 /**
