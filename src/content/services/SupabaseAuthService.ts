@@ -187,10 +187,9 @@ export class SupabaseAuthService {
   /**
    * Start periodic authentication checks with aggressive detection during onboarding.
    *
-   * Uses chrome.alarms for long-running intervals (authenticated/premium modes)
-   * since they survive service worker termination in MV3. Falls back to setInterval
-   * for short aggressive detection modes (1-2s) where alarms aren't practical
-   * (chrome.alarms minimum is 1 minute) and the modes only last ~60 seconds anyway.
+   * Uses chrome.alarms wherever available because alarms survive service worker
+   * termination in MV3. Unauthenticated and aggressive detection modes also keep
+   * their short setInterval checks for awake responsiveness.
    */
   private startPeriodicChecks(): void {
     /* Clear any existing interval timer */
@@ -244,24 +243,46 @@ export class SupabaseAuthService {
       useAlarm = true;
     }
 
-    if (useAlarm && typeof chrome.alarms?.create === 'function') {
+    const canUseAlarm = typeof chrome.alarms?.create === 'function';
+    const shouldUseAlarm = canUseAlarm && (useAlarm || !this.authState.isAuthenticated);
+    const shouldUseInterval = !useAlarm || !canUseAlarm;
+
+    let alarmScheduled = false;
+
+    if (shouldUseAlarm) {
       /* chrome.alarms survives service worker termination — reliable for long intervals.
-       * The alarm handler in BackgroundService.setupAlarms() dispatches to checkAuthStatus(). */
+       * The alarm handler in BackgroundService.setupAlarms() dispatches to checkAuthStatus().
+       * Unauthenticated modes keep their short interval for awake responsiveness and also
+       * register the minimum one-minute alarm so a dead MV3 worker can wake and recover. */
       const periodInMinutes = Math.max(interval / 60000, 1); // chrome.alarms minimum is 1 minute
-      chrome.alarms.create('auth-periodic-check', { periodInMinutes });
-      logger.info(`🔄 Started auth checks via chrome.alarms every ${periodInMinutes}min (${mode})`);
-    } else {
+      try {
+        const alarmCreateResult = chrome.alarms.create('auth-periodic-check', { periodInMinutes });
+        alarmScheduled = true;
+        if (alarmCreateResult && typeof (alarmCreateResult as Promise<void>).catch === 'function') {
+          void (alarmCreateResult as Promise<void>).catch((error) => {
+            logger.warn('Failed to schedule auth periodic alarm:', error);
+            if (useAlarm && !this.checkInterval) {
+              this.checkInterval = setInterval(() => {
+                this.checkAuthStatus();
+              }, interval);
+              logger.info(`🔄 Started auth checks every ${interval / 1000}s (${mode})`);
+            }
+          });
+        }
+        logger.info(
+          `🔄 Started auth checks via chrome.alarms every ${periodInMinutes}min (${mode})`
+        );
+      } catch (error) {
+        logger.warn('Failed to schedule auth periodic alarm:', error);
+      }
+    }
+
+    if (shouldUseInterval || (useAlarm && !alarmScheduled)) {
       /* Fallback to setInterval when alarms API is unavailable or for short-interval modes.
        * Short intervals for aggressive detection only last ~60s and don't need alarm persistence. */
       this.checkInterval = setInterval(() => {
         this.checkAuthStatus();
       }, interval);
-      /* Clear any existing alarm when switching to setInterval mode */
-      if (typeof chrome.alarms?.clear === 'function') {
-        chrome.alarms.clear('auth-periodic-check').catch(() => {
-          /* Alarm might not exist — ignore */
-        });
-      }
       logger.info(`🔄 Started auth checks every ${interval / 1000}s (${mode})`);
     }
   }

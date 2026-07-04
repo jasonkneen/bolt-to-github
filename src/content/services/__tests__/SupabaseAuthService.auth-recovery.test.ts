@@ -258,24 +258,23 @@ describe('SupabaseAuthService - Auth Recovery (401/403, alarms, listener guards)
       });
     });
 
-    test('should use setInterval for unauthenticated short-interval modes', () => {
+    test('should use setInterval and keep wake-up alarm for unauthenticated short-interval modes', () => {
       mockChromeAlarms.create.mockClear();
+      mockChromeAlarms.clear.mockClear();
 
       (authService as any).authState.isAuthenticated = false;
       (authService as any).isInitialOnboarding = true;
 
       (authService as any).startPeriodicChecks();
 
-      // Should NOT create an alarm for short-interval mode
-      expect(mockChromeAlarms.create).not.toHaveBeenCalledWith(
-        'auth-periodic-check',
-        expect.anything()
-      );
-      // Should have a setInterval active
-      expect((authService as any).checkInterval).not.toBeNull();
+      expect(mockChromeAlarms.create).toHaveBeenCalledWith('auth-periodic-check', {
+        periodInMinutes: 1,
+      });
+      expect(mockChromeAlarms.clear).not.toHaveBeenCalledWith('auth-periodic-check');
     });
 
-    test('should clear alarm when switching to short-interval mode', () => {
+    test('should keep wake-up alarm when switching to unauthenticated interval mode', () => {
+      mockChromeAlarms.create.mockClear();
       mockChromeAlarms.clear.mockClear();
 
       (authService as any).authState.isAuthenticated = false;
@@ -284,7 +283,10 @@ describe('SupabaseAuthService - Auth Recovery (401/403, alarms, listener guards)
 
       (authService as any).startPeriodicChecks();
 
-      expect(mockChromeAlarms.clear).toHaveBeenCalledWith('auth-periodic-check');
+      expect(mockChromeAlarms.create).toHaveBeenCalledWith('auth-periodic-check', {
+        periodInMinutes: 1,
+      });
+      expect(mockChromeAlarms.clear).not.toHaveBeenCalledWith('auth-periodic-check');
     });
 
     test('cleanup should clear auth alarm', () => {

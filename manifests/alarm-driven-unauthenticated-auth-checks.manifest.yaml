@@ -1,0 +1,239 @@
+# draft-kind: auth-lifecycle-fix (4 of 8)
+schema: '2'
+goal: 'Keep an alarm-driven auth check alive while unauthenticated'
+type: fix
+description: |
+  Root cause: startPeriodicChecks() uses chrome.alarms only for AUTHENTICATED
+  modes; in unauthenticated mode it falls back to setInterval AND explicitly
+  clears the 'auth-periodic-check' alarm. If the service worker dies while
+  unauthenticated (keepAlive failure, browser restart, profile reopen after
+  weeks), no alarm exists to wake it for auth checks — recovery then depends
+  entirely on tab-event listeners that are registered asynchronously and
+  therefore do not wake a dead worker in MV3.
+
+  Fix contract: in unauthenticated (non-aggressive) mode the service keeps a
+  1-minute 'auth-periodic-check' alarm registered alongside the existing 30s
+  setInterval (the interval provides responsiveness while awake; the alarm
+  guarantees wake-ups). Aggressive onboarding/post-connection modes keep their
+  short setIntervals but no longer clear the alarm. Authenticated-mode alarm
+  behavior is unchanged.
+
+  Rationale: the alarm handler already exists in
+  BackgroundService.setupAlarms() and dispatches 'auth-periodic-check' to
+  forceCheck(); this draft only guarantees the alarm survives every mode
+  transition, closing the last wake-up gap in the unauthenticated state.
+temptations:
+  - risk: 'Do not drop the 30s setInterval in favor of alarm-only checks — Chrome clamps alarms to 1 minute and onboarding UX depends on faster detection while awake.'
+    instead: 'Run both: setInterval for awake responsiveness, alarm for guaranteed wake-up; test that both exist in unauthenticated mode.'
+  - risk: 'Do not test by inspecting the private checkInterval handle.'
+    instead: 'Assert through the chrome.alarms mock (create called with auth-periodic-check and periodInMinutes >= 1, clear NOT called on unauthenticated transitions) and through observable check activity under fake timers.'
+files:
+  edit:
+    - path: src/content/services/SupabaseAuthService.ts
+      artifacts:
+        - kind: class
+          name: SupabaseAuthService
+          description: |
+            startPeriodicChecks keeps the 'auth-periodic-check' alarm
+            registered in every mode where chrome.alarms is available,
+            including unauthenticated and aggressive-detection modes; the alarm
+            is only cleared by cleanup(). No public API surface changes.
+    - path: src/content/services/__tests__/SupabaseAuthService.auth-recovery.test.ts
+      artifacts:
+        - kind: test_function
+          name: should use setInterval and keep wake-up alarm for unauthenticated short-interval modes
+        - kind: test_function
+          name: should keep wake-up alarm when switching to unauthenticated interval mode
+  create:
+    - path: src/content/services/__tests__/SupabaseAuthService.periodic-checks.test.ts
+      artifacts:
+        - kind: test_function
+          name: unauthenticated mode registers a wake-up alarm alongside the interval check
+        - kind: test_function
+          name: entering aggressive detection does not clear the periodic auth alarm
+        - kind: test_function
+          name: authenticated mode alarm scheduling is unchanged
+        - kind: test_function
+          name: cleanup clears the periodic auth alarm
+  read:
+    - src/background/BackgroundService.ts
+    - src/background/__tests__/BackgroundService.alarms.test.ts
+validate:
+  - pnpm exec vitest run src/content/services/__tests__/SupabaseAuthService.periodic-checks.test.ts src/content/services/__tests__/SupabaseAuthService.auth-recovery.test.ts src/background/__tests__/BackgroundService.alarms.test.ts
+  - pnpm lint
+  - pnpm check
+created: '2026-07-04T01:08:44Z'
+metadata:
+  tags:
+    - auth
+    - mv3
+    - alarms
+  priority: high
+  status: promotion
+  depends_on: []
+  promotion_ready: true
+  notes: |
+    Behavioral tests created for promotion. Red phase must fail on the
+    existing unauthenticated alarm-clearing behavior before implementation.
+outcome:
+  status: completed
+  summary: |
+    SupabaseAuthService now keeps the auth-periodic-check Chrome alarm
+    registered whenever chrome.alarms is available, including unauthenticated,
+    initial-onboarding, and post-connection modes, while preserving short
+    setInterval checks for responsive auth detection while the worker is awake.
+  rationale: |
+    MV3 service workers cannot rely on setInterval after suspension, so
+    unauthenticated auth recovery needs an alarm wake-up path even though the
+    user-facing onboarding and post-connection flows still need faster interval
+    checks. The implementation separates alarm scheduling from interval
+    scheduling, avoids clearing the alarm during mode transitions, and converts
+    synchronous or asynchronous alarm scheduling failures into visible logging
+    plus interval fallback instead of blocking re-authentication flow.
+  lessons:
+    - lesson_type: mv3-auth-periodic-checks
+      summary: |
+        For MV3 auth recovery, short awake intervals and Chrome alarms solve
+        different lifecycle problems. Unauthenticated modes should keep both
+        when alarms are available: intervals for responsiveness, alarms for
+        service-worker wake-up.
+      tags:
+        - auth
+        - mv3
+        - alarms
+      paths:
+        - src/content/services/SupabaseAuthService.ts
+        - src/content/services/__tests__/SupabaseAuthService.periodic-checks.test.ts
+    - lesson_type: chrome-alarms-error-handling
+      summary: |
+        Chrome extension APIs can fail synchronously or by rejecting returned
+        promises. Alarm scheduling code should observe both failure paths before
+        deciding that an alarm-backed mode does not need interval fallback.
+      tags:
+        - chrome-extension
+        - alarms
+        - error-handling
+      paths:
+        - src/content/services/SupabaseAuthService.ts
+  review_notes:
+    - source: independent reviewer subagent Hilbert
+      severity: blocker fixed
+      summary: |
+        Initial read-only implementation review found that chrome.alarms.create
+        rejection would not be caught by synchronous try/catch, weakening the
+        fail-soft contract. The implementation now observes returned promises,
+        handles async rejection, and the periodic-checks test covers rejected
+        alarm creation with timer fallback.
+    - source: independent reviewer subagent Bernoulli
+      severity: ready
+      summary: |
+        Second read-only implementation review found no findings and confirmed
+        scope, promotion semantics, unauthenticated/aggressive alarm retention,
+        interval responsiveness, cleanup-only alarm clearing, and sync/async
+        alarm failure fallback.
+    - source: local validation
+      severity: unrelated full-suite blocker
+      summary: |
+        Full active-manifest MAID test did not execute commands because the
+        unrelated active manifest repair-e2e-error-flow-product-behavior has a
+        Playwright E2E validate command rejected by the fast gate with E231.
+        Manifest-specific MAID test, active-manifest validation, and full Vitest
+        CI passed.
+  validation:
+    - command:
+        - pnpm
+        - exec
+        - vitest
+        - run
+        - src/content/services/__tests__/SupabaseAuthService.periodic-checks.test.ts
+        - src/content/services/__tests__/SupabaseAuthService.auth-recovery.test.ts
+        - src/background/__tests__/BackgroundService.alarms.test.ts
+      status: failed-red-phase
+      summary: |
+        Pre-implementation red phase failed four tests for the intended missing
+        unauthenticated and aggressive-mode auth-periodic-check alarm behavior;
+        BackgroundService alarm routing passed.
+    - command:
+        - pnpm
+        - exec
+        - vitest
+        - run
+        - src/content/services/__tests__/SupabaseAuthService.periodic-checks.test.ts
+        - src/content/services/__tests__/SupabaseAuthService.auth-recovery.test.ts
+        - src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts
+        - src/background/__tests__/BackgroundService.alarms.test.ts
+      status: passed
+      summary: Focused affected auth regression command passed 37 tests across 4 files.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/alarm-driven-unauthenticated-auth-checks.manifest.yaml
+        - --mode
+        - schema
+      status: passed
+      summary: Promoted active manifest schema validation passed.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/alarm-driven-unauthenticated-auth-checks.manifest.yaml
+        - --mode
+        - behavioral
+      status: passed
+      summary: Promoted active manifest behavioral validation passed.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/alarm-driven-unauthenticated-auth-checks.manifest.yaml
+        - --mode
+        - implementation
+      status: passed
+      summary: Promoted active manifest implementation validation passed.
+    - command:
+        - ./scripts/maid
+        - test
+        - --manifest
+        - manifests/alarm-driven-unauthenticated-auth-checks.manifest.yaml
+      status: passed
+      summary: Manifest test runner passed the focused Vitest command, pnpm lint, and pnpm check.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - schema
+      status: passed
+      summary: Full active-manifest schema validation passed for 12 manifests.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - behavioral
+      status: passed
+      summary: Full active-manifest behavioral validation passed for 12 manifests.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - implementation
+      status: passed
+      summary: Full active-manifest implementation validation passed for 12 manifests.
+    - command:
+        - pnpm
+        - test:ci
+      status: passed
+      summary: Full Vitest CI suite passed 178 test files and 4249 tests.
+    - command:
+        - ./scripts/maid
+        - test
+        - --manifest-dir
+        - manifests
+      status: blocked-unrelated
+      summary: |
+        Full active-manifest MAID test did not execute commands because
+        repair-e2e-error-flow-product-behavior contains a Playwright E2E
+        validate command rejected by the fast behavioral gate with E231.
