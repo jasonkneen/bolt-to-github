@@ -45,19 +45,22 @@ A Chrome extension that automatically captures ZIP file downloads from bolt.new,
 
 ### Previous Version: v1.3.19
 
-#### Version 1.3.19 - Analytics Clarity & Hardening (July 2026)
+#### Version 1.3.19 - Auth Recovery & Reliability (July 2026)
 
 **What's new:**
 
-- Extension page views now report readable titles and paths in analytics instead of a generic "Extension Page" bucket
-- "Stuck? Get Expert Help" clicks are tracked and UTM-tagged so expert-help engagement is measurable
-- Hardened MV3 runtime messaging, repository error flows, and release validation
+- Clearer push errors with a retry option instead of failing silently
+- More reliable auth recovery after stale sign-ins or extension reloads, without a manual disable/enable cycle
+- GitHub App connections survive normal re-authentication instead of forcing a full reconnect
+- Consistent repository name validation before a push can fail
+- Reconnect notices on open Bolt tabs when an extension reload or update leaves the injected UI disconnected
 
 **Key Benefits:**
 
-- Cleaner usage insights guide future improvements to the flows users actually touch
-- Push failures surface retryable errors instead of failing silently
-- More reliable message handling between popup, content scripts, and background
+- Push failures are actionable: you see what went wrong and can retry immediately
+- Background auth recovery keeps working across MV3 service worker restarts
+- GitHub App setup is preserved through transient session expiry
+- Orphaned tabs tell you exactly when a page refresh is needed to reconnect
 
 ### Previous Version: v1.3.18
 
