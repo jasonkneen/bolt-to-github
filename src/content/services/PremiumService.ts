@@ -1,3 +1,4 @@
+import { BackgroundAuthClient } from '$lib/services/BackgroundAuthClient';
 import { debounce, throttle } from '../../lib/utils/debounce';
 import { createLogger } from '../../lib/utils/logger';
 
@@ -473,11 +474,8 @@ export class PremiumService {
         return this.premiumStatus.isPremium;
       }
 
-      // Get Supabase auth service instance and validate subscription
-      const authServiceModule = await import('./SupabaseAuthService');
-      const authService = authServiceModule.SupabaseAuthService.getInstance();
-
-      const isSubscriptionValid = await authService.validateSubscriptionStatus();
+      const authClient = new BackgroundAuthClient();
+      const isSubscriptionValid = await authClient.validateSubscription();
       this.lastSubscriptionCheck = now;
 
       if (!isSubscriptionValid && this.premiumStatus.isPremium) {
@@ -500,7 +498,7 @@ export class PremiumService {
     logger.info('🚫 Handling subscription invalidation...');
 
     // Update premium status to inactive
-    await this.updatePremiumStatus({
+    await this.updatePremiumStatusImmediate({
       isAuthenticated: false, // Session is likely invalid if subscription validation failed
       isPremium: false,
       features: {
