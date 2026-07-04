@@ -1,0 +1,249 @@
+# draft-kind: auth-lifecycle-fix (3 of 8)
+schema: '2'
+goal: 'Transient re-auth clears only session tokens, never GitHub App config'
+type: fix
+description: |
+  Root cause: triggerReAuthentication() calls the full logout() path, whose
+  notifyLogout() -> clearGitHubAppsCache() removes authenticationMethod and all
+  githubApp* keys from storage. A transient Supabase session expiry therefore
+  destroys the GitHub App linkage; initializeGitHubService() then defaults the
+  missing authenticationMethod to 'pat', finds no PAT, and leaves githubService
+  null — so pushes keep failing even after Supabase auth is restored.
+
+  Fix contract: introduce a public clearExpiredSession() on SupabaseAuthService
+  that clears ONLY the Supabase session artifacts (supabaseToken,
+  supabaseRefreshToken, supabaseTokenExpiry, supabaseAuthState,
+  refreshTokenIssuedAt, extensionSessionMinted, extensionSessionMintedAt) and
+  resets in-memory auth state. triggerReAuthentication() and the session-expiry
+  paths use clearExpiredSession(); the explicit user-initiated logout() keeps
+  its current full-wipe behavior including GitHub App cache.
+
+  Rationale: the GitHub App installation belongs to the user's GitHub account,
+  not to the Supabase session lifecycle. Re-authenticating the Supabase session
+  must be able to resume using the still-valid GitHub App linkage. The PAT
+  fallback default in initializeGitHubService is intentionally untouched here
+  (PAT removal is a separate future effort).
+temptations:
+  - risk: 'Do not "simplify" by making logout() itself soft — explicit user logout MUST still wipe GitHub App cache (account switching depends on it).'
+    instead: 'Keep two distinct public behaviors: logout() = full wipe, clearExpiredSession() = session-only; test both storage outcomes explicitly.'
+  - risk: 'Do not enumerate the session key list in multiple places again (the bug class that caused extensionSessionMinted to be missed in early cleanup paths).'
+    instead: 'Route every session-only cleanup through clearExpiredSession() and assert via tests that githubApp* keys survive it.'
+files:
+  edit:
+    - path: src/content/services/SupabaseAuthService.ts
+      artifacts:
+        - kind: method
+          name: clearExpiredSession
+          of: SupabaseAuthService
+          args: []
+          returns: Promise<void>
+          description: |
+            Clears only Supabase session storage keys and resets in-memory auth
+            state to unauthenticated; leaves authenticationMethod and all
+            githubApp* storage keys intact. Used by triggerReAuthentication and
+            session-invalidation paths in place of full logout().
+    - path: src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts
+      artifacts:
+        - kind: test_function
+          name: clearExpiredSession removes supabase session keys and minted flags
+        - kind: test_function
+          name: clearExpiredSession preserves authenticationMethod and githubApp keys
+        - kind: test_function
+          name: re-authentication flow after session expiry keeps GitHub App linkage usable
+        - kind: test_function
+          name: explicit logout still clears GitHub App cache and authenticationMethod
+  read:
+    - src/services/GitHubAppService.ts
+    - src/background/BackgroundService.ts
+    - src/content/services/__tests__/SupabaseAuthService.independent-session.test.ts
+validate:
+  - pnpm exec vitest run src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts src/content/services/__tests__/SupabaseAuthService.independent-session.test.ts
+  - pnpm lint
+  - pnpm check
+created: '2026-07-04T01:08:43Z'
+metadata:
+  tags:
+    - auth
+    - github-app
+    - storage
+  priority: high
+  status: implementation
+  depends_on: []
+  promotion_ready: true
+  notes: |
+    Promoted on 2026-07-04 after the session-cleanup behavioral spec was
+    created and red phase was confirmed. The focused red phase failed for the
+    intended missing clearExpiredSession API and the current re-auth flow wiping
+    GitHub App configuration; explicit logout still cleared GitHub App state.
+outcome:
+  status: completed
+  summary: |
+    SupabaseAuthService now has a public clearExpiredSession() path for
+    transient Supabase session expiry. Re-authentication, stale refresh-token
+    cleanup, refresh failure cleanup, and session invalidation clear only the
+    Supabase session artifacts while preserving authenticationMethod and
+    GitHub App storage keys. Explicit user logout still performs the full
+    logout notification path and clears GitHub App configuration.
+  rationale: |
+    GitHub App linkage belongs to the user's GitHub account and must survive
+    Supabase session refresh or re-authentication. Splitting session-only
+    cleanup from explicit logout prevents transient auth expiry from forcing
+    the background GitHub service back to PAT-defaulted missing credentials,
+    while preserving the existing full-wipe behavior needed for user/account
+    switching.
+  lessons:
+    - lesson_type: auth-session-boundary
+      summary: |
+        Session expiry cleanup and explicit account logout need separate public
+        service paths. Reusing logout for transient expiry can erase durable
+        account configuration such as GitHub App installation state.
+      tags:
+        - auth
+        - github-app
+        - storage
+      paths:
+        - src/content/services/SupabaseAuthService.ts
+    - lesson_type: centralized-session-keys
+      summary: |
+        Keep the Supabase session storage key list centralized so cleanup
+        callers do not drift and miss session flags such as
+        extensionSessionMinted or accidentally include GitHub App keys.
+      tags:
+        - auth
+        - storage
+        - reliability
+      paths:
+        - src/content/services/SupabaseAuthService.ts
+        - src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts
+  review_notes:
+    - source: independent reviewer subagent Archimedes
+      severity: ready
+      summary: |
+        Read-only MAID implementation review found no findings and returned
+        Ready to merge. The reviewer confirmed clearExpiredSession removes only
+        declared Supabase session keys, transient cleanup paths route through
+        it, explicit logout still reaches clearGitHubAppsCache(), and the new
+        behavioral spec covers preservation plus explicit logout wipe behavior.
+    - source: local validation
+      severity: unrelated full-suite blocker
+      summary: |
+        Full active-manifest MAID test did not execute commands because the
+        unrelated active manifest repair-e2e-error-flow-product-behavior has a
+        Playwright E2E validate command rejected by the fast gate with E231.
+        MAID verify also failed its existing broad file_tracking gate, while
+        schema, behavioral, implementation, and coherence stages passed.
+  validation:
+    - command:
+        - pnpm
+        - exec
+        - vitest
+        - run
+        - src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts
+      status: failed-red-phase
+      summary: |
+        Pre-implementation red phase failed 3 of 4 tests for the intended
+        missing clearExpiredSession API and the current re-auth flow wiping
+        GitHub App configuration; the explicit logout wipe behavior already
+        passed.
+    - command:
+        - pnpm
+        - exec
+        - vitest
+        - run
+        - src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts
+        - src/content/services/__tests__/SupabaseAuthService.independent-session.test.ts
+      status: passed
+      summary: Focused SupabaseAuthService session-cleanup command passed 22 tests across 2 files.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/preserve-github-app-config-on-reauth.manifest.yaml
+        - --mode
+        - schema
+      status: passed
+      summary: Promoted active manifest schema validation passed.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/preserve-github-app-config-on-reauth.manifest.yaml
+        - --mode
+        - behavioral
+      status: passed
+      summary: Promoted active manifest behavioral validation passed.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/preserve-github-app-config-on-reauth.manifest.yaml
+        - --mode
+        - implementation
+      status: passed
+      summary: Promoted active manifest implementation validation passed.
+    - command:
+        - ./scripts/maid
+        - test
+        - --manifest
+        - manifests/preserve-github-app-config-on-reauth.manifest.yaml
+      status: passed
+      summary: Manifest test runner passed all three declared validation commands.
+    - command:
+        - pnpm
+        - lint
+      status: passed
+      summary: ESLint completed successfully through the manifest test runner.
+    - command:
+        - pnpm
+        - check
+      status: passed
+      summary: svelte-check completed successfully through the manifest test runner.
+    - command:
+        - pnpm
+        - test:ci
+      status: passed
+      summary: Full Vitest CI suite passed 177 test files and 4245 tests.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - schema
+      status: passed
+      summary: Full active-manifest schema validation passed for 11 manifests.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - behavioral
+      status: passed
+      summary: Full active-manifest behavioral validation passed for 11 manifests.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - implementation
+      status: passed
+      summary: Full active-manifest implementation validation passed for 11 manifests.
+    - command:
+        - ./scripts/maid
+        - test
+        - --manifest-dir
+        - manifests
+      status: failed-unrelated
+      summary: |
+        Full active-manifest MAID test failed before command execution on
+        unrelated E231 for repair-e2e-error-flow-product-behavior's Playwright
+        validate command.
+    - command:
+        - ./scripts/maid
+        - verify
+        - --manifest-dir
+        - manifests
+      status: failed-unrelated
+      summary: |
+        MAID verify passed schema, behavioral, implementation, and coherence,
+        then failed the existing broad file_tracking gate.
+  completed_at: '2026-07-04T07:12:18Z'

@@ -6,6 +6,16 @@ import { createLogger } from '../../lib/utils/logger';
 
 const logger = createLogger('SupabaseAuthService');
 
+const SUPABASE_SESSION_STORAGE_KEYS = [
+  'supabaseToken',
+  'supabaseRefreshToken',
+  'supabaseTokenExpiry',
+  'supabaseAuthState',
+  'refreshTokenIssuedAt',
+  'extensionSessionMinted',
+  'extensionSessionMintedAt',
+];
+
 export interface SupabaseUser {
   id: string;
   email: string;
@@ -638,8 +648,7 @@ export class SupabaseAuthService {
         return; // Don't proceed with normal re-auth flow - reload will handle it
       }
 
-      // Ensure we start from a clean state
-      await this.logout();
+      await this.clearExpiredSession();
 
       // Aggressive detection for fast token pickup once user connects
       this.enterPostConnectionMode();
@@ -748,15 +757,7 @@ export class SupabaseAuthService {
               refreshTokenAge / (24 * 60 * 60 * 1000)
             )} days). Likely expired. Clearing tokens to force re-authentication.`
           );
-          /* Clear tokens immediately if refresh token is too old */
-          await chrome.storage.local.remove([
-            'supabaseToken',
-            'supabaseRefreshToken',
-            'supabaseTokenExpiry',
-            'refreshTokenIssuedAt',
-            'extensionSessionMinted',
-            'extensionSessionMintedAt',
-          ]);
+          await this.clearExpiredSession();
           return null;
         }
 
@@ -1235,15 +1236,7 @@ export class SupabaseAuthService {
           );
         }
 
-        /* If refresh failed, clear stored tokens and independent session flag */
-        await chrome.storage.local.remove([
-          'supabaseToken',
-          'supabaseRefreshToken',
-          'supabaseTokenExpiry',
-          'refreshTokenIssuedAt',
-          'extensionSessionMinted',
-          'extensionSessionMintedAt',
-        ]);
+        await this.clearExpiredSession();
         return null;
       }
     } catch (error) {
@@ -1406,8 +1399,7 @@ export class SupabaseAuthService {
    * Handle session invalidation by clearing tokens and showing re-auth modal
    */
   private async handleSessionInvalidation(): Promise<void> {
-    /* Clear all stored tokens (reuses clearStoredTokens to avoid key list duplication) */
-    await this.clearStoredTokens();
+    await this.clearExpiredSession();
     /* Notify listeners and persist auth state via updateAuthState (not direct mutation)
      * so that storage, premium service, and periodic-check reconfiguration all update */
     this.updateAuthState({
@@ -1633,16 +1625,15 @@ export class SupabaseAuthService {
    * Clear all stored authentication tokens
    */
   private async clearStoredTokens(): Promise<void> {
+    await this.clearExpiredSession();
+  }
+
+  /**
+   * Clear only expired Supabase session artifacts while preserving GitHub App configuration.
+   */
+  public async clearExpiredSession(): Promise<void> {
     try {
-      await chrome.storage.local.remove([
-        'supabaseToken',
-        'supabaseRefreshToken',
-        'supabaseTokenExpiry',
-        'supabaseAuthState',
-        'refreshTokenIssuedAt',
-        'extensionSessionMinted',
-        'extensionSessionMintedAt',
-      ]);
+      await chrome.storage.local.remove(SUPABASE_SESSION_STORAGE_KEYS);
 
       /* Reset internal auth state */
       this.authState = {
@@ -1651,9 +1642,9 @@ export class SupabaseAuthService {
         subscription: { isActive: false, plan: 'free' },
       };
 
-      logger.info('🧹 Cleared all stored tokens and auth state');
+      logger.info('🧹 Cleared expired Supabase session and auth state');
     } catch (error) {
-      logger.warn('Failed to clear stored tokens:', error);
+      logger.warn('Failed to clear expired Supabase session:', error);
     }
   }
 
