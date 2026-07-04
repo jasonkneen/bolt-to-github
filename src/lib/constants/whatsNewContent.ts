@@ -6,6 +6,12 @@ export interface WhatsNewVersion {
 }
 
 export const whatsNewContent: Record<string, WhatsNewVersion> = {
+  '1.3.20': {
+    date: '2026-XX-XX',
+    highlights: ['TBD - update before release'],
+    details: 'TBD - update before release.',
+    type: 'patch',
+  },
   '1.3.19': {
     date: '2026-07-03',
     highlights: [
