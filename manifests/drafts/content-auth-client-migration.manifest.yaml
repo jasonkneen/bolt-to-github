@@ -1,0 +1,81 @@
+# draft-kind: auth-lifecycle-refactor (7 of 8)
+schema: '2'
+goal: 'Content scripts stop instantiating SupabaseAuthService'
+type: refactor
+description: |
+  Each bolt.new tab's content script currently creates its own
+  SupabaseAuthService via PremiumService.validateSubscriptionWithServer()
+  (dynamic import + getInstance). In the content-script context most privileged
+  APIs (chrome.tabs, chrome.scripting, chrome.alarms) are missing, so this copy
+  can never acquire tokens itself — but it CAN refresh and clear the shared
+  stored tokens, racing the background for the rotating refresh token and
+  wiping storage on its own failures. With N open bolt.new tabs there are N+2
+  competing auth services.
+
+  Fix contract: PremiumService validates subscriptions through the
+  BackgroundAuthClient (draft 6) VALIDATE_SUBSCRIPTION endpoint; no content
+  code path imports SupabaseAuthService. After this draft, SupabaseAuthService
+  runs exclusively in the background service worker — completing the
+  single-auth-authority architecture. A source-boundary guard test enforces
+  that only background code imports SupabaseAuthService, so the race cannot
+  silently return.
+
+  Rationale: PremiumService's public surface is unchanged; only its server
+  validation transport changes. The guard test is a deliberate exception to
+  "test behavior, not implementation": the import boundary IS the contract
+  here, because any violation reintroduces a distributed-state bug that no
+  unit test can observe.
+temptations:
+  - risk: 'Do not keep the dynamic SupabaseAuthService import as a "fallback if messaging fails" — that resurrects the multi-context race exactly when the system is already degraded.'
+    instead: 'On messaging failure, fall back to the cached premium status and log a visible warning (existing catch behavior), never to a local auth service.'
+  - risk: 'Do not move SupabaseAuthService.ts out of src/content/services/ in this draft to "fix" the layering.'
+    instead: 'Keep the file where it is; relocation is a separate mechanical refactor once nothing outside background imports it.'
+  - risk: 'Do not write the guard test against bundler internals or mock module resolution.'
+    instead: 'Scan source files for the import specifier with node fs in a plain vitest test; allow-list src/background/ and SupabaseAuthService test files.'
+files:
+  edit:
+    - path: src/content/services/PremiumService.ts
+      artifacts:
+        - kind: class
+          name: PremiumService
+          description: |
+            Server-side subscription validation goes through
+            BackgroundAuthClient.validateSubscription() instead of a local
+            SupabaseAuthService instance. Cache behavior, downgrade handling,
+            and the public API are unchanged.
+    - path: src/content/services/__tests__/PremiumService.auth-client.test.ts
+      artifacts:
+        - kind: test_function
+          name: subscription validation asks the background instead of creating a local auth service
+        - kind: test_function
+          name: invalid subscription from background triggers downgrade handling
+        - kind: test_function
+          name: messaging failure falls back to cached premium status with a visible warning
+    - path: src/test/boundaries/auth-import-boundary.test.ts
+      artifacts:
+        - kind: test_function
+          name: SupabaseAuthService is only imported from background code
+  read:
+    - src/lib/services/BackgroundAuthClient.ts
+    - src/background/AuthMessageRouter.ts
+    - src/content/services/__tests__/PremiumService.test.ts
+validate:
+  - pnpm exec vitest run src/content/services/__tests__/PremiumService.auth-client.test.ts src/content/services/__tests__/PremiumService.test.ts src/test/boundaries/auth-import-boundary.test.ts
+  - pnpm lint
+  - pnpm check
+created: '2026-07-04T09:08:41+08:00'
+metadata:
+  tags:
+    - auth
+    - content-script
+    - architecture
+  priority: high
+  status: planning
+  depends_on:
+    - background-auth-message-endpoints
+    - popup-auth-client-migration
+  promotion_ready: false
+  notes: |
+    Behavioral tests planned, red phase not confirmed. The boundary guard test
+    will initially fail against GitHubSettings.svelte/githubAppSync.ts until
+    draft 6 lands — hence the dependency ordering.

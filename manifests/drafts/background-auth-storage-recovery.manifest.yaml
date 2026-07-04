@@ -1,0 +1,78 @@
+# draft-kind: auth-lifecycle-fix (2 of 8)
+schema: '2'
+goal: 'Background recovers immediately when auth tokens are restored in storage'
+type: fix
+description: |
+  Root cause: BackgroundService.setupStorageListener() only reacts to the
+  'sync' storage namespace (githubToken/repoOwner/repoName/branch), but every
+  authentication artifact — supabaseToken, supabaseAuthState,
+  authenticationMethod, githubAppInstallationId — lives in the 'local'
+  namespace. When auth is restored by any other context (popup "refresh"
+  button, website tab extraction) the long-lived background service worker
+  never notices: its GitHub service stays null/PAT-defaulted and its auth state
+  stays failed until the extension is manually toggled.
+
+  Fix contract: the background storage listener also watches
+  chrome.storage.local changes for the auth key set (supabaseToken,
+  supabaseTokenExpiry, authenticationMethod, githubAppInstallationId). On a
+  relevant change it (debounced, ~1s) forces a SupabaseAuthService check and
+  re-runs initializeGitHubService(), rebuilding the ZipHandler and
+  TempRepoManager exactly as the existing sync-namespace path does.
+
+  Rationale: reacting to storage restoration makes recovery independent of
+  WHICH context restored the tokens, removing the need for reloads in the
+  common recovery path. The self-heal reload (draft 1) remains as last resort.
+temptations:
+  - risk: 'Do not re-initialize the GitHub service on EVERY local storage write — keepAlive writes keepAliveTimestamp every 25s and would thrash it.'
+    instead: 'Filter to the explicit auth key set and debounce; add a test that unrelated local keys (keepAliveTimestamp, lastKeepAlive) trigger nothing.'
+  - risk: 'Do not create a feedback loop: forceCheck() itself writes supabaseToken/supabaseAuthState to local storage.'
+    instead: 'Only trigger when the watched value actually changed (compare oldValue/newValue) and cover the loop-prevention case with a behavioral test.'
+  - risk: 'Do not assert internal call order of private methods in tests.'
+    instead: 'Assert observable outcomes: after a simulated storage change, a subsequent push path has a working GitHub service, and checkAuthStatus was driven through public forceCheck behavior (e.g. fetch to the auth endpoint occurs).'
+files:
+  edit:
+    - path: src/background/BackgroundService.ts
+      artifacts:
+        - kind: class
+          name: BackgroundService
+          description: |
+            Storage listener additionally handles namespace 'local' for the
+            auth key set {supabaseToken, supabaseTokenExpiry,
+            authenticationMethod, githubAppInstallationId}: on a real value
+            change it debounces ~1s, then re-initializes the GitHub service,
+            ZipHandler, and TempRepoManager and forces a Supabase auth check.
+            Existing 'sync' namespace behavior is unchanged.
+    - path: src/background/__tests__/BackgroundService.storage-recovery.test.ts
+      artifacts:
+        - kind: test_function
+          name: reinitializes GitHub service when auth tokens are restored in local storage
+        - kind: test_function
+          name: forces auth check when authenticationMethod is restored to github_app
+        - kind: test_function
+          name: ignores unrelated local storage keys such as keepAliveTimestamp
+        - kind: test_function
+          name: does not loop when its own auth check writes token state back to storage
+        - kind: test_function
+          name: debounces rapid successive auth storage changes into one recovery pass
+  read:
+    - src/background/test-fixtures/BackgroundServiceMocks.ts
+    - src/background/__tests__/BackgroundService.auth-lifecycle.test.ts
+    - src/content/services/SupabaseAuthService.ts
+validate:
+  - pnpm exec vitest run src/background/__tests__/BackgroundService.storage-recovery.test.ts src/background/__tests__/BackgroundService.auth-lifecycle.test.ts
+  - pnpm lint
+  - pnpm check
+created: '2026-07-04T09:08:41+08:00'
+metadata:
+  tags:
+    - auth
+    - mv3
+    - storage
+    - recovery
+  priority: critical
+  status: planning
+  depends_on: []
+  promotion_ready: false
+  notes: |
+    Behavioral tests planned, red phase not confirmed. Independent of draft 1;
+    the two together remove the toggle requirement for the background side.
