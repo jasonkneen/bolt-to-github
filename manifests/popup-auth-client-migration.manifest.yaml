@@ -155,24 +155,22 @@ outcome:
         - src/lib/services/BackgroundAuthClient.ts
         - src/lib/services/__tests__/BackgroundAuthClient.test.ts
   review_notes:
-    - source: fallback self-review
+    - source: independent subagent implementation review
       severity: ready
       summary: |
-        Independent subagent review was unavailable under the current tool
-        policy without explicit user authorization. The fallback review found
-        no implementation findings: changed files stayed within promoted
-        manifest scope, declared artifacts exist, direct popup/lib
-        SupabaseAuthService.getInstance() usage was removed, type-only AuthState
-        imports are the only remaining SupabaseAuthService references under
-        src/lib and src/popup, and manifest validation passed.
+        Post-commit review loop was rerun with a read-only subagent reviewer
+        after explicit user authorization. The reviewer found no code-level
+        blockers: changed files stayed within promoted manifest scope, declared
+        artifacts exist, direct popup/lib SupabaseAuthService.getInstance()
+        usage was removed, and runtime/background auth failures propagate as
+        thrown errors or visible error results rather than fake unauthenticated
+        state. The only review finding was this stale outcome record.
     - source: local validation
-      severity: existing repo-level gate blocker
+      severity: ready
       summary: |
-        Full active `./scripts/maid test --manifest-dir manifests` remains
-        blocked before running commands by the pre-existing
-        repair-e2e-error-flow-product-behavior E231 Playwright fast-gate issue.
         Focused manifest testing, active schema/behavioral/implementation
-        validation, lint, check, and the full Vitest CI suite passed.
+        validation, lint, check, build, and the full active MAID test runner
+        passed in the post-commit review loop.
   validation:
     - command:
         - pnpm
@@ -218,7 +216,7 @@ outcome:
         - --mode
         - schema
       status: passed
-      summary: Full active manifest schema validation passed for 14 manifests.
+      summary: Full active manifest schema validation passed for 17 manifests.
     - command:
         - ./scripts/maid
         - validate
@@ -227,7 +225,9 @@ outcome:
         - --mode
         - behavioral
       status: passed
-      summary: Full active manifest behavioral validation passed for 14 manifests.
+      summary: |
+        Full active manifest behavioral validation passed for 17 manifests, with
+        one superseded manifest skipped.
     - command:
         - ./scripts/maid
         - validate
@@ -236,17 +236,18 @@ outcome:
         - --mode
         - implementation
       status: passed
-      summary: Full active manifest implementation validation passed for 14 manifests.
+      summary: |
+        Full active manifest implementation validation passed for 17 manifests,
+        with one superseded manifest skipped.
     - command:
         - ./scripts/maid
         - test
         - --manifest-dir
         - manifests
-      status: failed-existing-blocker
+      status: passed
       summary: |
-        Full active manifest test runner executed zero commands because the
-        existing repair-e2e-error-flow-product-behavior manifest triggers E231
-        for a Playwright validate command in the fast behavioral gate.
+        Full active manifest test runner passed five command batches, including
+        the focused auth tests, lint, check, build, and full Vitest CI suite.
     - command:
         - pnpm
         - test:ci
