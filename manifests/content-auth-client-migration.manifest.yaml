@@ -48,6 +48,8 @@ files:
     - path: src/test/boundaries/auth-import-boundary.test.ts
       artifacts:
         - kind: test_function
+          name: runtime SupabaseAuthService usage detection covers multiline imports and re-exports
+        - kind: test_function
           name: SupabaseAuthService is only imported from background code
   edit:
     - path: src/content/services/PremiumService.ts
@@ -128,15 +130,19 @@ outcome:
         - src/test/boundaries/auth-import-boundary.test.ts
         - manifests/content-auth-client-migration.manifest.yaml
   review_notes:
-    - source: fallback self-review
-      severity: ready
+    - source: Kepler read-only subagent review
+      severity: fixed
       summary: |
-        Independent subagent review was unavailable because the available
-        subagent tool requires an explicit user request for delegation. The
-        fallback MAID implementation self-review found no blockers: changed
-        files stayed within promoted manifest scope, declared artifacts exist,
-        PremiumService no longer has a runtime SupabaseAuthService import or
-        getInstance path, and the manifest temptations were followed.
+        The missing independent implementation review was run after commit
+        49fa9bca6d147fe8f194110dda9b3343c2524276 as if the implementation had
+        not yet been committed. The reviewer found no PremiumService behavior
+        blockers and confirmed the changed files stayed within manifest scope,
+        declared artifacts existed, PremiumService no longer imports or creates
+        SupabaseAuthService at runtime, and BackgroundAuthClient routes
+        validation to the background-owned AuthMessageRouter endpoint. The
+        reviewer requested two fixes: record this actual review in the outcome
+        and tighten the boundary guard's multiline import/re-export coverage.
+        Both findings were addressed before final handoff.
     - source: local validation
       severity: existing repo-level gate blocker
       summary: |
@@ -230,3 +236,50 @@ outcome:
         - test:ci
       status: passed
       summary: Full Vitest CI passed 182 test files and 4269 tests.
+    - command:
+        - pnpm
+        - exec
+        - vitest
+        - run
+        - src/content/services/__tests__/PremiumService.auth-client.test.ts
+        - src/content/services/__tests__/PremiumService.test.ts
+        - src/test/boundaries/auth-import-boundary.test.ts
+      status: passed-post-review-fix
+      summary: |
+        Post-review focused tests passed after tightening the auth boundary
+        guard to cover multiline value imports, value re-exports, dynamic
+        imports, getInstance calls, and constructor calls while allowing
+        type-only import/export statements.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/content-auth-client-migration.manifest.yaml
+        - --mode
+        - behavioral
+      status: passed-post-review-fix
+      summary: Post-review behavioral validation passed for the updated manifest.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/content-auth-client-migration.manifest.yaml
+        - --mode
+        - implementation
+      status: passed-post-review-fix
+      summary: Post-review implementation validation passed for the updated manifest.
+    - command:
+        - ./scripts/maid
+        - test
+        - --manifest
+        - manifests/content-auth-client-migration.manifest.yaml
+      status: passed-post-review-fix
+      summary: |
+        Post-review manifest test runner passed the declared focused Vitest
+        command, lint, and svelte-check.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/content-auth-client-migration.manifest.yaml
+        - --mode
+        - schema
+      status: passed-post-review-fix
+      summary: Post-review schema validation passed for the updated manifest.
