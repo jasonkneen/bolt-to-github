@@ -1,0 +1,76 @@
+# draft-kind: implementation-plan (retention-conversion-plan Workstream A4, item 2)
+schema: '2'
+goal: Extend the auth import boundary guard so src/services/ cannot grow new runtime SupabaseAuthService usage and guarded UI contexts cannot transitively instantiate auth through BoltProjectSyncService.
+description: |
+  The v1.3.19 boundary test (src/test/boundaries/auth-import-boundary.test.ts)
+  blocks runtime SupabaseAuthService usage from content/, lib/, pages/, and
+  popup/, but src/services/ is unguarded. BoltProjectSyncService.ts calls
+  SupabaseAuthService.getInstance() in its constructor; today it is only
+  constructed by BackgroundService, so single-authority holds — but nothing
+  stops future popup/content/lib code from importing a src/services module
+  that transitively instantiates the auth service. This was flagged as a
+  non-blocking finding in the v1.3.19 implementation review.
+
+  Rationale for design choices:
+  - Chosen approach is test-only: extend the boundary suite rather than move
+    BoltProjectSyncService under src/background/. A file move touches
+    production imports and git history for zero behavioral gain; the guard
+    extension closes the same hole with no production risk. Moving the
+    service remains a valid future refactor and is recorded here as the
+    considered alternative (only BackgroundService imports it today, so the
+    move would be cheap if preferred at promotion time).
+  - Two new guarantees: (1) src/services/ files may not use
+    SupabaseAuthService at runtime, with a single explicit allowlist entry
+    for services/BoltProjectSyncService.ts (its usage is intentional and
+    background-constructed); (2) the guarded UI roots (content/, lib/,
+    pages/, popup/) may not import BoltProjectSyncService at runtime,
+    closing the known transitive-instantiation vector. Type-only imports
+    stay allowed, matching existing guard semantics.
+  - The allowlist must be an exact-path list, not a directory prefix, so a
+    new auth-using file in src/services/ fails the guard by default.
+type: refactor
+files:
+  edit:
+    - path: src/test/boundaries/auth-import-boundary.test.ts
+      artifacts:
+        - kind: test_function
+          name: src/services modules stay free of runtime SupabaseAuthService usage except the allowlisted sync service
+          description: |
+            Scans src/services/ production files with the existing
+            runtimeSupabaseAuthUsage detection and asserts zero violations
+            outside the explicit services/BoltProjectSyncService.ts allowlist
+            entry. Type-only imports remain permitted.
+        - kind: test_function
+          name: guarded UI contexts do not import BoltProjectSyncService at runtime
+          description: |
+            Asserts content/, lib/, pages/, and popup/ production files have
+            no runtime import, re-export, dynamic import, or construction of
+            BoltProjectSyncService, so auth cannot be transitively
+            instantiated from restricted contexts. Type-only imports remain
+            permitted.
+  read:
+    - src/services/BoltProjectSyncService.ts
+    - src/background/BackgroundService.ts
+    - src/lib/services/chromeStorage.ts
+validate:
+  - pnpm exec vitest run src/test/boundaries/auth-import-boundary.test.ts
+  - pnpm lint
+  - pnpm check
+created: '2026-07-04T20:15:00Z'
+metadata:
+  tags:
+    - auth
+    - architecture-boundary
+    - reliability
+    - retention-plan-a4
+  priority: medium
+  status: planning
+temptations:
+  - risk: Do not allowlist the whole src/services/ directory or match by substring to make the guard pass.
+    instead: Allowlist the single exact relative path services/BoltProjectSyncService.ts so any new auth usage in src/services fails by default.
+  - risk: Do not copy-paste a second regex detector for BoltProjectSyncService imports that drifts from the SupabaseAuthService one.
+    instead: Generalize the existing runtimeSupabaseAuthUsage helper (or extract a shared detector parameterized by module name) so both guards share the multiline-import, re-export, dynamic-import, and type-only handling already proven by the detector self-test.
+  - risk: Do not confirm the red phase with a fabricated violation committed to src/.
+    instead: Confirm red by asserting against the detector self-test fixture strings or by temporarily verifying the new checks fail when the allowlist entry is removed, without committing fixture violations.
+  - risk: Do not silently expand scope into moving BoltProjectSyncService under src/background/ during implementation.
+    instead: If the move turns out to be preferred, stop and evolve this manifest (or supersede it) before touching production files; this contract is test-only.

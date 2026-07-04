@@ -1,0 +1,95 @@
+# draft-kind: implementation-plan (retention-conversion-plan Workstream A4, item 1)
+schema: '2'
+goal: Restore the pre-reload countdown notification on the direct-alarm self-heal path so bolt.new tabs are warned before every extension reload, not just message-fallback reloads.
+description: |
+  v1.3.19 made the direct chrome.alarms path the primary self-heal reload
+  mechanism: SupabaseAuthService.requestExtensionReload() schedules the
+  'self-heal-reload' alarm itself when chrome.alarms is available, and only
+  falls back to the RELOAD_EXTENSION runtime message for unprivileged
+  contexts. But the "Extension needs to restart... Restarting in 3 seconds"
+  SHOW_EXTENSION_RELOAD_NOTIFICATION broadcast to bolt.new tabs lives only in
+  BackgroundService.handleExtensionReload (the message-fallback handler), so
+  on the now-primary path users get no heads-up before the reload. This was
+  flagged as a non-blocking finding in the v1.3.19 implementation review.
+
+  Rationale for design choices:
+  - Extract the best-effort tab broadcast into a shared helper in
+    src/lib/utils (new file) instead of duplicating the tabs.query loop in
+    SupabaseAuthService. Both call sites (BackgroundService message path,
+    SupabaseAuthService direct-alarm path) run in the background context
+    where chrome.tabs is available; a lib/utils helper keeps the logic in
+    one place and imports no auth code, so the auth import boundary is
+    unaffected.
+  - The helper is fire-and-forget and never throws: notification failure
+    must never block or delay the reload itself (same guarantee the inline
+    BackgroundService code gives today via nested try/catch).
+  - SupabaseAuthService and BackgroundService are call-site rewires only:
+    their public contracts do not change, so they stay under files.read as
+    touched-but-uncontracted files (per repo MAID convention); the contract
+    lives in the new helper and the behavioral tests.
+type: fix
+files:
+  create:
+    - path: src/lib/utils/reloadNotification.ts
+      artifacts:
+        - kind: function
+          name: notifyBoltTabsAboutReload
+          args:
+            - name: options
+              type: '{ message?: string; countdownSeconds?: number }'
+          returns: Promise<void>
+          description: |
+            Best-effort broadcast of SHOW_EXTENSION_RELOAD_NOTIFICATION to all
+            open https://bolt.new/* tabs with the given message and countdown
+            (defaults matching the current BackgroundService copy: 3-second
+            countdown, authentication-restart message). Resolves without
+            throwing when chrome.tabs is unavailable, tabs.query fails, or
+            individual sendMessage calls reject (tabs without a content
+            script). Must never delay or block the caller's reload flow.
+    - path: src/lib/utils/__tests__/reloadNotification.test.ts
+      artifacts:
+        - kind: test_function
+          name: broadcasts the reload notification with countdown to every bolt.new tab
+          description: Verifies tabs.query is scoped to https://bolt.new/* and each tab with an id receives SHOW_EXTENSION_RELOAD_NOTIFICATION carrying message and countdown.
+        - kind: test_function
+          name: resolves silently when a tab has no content script listener
+          description: Verifies per-tab sendMessage rejections are swallowed and remaining tabs are still notified.
+        - kind: test_function
+          name: resolves silently when chrome.tabs is unavailable
+          description: Verifies the helper never throws in contexts without the tabs API so it can never break a reload.
+  edit:
+    - path: src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts
+      artifacts:
+        - kind: test_function
+          name: notifies bolt tabs before scheduling the direct self-heal reload alarm
+          description: |
+            Verifies the direct-alarm path sends the tab notification before
+            chrome.alarms.create('self-heal-reload') is invoked, and that a
+            notification failure still lets the alarm get scheduled.
+  read:
+    - src/content/services/SupabaseAuthService.ts
+    - src/background/BackgroundService.ts
+    - src/content/ContentManager.ts
+validate:
+  - pnpm exec vitest run src/lib/utils/__tests__/reloadNotification.test.ts src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts
+  - pnpm exec vitest run src/content/services/__tests__/SupabaseAuthService.reload.test.ts src/background/__tests__/BackgroundService.reload.test.ts
+  - pnpm lint
+  - pnpm check
+created: '2026-07-04T20:15:00Z'
+metadata:
+  tags:
+    - auth
+    - self-heal
+    - reliability
+    - retention-plan-a4
+  priority: medium
+  status: planning
+temptations:
+  - risk: Do not let the notification broadcast delay or gate the reload alarm; an await that can hang defeats self-heal.
+    instead: Fire the helper with a bounded, error-swallowing implementation and schedule the alarm regardless of the notification result, mirroring the existing BackgroundService best-effort semantics.
+  - risk: Do not import SupabaseAuthService (or any auth module) from the new lib/utils helper to reuse constants.
+    instead: Keep the helper dependency-free (chrome.tabs + message literal only) so the auth import boundary test stays meaningful.
+  - risk: Do not duplicate the tabs.query loop inside SupabaseAuthService instead of extracting the shared helper.
+    instead: Replace the inline loop in BackgroundService.handleExtensionReload with the same helper so both paths stay behaviorally identical.
+  - risk: Do not weaken existing self-heal or reload tests to accommodate the new notification call ordering.
+    instead: Extend the existing test files with new assertions; all pre-existing assertions must stay green unchanged.
