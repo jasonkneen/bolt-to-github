@@ -58,6 +58,7 @@ describe('SupabaseAuthService - Extension Reload Logic', () => {
   beforeEach(() => {
     vi.useFakeTimers({ now: new Date('2024-01-01T00:00:00.000Z') });
     vi.clearAllMocks();
+    global.chrome.alarms = mockChromeAlarms as any;
 
     (SupabaseAuthService as any).instance = null;
     authService = SupabaseAuthService.getInstance();
@@ -121,17 +122,20 @@ describe('SupabaseAuthService - Extension Reload Logic', () => {
   });
 
   describe('Extension Reload Request', () => {
-    test('should send RELOAD_EXTENSION message to background', async () => {
+    test('should schedule self-heal reload alarm directly when alarms API is available', async () => {
       const sendMessageSpy = mockChromeRuntime.sendMessage as Mock;
+      const alarmCreateSpy = mockChromeAlarms.create as Mock;
 
       await (authService as any).requestExtensionReload();
 
-      expect(sendMessageSpy).toHaveBeenCalledWith({
-        type: 'RELOAD_EXTENSION',
-        data: {
-          reason: 'Multiple authentication failures - clearing stale state',
-        },
+      expect(alarmCreateSpy).toHaveBeenCalledWith('self-heal-reload', {
+        delayInMinutes: 3 / 60,
       });
+      expect(sendMessageSpy).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'RELOAD_EXTENSION',
+        })
+      );
     });
 
     test('should record last reload timestamp', async () => {
@@ -146,57 +150,64 @@ describe('SupabaseAuthService - Extension Reload Logic', () => {
     });
 
     test('should prevent reload loops by enforcing minimum time between reloads', async () => {
-      const sendMessageSpy = mockChromeRuntime.sendMessage as Mock;
+      const alarmCreateSpy = mockChromeAlarms.create as Mock;
 
-      sendMessageSpy.mockClear();
+      alarmCreateSpy.mockClear();
 
       await (authService as any).requestExtensionReload();
 
-      const reloadCalls = sendMessageSpy.mock.calls.filter(
-        (call) => call[0]?.type === 'RELOAD_EXTENSION'
+      const reloadCalls = alarmCreateSpy.mock.calls.filter(
+        (call) => call[0] === 'self-heal-reload'
       );
       expect(reloadCalls.length).toBe(1);
 
-      sendMessageSpy.mockClear();
+      alarmCreateSpy.mockClear();
 
       await (authService as any).requestExtensionReload();
 
-      const secondReloadCalls = sendMessageSpy.mock.calls.filter(
-        (call) => call[0]?.type === 'RELOAD_EXTENSION'
+      const secondReloadCalls = alarmCreateSpy.mock.calls.filter(
+        (call) => call[0] === 'self-heal-reload'
       );
       expect(secondReloadCalls.length).toBe(0);
     });
 
     test('should allow reload after minimum time has passed', async () => {
-      const sendMessageSpy = mockChromeRuntime.sendMessage as Mock;
+      const alarmCreateSpy = mockChromeAlarms.create as Mock;
 
-      sendMessageSpy.mockClear();
+      alarmCreateSpy.mockClear();
 
       await (authService as any).requestExtensionReload();
 
-      const firstReloadCalls = sendMessageSpy.mock.calls.filter(
-        (call) => call[0]?.type === 'RELOAD_EXTENSION'
+      const firstReloadCalls = alarmCreateSpy.mock.calls.filter(
+        (call) => call[0] === 'self-heal-reload'
       );
       expect(firstReloadCalls.length).toBe(1);
 
-      sendMessageSpy.mockClear();
+      alarmCreateSpy.mockClear();
 
       const sixMinutesAgo = Date.now() - 6 * 60 * 1000;
       (authService as any).lastReloadTimestamp = sixMinutesAgo;
 
       await (authService as any).requestExtensionReload();
 
-      const secondReloadCalls = sendMessageSpy.mock.calls.filter(
-        (call) => call[0]?.type === 'RELOAD_EXTENSION'
+      const secondReloadCalls = alarmCreateSpy.mock.calls.filter(
+        (call) => call[0] === 'self-heal-reload'
       );
       expect(secondReloadCalls.length).toBe(1);
     });
 
     test('should handle sendMessage errors gracefully', async () => {
+      global.chrome.alarms = undefined as any;
       const sendMessageSpy = mockChromeRuntime.sendMessage as Mock;
       sendMessageSpy.mockRejectedValueOnce(new Error('Message failed'));
 
       await expect((authService as any).requestExtensionReload()).resolves.not.toThrow();
+      expect(sendMessageSpy).toHaveBeenCalledWith({
+        type: 'RELOAD_EXTENSION',
+        data: {
+          reason: 'Multiple authentication failures - clearing stale state',
+        },
+      });
     });
   });
 

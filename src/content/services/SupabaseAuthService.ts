@@ -630,7 +630,11 @@ export class SupabaseAuthService {
           `⚠️ Reached maximum auth failures (${this.MAX_AUTH_FAILURES_BEFORE_RELOAD}). ` +
             `Requesting extension reload to clear stale state.`
         );
-        await this.requestExtensionReload();
+        const reloadScheduled = await this.requestExtensionReload();
+        if (!reloadScheduled) {
+          this.reloadRequested = false;
+          this.consecutiveAuthFailures = 0;
+        }
         return; // Don't proceed with normal re-auth flow - reload will handle it
       }
 
@@ -643,9 +647,15 @@ export class SupabaseAuthService {
       // Show in-page modal prompting sign-in
       await this.showReauthenticationModal();
 
-      // Ask background to open bolt2github.com (service-worker context handles window/tab)
+      // Open bolt2github.com directly when this context can create tabs; content scripts fall back.
       try {
-        if (chrome.runtime?.id) {
+        if (typeof chrome.tabs?.create === 'function') {
+          await chrome.tabs.create({
+            url: 'https://bolt2github.com/login',
+            active: true,
+          });
+          logger.info('✅ Opened re-authentication page directly');
+        } else if (chrome.runtime?.id) {
           await chrome.runtime.sendMessage({
             type: 'OPEN_REAUTHENTICATION',
             data: {
@@ -2147,7 +2157,7 @@ export class SupabaseAuthService {
    * This is a "nuclear option" when authentication repeatedly fails after user has logged in
    * Replicates the effect of manually disabling/enabling the extension
    */
-  private async requestExtensionReload(): Promise<void> {
+  private async requestExtensionReload(): Promise<boolean> {
     try {
       // Check if minimum time has passed since last reload (prevent reload loops)
       const timeSinceLastReload = Date.now() - this.lastReloadTimestamp;
@@ -2156,27 +2166,34 @@ export class SupabaseAuthService {
           `⏸️ Reload requested too soon after previous reload (${Math.round(timeSinceLastReload / 1000)}s ago). ` +
             `Minimum interval: ${this.MIN_TIME_BETWEEN_RELOADS / 1000}s. Skipping reload to prevent loops.`
         );
-        return;
+        this.reloadRequested = false;
+        return false;
       }
 
       logger.info(
         '🔄 Requesting extension reload to clear stale authentication state (after multiple failures)'
       );
 
-      // Record reload timestamp BEFORE sending message (to prevent race conditions)
-      this.lastReloadTimestamp = Date.now();
+      const reloadTimestamp = Date.now();
 
-      // Persist timestamp to storage to survive extension restarts and prevent reload loops
-      try {
-        await chrome.storage.local.set({ lastExtensionReloadTimestamp: this.lastReloadTimestamp });
-        logger.debug('💾 Persisted reload timestamp to storage');
-      } catch (storageError) {
-        logger.warn('Failed to persist reload timestamp:', storageError);
-        // Continue anyway - timestamp in memory is better than nothing
+      if (typeof chrome.alarms?.create === 'function') {
+        try {
+          const RELOAD_DELAY_MINUTES = 3 / 60; // 3 seconds = 0.05 minutes
+          await chrome.alarms.create('self-heal-reload', {
+            delayInMinutes: RELOAD_DELAY_MINUTES,
+          });
+          this.lastReloadTimestamp = reloadTimestamp;
+          await this.persistLastReloadTimestamp();
+          logger.info('✅ Scheduled extension reload directly via chrome.alarms');
+          return true;
+        } catch (alarmError) {
+          logger.error('❌ Failed to schedule extension reload alarm:', alarmError);
+          this.reloadRequested = false;
+          return false;
+        }
       }
 
-      // Send message to background service to handle the reload
-      // The background service will show a notification and then call chrome.runtime.reload()
+      // Fall back to messaging for unprivileged contexts where chrome.alarms is unavailable.
       try {
         if (chrome.runtime?.id) {
           await chrome.runtime.sendMessage({
@@ -2185,14 +2202,31 @@ export class SupabaseAuthService {
               reason: 'Multiple authentication failures - clearing stale state',
             },
           });
+          this.lastReloadTimestamp = reloadTimestamp;
+          await this.persistLastReloadTimestamp();
           logger.info('✅ Extension reload requested successfully');
+          return true;
         }
       } catch (error) {
         logger.error('❌ Failed to send extension reload message:', error);
-        // Don't throw - this is best effort
       }
+
+      this.reloadRequested = false;
+      return false;
     } catch (error) {
       logger.error('❌ Error requesting extension reload:', error);
+      this.reloadRequested = false;
+      return false;
+    }
+  }
+
+  private async persistLastReloadTimestamp(): Promise<void> {
+    try {
+      await chrome.storage.local.set({ lastExtensionReloadTimestamp: this.lastReloadTimestamp });
+      logger.debug('💾 Persisted reload timestamp to storage');
+    } catch (storageError) {
+      logger.warn('Failed to persist reload timestamp:', storageError);
+      // Continue anyway - timestamp in memory is better than nothing
     }
   }
 }

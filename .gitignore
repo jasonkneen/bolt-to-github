@@ -29,3 +29,11 @@ plan-revision.md
 test-results/
 playwright-report/
 playwright/.cache/
+
+# MAID generated advisory index (plan-locks are tracked, this is regenerated)
+.maid/serve.sock
+.maid/serve.pid
+.maid/outcomes.json
+.maid/outcomes-digest.json
+.maid/outcomes-digest.md
+.maid/outcomes-enrichment-prompt.json
