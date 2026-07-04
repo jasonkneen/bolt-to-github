@@ -26,6 +26,13 @@ import { UsageTracker } from './UsageTracker';
 import { WindowManager } from './WindowManager';
 
 const logger = createLogger('BackgroundService');
+const AUTH_STORAGE_RECOVERY_DEBOUNCE_MS = 1000;
+const AUTH_STORAGE_RECOVERY_KEYS = new Set([
+  'supabaseToken',
+  'supabaseTokenExpiry',
+  'authenticationMethod',
+  'githubAppInstallationId',
+]);
 
 export class BackgroundService {
   private stateManager: StateManager;
@@ -45,6 +52,7 @@ export class BackgroundService {
   private storageListener:
     | ((changes: { [key: string]: chrome.storage.StorageChange }, namespace: string) => void)
     | null = null;
+  private authStorageRecoveryTimeout: NodeJS.Timeout | null = null;
   private syncAlarmHandler: ((alarm: chrome.alarms.Alarm) => void) | null = null;
   // Tab-based project tracking to prevent wrong project pushes
   private tabProjectMap: Map<number, string> = new Map();
@@ -243,6 +251,27 @@ export class BackgroundService {
 
   private setupZipHandler(githubService: UnifiedGitHubService) {
     this.zipHandler = new ZipHandler(githubService, (status) => this.broadcastStatus(status));
+  }
+
+  private async reinitializeGitHubDependencies(): Promise<void> {
+    const githubService = await this.initializeGitHubService();
+    if (githubService) {
+      logger.info('🔄 GitHub service reinitialized, reinitializing ZipHandler...');
+      this.setupZipHandler(githubService);
+
+      const settings = await this.stateManager.getGitHubSettings();
+      if (settings?.gitHubSettings?.repoOwner) {
+        logger.info('🔄 Reinitializing TempRepoManager with updated settings...');
+        this.tempRepoManager = new BackgroundTempRepoManager(
+          githubService,
+          settings.gitHubSettings.repoOwner,
+          (status) => this.broadcastStatus(status)
+        );
+      } else {
+        logger.warn('⚠️ No repoOwner found, TempRepoManager will remain uninitialized');
+        this.tempRepoManager = null;
+      }
+    }
   }
 
   private broadcastStatus(status: UploadStatusState) {
@@ -485,31 +514,48 @@ export class BackgroundService {
 
         if (settingsChanged) {
           logger.info('🔄 GitHub settings changed, reinitializing GitHub service...');
-          const githubService = await this.initializeGitHubService();
-          if (githubService) {
-            logger.info('🔄 GitHub service reinitialized, reinitializing ZipHandler...');
-            this.setupZipHandler(githubService);
-
-            // Also reinitialize TempRepoManager with new settings
-            const settings = await this.stateManager.getGitHubSettings();
-            if (settings?.gitHubSettings?.repoOwner) {
-              logger.info('🔄 Reinitializing TempRepoManager with updated settings...');
-              this.tempRepoManager = new BackgroundTempRepoManager(
-                githubService,
-                settings.gitHubSettings.repoOwner,
-                (status) => this.broadcastStatus(status)
-              );
-            } else {
-              logger.warn('⚠️ No repoOwner found, TempRepoManager will remain uninitialized');
-              this.tempRepoManager = null;
-            }
-          }
+          await this.reinitializeGitHubDependencies();
         }
+      } else if (namespace === 'local' && this.hasRelevantAuthStorageChange(changes)) {
+        this.scheduleAuthStorageRecovery();
       }
     };
 
     // Add the listener
     chrome.storage.onChanged.addListener(this.storageListener);
+  }
+
+  private hasRelevantAuthStorageChange(changes: {
+    [key: string]: chrome.storage.StorageChange;
+  }): boolean {
+    return Object.entries(changes).some(([key, change]) => {
+      return AUTH_STORAGE_RECOVERY_KEYS.has(key) && !Object.is(change.oldValue, change.newValue);
+    });
+  }
+
+  private scheduleAuthStorageRecovery(): void {
+    if (this.authStorageRecoveryTimeout) {
+      clearTimeout(this.authStorageRecoveryTimeout);
+    }
+
+    this.authStorageRecoveryTimeout = setTimeout(() => {
+      this.authStorageRecoveryTimeout = null;
+      this.recoverFromAuthStorageChange().catch((error) => {
+        logger.error('Failed to recover from auth storage change:', error);
+      });
+    }, AUTH_STORAGE_RECOVERY_DEBOUNCE_MS);
+  }
+
+  private async recoverFromAuthStorageChange(): Promise<void> {
+    logger.info('🔐 Auth storage changed, forcing auth check and reinitializing GitHub service');
+
+    try {
+      await this.supabaseAuthService.forceCheck();
+    } catch (error) {
+      logger.error('Failed to force auth check after auth storage change:', error);
+    }
+
+    await this.reinitializeGitHubDependencies();
   }
 
   private async handlePortMessage(tabId: number, message: Message): Promise<void> {
@@ -1872,6 +1918,11 @@ export class BackgroundService {
     if (this.storageListener) {
       chrome.storage.onChanged.removeListener(this.storageListener);
       this.storageListener = null;
+    }
+
+    if (this.authStorageRecoveryTimeout) {
+      clearTimeout(this.authStorageRecoveryTimeout);
+      this.authStorageRecoveryTimeout = null;
     }
 
     // Clean up auth state listener
