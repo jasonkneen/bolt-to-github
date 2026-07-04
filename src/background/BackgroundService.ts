@@ -20,6 +20,7 @@ import { resolveExtensionPageTitle } from '../lib/utils/analytics';
 import { BoltProjectSyncService } from '../services/BoltProjectSyncService';
 import { UnifiedGitHubService } from '../services/UnifiedGitHubService';
 import { ZipHandler } from '../services/zipHandler';
+import { AuthMessageRouter, type AuthMessageType } from './AuthMessageRouter';
 import { StateManager } from './StateManager';
 import { BackgroundTempRepoManager } from './TempRepoManager';
 import { UsageTracker } from './UsageTracker';
@@ -42,6 +43,7 @@ export class BackgroundService {
   private tempRepoManager: BackgroundTempRepoManager | null = null;
   private pendingCommitMessage: string;
   private supabaseAuthService: SupabaseAuthService;
+  private authMessageRouter: AuthMessageRouter;
   private operationStateManager: OperationStateManager;
   private usageTracker: UsageTracker;
   private syncService: BoltProjectSyncService;
@@ -78,6 +80,7 @@ export class BackgroundService {
     this.zipHandler = null;
     this.pendingCommitMessage = 'Commit from Bolt to GitHub';
     this.supabaseAuthService = SupabaseAuthService.getInstance();
+    this.authMessageRouter = new AuthMessageRouter(this.supabaseAuthService);
     this.operationStateManager = OperationStateManager.getInstance();
     this.usageTracker = new UsageTracker();
     this.syncService = new BoltProjectSyncService();
@@ -321,6 +324,14 @@ export class BackgroundService {
         });
         return true;
       };
+
+      const authMessageHandled = this.authMessageRouter.handleMessage(
+        message as { type: AuthMessageType },
+        sendResponse
+      );
+      if (authMessageHandled) {
+        return authMessageHandled;
+      }
 
       if (message.action === 'PUSH_TO_GITHUB') {
         return runAsync(async () => {

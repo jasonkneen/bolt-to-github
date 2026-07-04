@@ -4,6 +4,7 @@ import { BackgroundService } from '../BackgroundService';
 const mockForceCheck = vi.fn().mockResolvedValue(undefined);
 const mockForceSubscriptionRevalidation = vi.fn().mockResolvedValue(true);
 const mockForceSyncToPopup = vi.fn().mockResolvedValue(undefined);
+const mockGetAuthState = vi.fn().mockReturnValue({ isAuthenticated: true });
 
 vi.mock('../../services/UnifiedGitHubService');
 vi.mock('../../services/zipHandler');
@@ -21,9 +22,13 @@ vi.mock('../../content/services/SupabaseAuthService', () => ({
       forceCheck: mockForceCheck,
       forceSubscriptionRevalidation: mockForceSubscriptionRevalidation,
       forceSyncToPopup: mockForceSyncToPopup,
-      getAuthState: vi.fn().mockReturnValue({ isAuthenticated: true }),
+      getAuthState: mockGetAuthState,
       addAuthStateListener: vi.fn(),
       removeAuthStateListener: vi.fn(),
+      enterPostConnectionMode: vi.fn(),
+      syncGitHubApp: vi.fn().mockResolvedValue(true),
+      validateSubscriptionStatus: vi.fn().mockResolvedValue(true),
+      logout: vi.fn().mockResolvedValue(undefined),
     })),
   },
 }));
@@ -126,6 +131,7 @@ describe('BackgroundService - Extension Reload Behavior', () => {
     mockForceCheck.mockResolvedValue(undefined);
     mockForceSubscriptionRevalidation.mockResolvedValue(true);
     mockForceSyncToPopup.mockResolvedValue(undefined);
+    mockGetAuthState.mockReturnValue({ isAuthenticated: true });
     mockAction.openPopup.mockResolvedValue(undefined);
     service = new BackgroundService();
     await new Promise((resolve) => setTimeout(resolve, 10));
@@ -273,6 +279,22 @@ describe('BackgroundService - Extension Reload Behavior', () => {
       expect(sendResponse).toHaveBeenCalledWith({
         success: false,
         error: 'Popup open failed',
+      });
+    });
+
+    it('runtime listener delegates background auth router messages through one listener', async () => {
+      const sendResponse = vi.fn();
+
+      const returnValue = runtimeMessageListener({ type: 'GET_AUTH_STATE' }, {}, sendResponse);
+
+      expect(returnValue).toBe(true);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(mockRuntime.onMessage.addListener).toHaveBeenCalledTimes(1);
+      expect(mockGetAuthState).toHaveBeenCalledTimes(1);
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: true,
+        authState: { isAuthenticated: true },
       });
     });
 
