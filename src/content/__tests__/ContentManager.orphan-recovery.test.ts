@@ -73,7 +73,12 @@ import { ContentManager } from '../ContentManager';
 import { UIManager } from '../UIManager';
 
 type RuntimeMessageListener = (
-  message: { type?: string; action?: string; data?: { duration?: number }; settings?: unknown },
+  message: {
+    type?: string;
+    action?: string;
+    data?: { duration?: number; message?: string; countdown?: number };
+    settings?: unknown;
+  },
   sender: chrome.runtime.MessageSender,
   sendResponse: (response?: unknown) => void
 ) => boolean | void;
@@ -211,7 +216,10 @@ function installHarness(runtimeId: string | undefined = 'test-extension-id'): Ch
   return { connect, runtimeReload, locationReload, ports, runtimeMessages };
 }
 
-function sendRuntimeMessage(harness: ChromeHarness, message: { type: string }): void {
+function sendRuntimeMessage(
+  harness: ChromeHarness,
+  message: { type: string; data?: { message?: string; countdown?: number } }
+): void {
   harness.runtimeMessages.forEach((listener) => {
     listener(message, {}, vi.fn());
   });
@@ -268,7 +276,13 @@ describe('ContentManager orphaned content-script recovery', () => {
     setRuntimeId(undefined);
     new ContentManager();
 
-    await advanceRecoveryToUnrecoverable();
+    expect(refreshBanner()).toBeNull();
+
+    await vi.advanceTimersByTimeAsync(5_000);
+
+    expect(refreshBanner()).toBeNull();
+
+    await vi.advanceTimersByTimeAsync(5_000);
 
     const banner = refreshBanner();
     expect(banner).not.toBeNull();
@@ -304,13 +318,18 @@ describe('ContentManager orphaned content-script recovery', () => {
     const harness = installHarness();
     new ContentManager();
 
-    sendRuntimeMessage(harness, { type: 'SHOW_EXTENSION_RELOAD_NOTIFICATION' });
+    sendRuntimeMessage(harness, {
+      type: 'SHOW_EXTENSION_RELOAD_NOTIFICATION',
+      data: {
+        message: 'Extension needs to restart to fix authentication. Restarting in 3 seconds...',
+        countdown: 3,
+      },
+    });
 
     expect(uiNotifications).toContainEqual({
       type: 'info',
-      message:
-        'Bolt to GitHub extension has been updated or reloaded. Please refresh the page to continue.',
-      duration: 10000,
+      message: 'Extension needs to restart to fix authentication. Restarting in 3 seconds...',
+      duration: 3000,
     });
 
     setRuntimeId(undefined);

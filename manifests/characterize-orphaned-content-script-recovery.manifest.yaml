@@ -123,13 +123,28 @@ outcome:
       paths:
         - src/content/ContentManager.ts
   review_notes:
-    - source: local MAID implementation self-review
+    - source: Gauss read-only subagent review
+      severity: fixed
+      summary: |
+        The missing independent implementation review was run after commit
+        02e9b669ae2c1ab818a2cb06870344a4a56b9c35 as if the implementation had
+        not yet been committed. The reviewer confirmed changed files stayed
+        within manifest scope, declared artifacts existed, tests asserted
+        observable DOM/reconnect/no-reload behavior rather than private flags,
+        and no automatic bolt.new tab reload was introduced. The reviewer found
+        two behavior gaps: startup-time runtime invalidation skipped the retry
+        ladder by calling the unrecoverable path from handleInitializationError,
+        and SHOW_EXTENSION_RELOAD_NOTIFICATION ignored the background countdown
+        payload. Both findings were fixed before final handoff.
+    - source: Bacon read-only follow-up review
       severity: ready
       summary: |
-        No review findings. Changed files stayed within manifest scope, tests
-        assert observable DOM/reconnect/no-reload behavior rather than private
-        recovery flags, and the production changes preserve the existing
-        recovery ladder.
+        A fresh follow-up reviewer found no remaining findings after the
+        post-review fixes. The reviewer confirmed the startup retry ladder now
+        remains active before the fallback banner appears, the content script
+        displays the background-provided reload countdown payload, and the
+        outcome records the independent review findings and post-review
+        validation evidence.
     - source: local validation
       severity: unrelated full-suite blocker
       summary: |
@@ -236,4 +251,48 @@ outcome:
         Full active-manifest MAID test command reported E231 for the existing
         repair-e2e-error-flow-product-behavior E2E/browser validate command
         before running manifest commands.
+    - command:
+        - pnpm
+        - exec
+        - vitest
+        - run
+        - src/content/__tests__/ContentManager.orphan-recovery.test.ts
+      status: passed-post-review-fix
+      summary: |
+        Post-review focused orphan-recovery tests passed after preserving the
+        startup retry ladder before the fallback banner appears and displaying
+        the background-provided self-heal countdown notification payload.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/characterize-orphaned-content-script-recovery.manifest.yaml
+        - --mode
+        - schema
+      status: passed-post-review-fix
+      summary: Post-review schema validation passed for the updated manifest.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/characterize-orphaned-content-script-recovery.manifest.yaml
+        - --mode
+        - behavioral
+      status: passed-post-review-fix
+      summary: Post-review behavioral validation passed for the updated manifest.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/characterize-orphaned-content-script-recovery.manifest.yaml
+        - --mode
+        - implementation
+      status: passed-post-review-fix
+      summary: Post-review implementation validation passed for the updated manifest.
+    - command:
+        - ./scripts/maid
+        - test
+        - --manifest
+        - manifests/characterize-orphaned-content-script-recovery.manifest.yaml
+      status: passed-post-review-fix
+      summary: |
+        Post-review manifest test runner passed the focused orphan-recovery
+        Vitest command, lint, and svelte-check.
   completed_at: '2026-07-04T08:55:49Z'

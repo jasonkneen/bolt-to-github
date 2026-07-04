@@ -482,19 +482,22 @@ export class ContentManager {
   private handleInitializationError(error: unknown): void {
     logger.error('Initialization error:', error);
     if (!chrome.runtime?.id) {
-      this.handleUnrecoverableContextInvalidation();
+      if (!this.isInRecovery) {
+        this.handleExtensionContextInvalidated();
+      }
       return;
     }
 
     this.notifyUserOfError();
   }
 
-  private notifyUserOfExtensionReload(): void {
+  private notifyUserOfExtensionReload(options: { message?: string; duration?: number } = {}): void {
     this.uiManager?.showNotification({
       type: 'info',
       message:
+        options.message ||
         'Bolt to GitHub extension has been updated or reloaded. Please refresh the page to continue.',
-      duration: 10000,
+      duration: options.duration ?? 10000,
     });
   }
 
@@ -658,7 +661,17 @@ export class ContentManager {
           }
 
           if (message.type === 'SHOW_EXTENSION_RELOAD_NOTIFICATION') {
-            this.notifyUserOfExtensionReload();
+            const reloadMessage =
+              typeof message.data?.message === 'string' ? message.data.message : undefined;
+            const reloadDuration =
+              typeof message.data?.countdown === 'number'
+                ? Math.max(message.data.countdown, 1) * 1000
+                : undefined;
+
+            this.notifyUserOfExtensionReload({
+              message: reloadMessage,
+              duration: reloadDuration,
+            });
             sendResponse({ success: true });
             return;
           }
