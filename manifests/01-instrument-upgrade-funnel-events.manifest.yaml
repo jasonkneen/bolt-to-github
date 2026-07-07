@@ -32,136 +32,136 @@ description: |
 type: feature
 files:
   edit:
-  - path: src/lib/utils/analytics.ts
-    artifacts:
-    - kind: function
-      name: trackUpgradeFunnelEvent
-      args:
-      - name: stage
-        type: '''modal_shown'' | ''cta_clicked'''
-      - name: metadata
-        type: '{ context: string; medium: "popup" | "content" }'
-      returns: void
-      description: |
-        Sends an upgrade_modal_shown or upgrade_cta_clicked
-        extension_event through sendAnalyticsToBackground with the
-        triggering context (UpgradeModalType or content feature) and
-        surface medium. Guarded fire-and-forget: a missing or failing
-        chrome.runtime must never affect the upgrade UX.
-  - path: src/lib/utils/upgradeModal.ts
-    artifacts:
-    - kind: function
-      name: triggerUpgradeModal
-      args:
-      - name: type
-        type: UpgradeModalType
-      returns: void
-      description: |
-        Existing behavior unchanged (dispatches the showUpgrade
-        CustomEvent with the resolved config); now also records a
-        modal_shown funnel event with the modal type as context before
-        dispatching.
-    - kind: function
-      name: setUpgradeModalState
-      args:
-      - name: type
-        type: UpgradeModalType
-      - name: setState
-        type: '(feature: string, reason: string, features: PremiumFeature[]) => void'
-      returns: void
-      description: |
-        Existing behavior unchanged (resolves config and applies it via
-        setState); now also records a modal_shown funnel event with the
-        modal type as context.
-  - path: src/popup/components/UpgradeModal.svelte
-    artifacts:
-    - kind: function
-      name: UpgradeModal
-      args:
-      - name: props
-        type: UpgradeModal component props
-      returns: Svelte component instance
-      description: |
-        Upgrade modal for the popup. Clicking the upgrade CTA records a
-        cta_clicked funnel event (with the modal's feature as context)
-        and opens the bolt2github upgrade URL tagged with
-        utm_source=extension&utm_medium=popup&utm_campaign=upgrade and
-        utm_content set to the feature. Close, refresh-subscription, and
-        sign-in behaviors are unchanged; analytics failures never block
-        the tab from opening.
-  - path: src/popup/App.svelte
-    artifacts:
-    - kind: function
-      name: openTrackedUpgradeModalFromPopupContext
-      args:
-      - name: upgradeFeature
-        type: string
-      - name: setUpgradeState
-        type: PopupContextUpgradeModalStateSetter
-      - name: applyState
-        type: PopupContextApplyUpgradeModalState
-      returns: void
-      description: |
-        Routes a popupContext=upgrade upgradeModalFeature value through
-        setUpgradeModalState, defaulting unknown feature keys to general, so
-        content-triggered popup upgrade impressions use the same modal_shown
-        tracking seam as direct popup upgrade triggers.
-  - path: src/lib/utils/__tests__/upgradeModal.test.ts
-    artifacts:
-    - kind: test_function
-      name: triggerUpgradeModal records a modal_shown event with the modal type context
-      description: Verifies the funnel event fires with context matching the requested UpgradeModalType and that the showUpgrade CustomEvent still dispatches with the resolved config.
-    - kind: test_function
-      name: setUpgradeModalState records a modal_shown event and still applies the config
-      description: Verifies tracking fires and setState receives the unchanged feature, reason, and features.
-    - kind: test_function
-      name: upgrade modal triggers still work when analytics messaging is unavailable
-      description: Verifies a missing chrome.runtime cannot prevent the modal from being triggered or the state from being set.
-  - path: src/popup/components/__tests__/UpgradeModal.component.test.ts
-    artifacts:
-    - kind: test_function
-      name: upgrade CTA records a cta_clicked event and opens the UTM-tagged upgrade URL
-      description: Verifies the click sends upgrade_cta_clicked with the feature context and chrome.tabs.create receives the upgrade URL carrying extension/popup/upgrade UTM parameters plus the feature as utm_content.
-    - kind: test_function
-      name: upgrade CTA still opens the upgrade page when analytics fails
-      description: Verifies a throwing analytics path cannot block the upgrade tab from opening.
-  - path: src/popup/__tests__/App.component.test.ts
-    artifacts:
-    - kind: test_function
-      name: openTrackedUpgradeModalFromPopupContext opens pending upgrade context through the tracked upgrade state seam
-      description: Verifies a popup opened from a content-script upgrade request delegates to setUpgradeModalState with the stored upgrade feature, preserving the shared modal_shown tracking seam.
-    - kind: test_function
-      name: openTrackedUpgradeModalFromPopupContext preserves commits context and defaults unknown values
-      description: Verifies the helper preserves the valid commits context and falls back to the general modal for unknown stored upgrade feature values.
+    - path: src/lib/utils/analytics.ts
+      artifacts:
+        - kind: function
+          name: trackUpgradeFunnelEvent
+          args:
+            - name: stage
+              type: "'modal_shown' | 'cta_clicked'"
+            - name: metadata
+              type: "{ context: string; medium: 'popup' | 'content' }"
+          returns: void
+          description: |
+            Sends an upgrade_modal_shown or upgrade_cta_clicked
+            extension_event through sendAnalyticsToBackground with the
+            triggering context (UpgradeModalType or content feature) and
+            surface medium. Guarded fire-and-forget: a missing or failing
+            chrome.runtime must never affect the upgrade UX.
+    - path: src/lib/utils/upgradeModal.ts
+      artifacts:
+        - kind: function
+          name: triggerUpgradeModal
+          args:
+            - name: type
+              type: UpgradeModalType
+          returns: void
+          description: |
+            Existing behavior unchanged (dispatches the showUpgrade
+            CustomEvent with the resolved config); now also records a
+            modal_shown funnel event with the modal type as context before
+            dispatching.
+        - kind: function
+          name: setUpgradeModalState
+          args:
+            - name: type
+              type: UpgradeModalType
+            - name: setState
+              type: '(feature: string, reason: string, features: PremiumFeature[]) => void'
+          returns: void
+          description: |
+            Existing behavior unchanged (resolves config and applies it via
+            setState); now also records a modal_shown funnel event with the
+            modal type as context.
+    - path: src/popup/components/UpgradeModal.svelte
+      artifacts:
+        - kind: function
+          name: UpgradeModal
+          args:
+            - name: props
+              type: UpgradeModal component props
+          returns: Svelte component instance
+          description: |
+            Upgrade modal for the popup. Clicking the upgrade CTA records a
+            cta_clicked funnel event (with the modal's feature as context)
+            and opens the bolt2github upgrade URL tagged with
+            utm_source=extension&utm_medium=popup&utm_campaign=upgrade and
+            utm_content set to the feature. Close, refresh-subscription, and
+            sign-in behaviors are unchanged; analytics failures never block
+            the tab from opening.
+    - path: src/popup/App.svelte
+      artifacts:
+        - kind: function
+          name: openTrackedUpgradeModalFromPopupContext
+          args:
+            - name: upgradeFeature
+              type: string
+            - name: setUpgradeState
+              type: PopupContextUpgradeModalStateSetter
+            - name: applyState
+              type: PopupContextApplyUpgradeModalState
+          returns: void
+          description: |
+            Routes a popupContext=upgrade upgradeModalFeature value through
+            setUpgradeModalState, defaulting unknown feature keys to general, so
+            content-triggered popup upgrade impressions use the same modal_shown
+            tracking seam as direct popup upgrade triggers.
+    - path: src/lib/utils/__tests__/upgradeModal.test.ts
+      artifacts:
+        - kind: test_function
+          name: triggerUpgradeModal records a modal_shown event with the modal type context
+          description: Verifies the funnel event fires with context matching the requested UpgradeModalType and that the showUpgrade CustomEvent still dispatches with the resolved config.
+        - kind: test_function
+          name: setUpgradeModalState records a modal_shown event and still applies the config
+          description: Verifies tracking fires and setState receives the unchanged feature, reason, and features.
+        - kind: test_function
+          name: upgrade modal triggers still work when analytics messaging is unavailable
+          description: Verifies a missing chrome.runtime cannot prevent the modal from being triggered or the state from being set.
+    - path: src/popup/components/__tests__/UpgradeModal.component.test.ts
+      artifacts:
+        - kind: test_function
+          name: upgrade CTA records a cta_clicked event and opens the UTM-tagged upgrade URL
+          description: Verifies the click sends upgrade_cta_clicked with the feature context and chrome.tabs.create receives the upgrade URL carrying extension/popup/upgrade UTM parameters plus the feature as utm_content.
+        - kind: test_function
+          name: upgrade CTA still opens the upgrade page when analytics fails
+          description: Verifies a throwing analytics path cannot block the upgrade tab from opening.
+    - path: src/popup/__tests__/App.component.test.ts
+      artifacts:
+        - kind: test_function
+          name: openTrackedUpgradeModalFromPopupContext opens pending upgrade context through the tracked upgrade state seam
+          description: Verifies a popup opened from a content-script upgrade request delegates to setUpgradeModalState with the stored upgrade feature, preserving the shared modal_shown tracking seam.
+        - kind: test_function
+          name: openTrackedUpgradeModalFromPopupContext preserves commits context and defaults unknown values
+          description: Verifies the helper preserves the valid commits context and falls back to the general modal for unknown stored upgrade feature values.
   read:
-  - src/lib/constants/premiumFeatures.ts
-  - src/content/UIManager.ts
-  - src/content/handlers/FileChangeHandler.ts
-  - src/content/managers/NotificationManager.ts
-  - src/background/BackgroundService.ts
+    - src/lib/constants/premiumFeatures.ts
+    - src/content/UIManager.ts
+    - src/content/handlers/FileChangeHandler.ts
+    - src/content/managers/NotificationManager.ts
+    - src/background/BackgroundService.ts
 validate:
-- pnpm exec vitest run src/lib/utils/__tests__/upgradeModal.test.ts src/popup/components/__tests__/UpgradeModal.component.test.ts src/lib/utils/__tests__/analytics.test.ts src/popup/__tests__/App.component.test.ts
-- pnpm lint
-- pnpm check
+  - pnpm exec vitest run src/lib/utils/__tests__/upgradeModal.test.ts src/popup/components/__tests__/UpgradeModal.component.test.ts src/lib/utils/__tests__/analytics.test.ts src/popup/__tests__/App.component.test.ts
+  - pnpm lint
+  - pnpm check
 created: '2026-07-07T05:51:22Z'
 metadata:
   tags:
-  - analytics
-  - conversion
-  - upgrade-funnel
-  - retention-plan-c1
+    - analytics
+    - conversion
+    - upgrade-funnel
+    - retention-plan-c1
   priority: high
 temptations:
-- risk: Do not let tracking block or delay showing the modal or opening the upgrade tab.
-  instead: Send events fire-and-forget through sendAnalyticsToBackground before the UX action, wrapped so failures are swallowed (reuse-analytics-boundary Outcome lesson).
-- risk: Do not add a new background message type or AnalyticsService method for these events.
-  instead: Reuse the existing ANALYTICS_EVENT extension_event envelope already handled by BackgroundService.handleAnalyticsEvent.
-- risk: Do not double-count impressions by instrumenting both the upgradeModal.ts seam and every component that calls it.
-  instead: Impressions fire only in triggerUpgradeModal and setUpgradeModalState; components add only the cta_clicked event.
-- risk: Do not hardcode a second upgrade URL variant per call site when adding UTM parameters.
-  instead: Build the UTM-tagged URL in the popup modal only for this child; handle direct content notification CTA URLs in a separate content-scoped manifest.
-- risk: Do not rewrite existing upgradeModal or popup component tests to accommodate tracking.
-  instead: Keep all existing assertions green; add new tests for tracking, UTM tagging, and degraded-runtime behavior.
+  - risk: Do not let tracking block or delay showing the modal or opening the upgrade tab.
+    instead: Send events fire-and-forget through sendAnalyticsToBackground before the UX action, wrapped so failures are swallowed (reuse-analytics-boundary Outcome lesson).
+  - risk: Do not add a new background message type or AnalyticsService method for these events.
+    instead: Reuse the existing ANALYTICS_EVENT extension_event envelope already handled by BackgroundService.handleAnalyticsEvent.
+  - risk: Do not double-count impressions by instrumenting both the upgradeModal.ts seam and every component that calls it.
+    instead: Impressions fire only in triggerUpgradeModal and setUpgradeModalState; components add only the cta_clicked event.
+  - risk: Do not hardcode a second upgrade URL variant per call site when adding UTM parameters.
+    instead: Build the UTM-tagged URL in the popup modal only for this child; handle direct content notification CTA URLs in a separate content-scoped manifest.
+  - risk: Do not rewrite existing upgradeModal or popup component tests to accommodate tracking.
+    instead: Keep all existing assertions green; add new tests for tracking, UTM tagging, and degraded-runtime behavior.
 outcome:
   status: completed
   summary: |
