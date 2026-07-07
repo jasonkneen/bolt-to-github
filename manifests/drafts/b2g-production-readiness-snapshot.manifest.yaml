@@ -1,0 +1,296 @@
+# draft-kind: parent-epic
+schema: '2'
+goal: |
+  Implement a deterministic Production Readiness Snapshot module for Bolt to
+  GitHub that compares an exported Bolt project zip with GitHub repository
+  state, detects production-sensitive change signals, presents a readiness
+  summary in the extension, and can generate an optional ADC Fix handoff report
+  without uploading source code.
+description: |
+  Parent planning epic derived from
+  docs/b2g_production_readiness_snapshot_reference.md.
+
+  This draft is planning inventory only. It must not be promoted directly into
+  manifests/ or implemented as a single contract. Each child below must become
+  an implementation-sized draft with exact artifacts, fixture-backed behavioral
+  tests, confirmed red phase when applicable, and behavioral MAID validation
+  before promotion.
+
+  Product boundary:
+  - B2G provides a deterministic export preflight and readiness trail.
+  - The module analyzes a Bolt export zip, GitHub base state, and optional
+    history to produce evidence-based readiness signals.
+  - The module does not claim to be a security audit, AI code review, or proof
+    of correctness.
+  - ADC Fix crossover is a thin, explicit, user-initiated handoff report. B2G
+    must never auto-upload source code, zips, secrets, or private repository
+    data to ADC Fix.
+
+  Epic completion criteria:
+  - B2G can analyze an exported Bolt zip before or during GitHub export.
+  - B2G can compare the zip with a GitHub base ref.
+  - B2G produces a structured ReadinessSnapshot object with state, confidence,
+    top concerns, safe-looking areas, evidence, outputs, and limitations.
+  - MVP detectors cover sensitive paths, dependencies, env vars, public routes,
+    test/CI signals, maintainability signals, and history-based unusual change
+    detection.
+  - The extension UI displays clear Green, Yellow, and Red snapshot states.
+  - The module can generate Markdown export receipts and ADC Fix handoff
+    reports.
+  - Secret-looking values are redacted in all structured and rendered outputs.
+  - Partial-data states are visible and honest when GitHub comparison, history,
+    large-file scans, or API calls are unavailable.
+  - Fixture-driven tests cover deterministic outputs and redaction behavior.
+  - Existing B2G export behavior remains intact.
+
+  MVP sequence:
+  1. Domain model and fixtures.
+  2. Zip inventory and normalization.
+  3. GitHub base inventory.
+  4. Diff engine.
+  5. Sensitive path classifier.
+  6. Dependency detector.
+  7. Env and secret detector.
+  8. Readiness composer.
+  9. Receipt generator.
+  10. Extension UI summary.
+  11. Public surface detector.
+  12. Test/CI and maintainability detector.
+  13. History baseline engine.
+  14. ADC Fix handoff report.
+  15. Commit marker and richer history parsing.
+type: feature
+files:
+  create:
+    - path: manifests/drafts/b2g-production-readiness-snapshot.manifest.yaml
+      artifacts:
+        - kind: type
+          name: B2GProductionReadinessSnapshotParentEpic
+          type: MAID parent epic planning inventory
+          description: |
+            Non-promotable parent epic draft derived from the production
+            readiness snapshot reference document. Captures the product
+            boundary, epic acceptance criteria, implementation-sized child
+            manifest split, MVP definition, open decisions, and task-specific
+            temptations for future child drafts.
+  read:
+    - docs/b2g_production_readiness_snapshot_reference.md
+    - docs/draft-manifest-workflow.md
+    - manifests/README.md
+    - manifests/drafts/README.md
+validate:
+  - ./scripts/maid validate manifests/drafts/b2g-production-readiness-snapshot.manifest.yaml --mode schema
+created: '2026-07-07T10:26:14+08:00'
+metadata:
+  tags:
+    - production-readiness
+    - bolt-export
+    - deterministic-analysis
+    - adc-fix-handoff
+    - parent-epic
+  priority: high
+  status: planning
+  promotable: false
+  source_document: docs/b2g_production_readiness_snapshot_reference.md
+  epic:
+    acceptance_criteria:
+      - Analyze exported Bolt zips before or during GitHub export.
+      - Compare candidate zip inventory with GitHub base repository state.
+      - Produce a structured ReadinessSnapshot object.
+      - Include readiness state, confidence, top concerns, safe-looking areas,
+        evidence, output references, trends where available, and limitations.
+      - Detect MVP signals for sensitive paths, dependencies, environment
+        variables, secrets/configuration, public routes, test/CI readiness,
+        maintainability, and history baselines.
+      - Render Green, Yellow, and Red states in the extension UI.
+      - Generate Markdown export receipts.
+      - Generate ADC Fix handoff reports without auto-uploading source code or
+        report content.
+      - Redact secret-looking values from every structured and rendered output.
+      - Cover the module with deterministic fixture tests.
+      - Preserve existing B2G export, push, auth, and GitHub sync behavior.
+    child_manifests:
+      - slug: 01-b2g-prs-domain-models-fixtures
+        goal: |
+          Add core TypeScript domain types, readiness categories, severity
+          types, fixture structure, golden output test harness, and shared
+          redaction helpers.
+        behavioral_focus:
+          - Domain objects satisfy the expected schema.
+          - Golden snapshot fixture loading is deterministic.
+          - Secret redaction helpers hide values while preserving evidence
+            names and paths.
+      - slug: 02-b2g-prs-zip-inventory-normalization
+        goal: |
+          Parse exported Bolt zips into normalized file inventory with path
+          normalization, ignore rules, text/binary detection, size, hash, and
+          line counts.
+        behavioral_focus:
+          - Zip fixtures produce expected inventories.
+          - Ignored paths are excluded from source analysis.
+          - Lockfiles remain available for dependency analysis.
+          - Binary files are counted but not line-diffed.
+      - slug: 03-b2g-prs-github-base-inventory
+        goal: |
+          Fetch repository base tree and file metadata from GitHub for
+          comparison with the candidate zip inventory.
+        behavioral_focus:
+          - Mock GitHub tree data normalizes into base inventory.
+          - Missing or rate-limited GitHub data produces partial snapshot
+            limitations.
+          - Base ref metadata is preserved.
+      - slug: 04-b2g-prs-diff-engine
+        goal: |
+          Compare candidate zip inventory against GitHub base inventory and
+          produce added, changed, deleted, renamed, line-change, and binary
+          change metrics.
+        behavioral_focus:
+          - Changed, added, and deleted counts match fixtures.
+          - Text line deltas are correct.
+          - Large files can be skipped with limitations.
+          - Binary file changes are counted separately.
+      - slug: 05-b2g-prs-sensitive-path-classifier
+        goal: |
+          Classify changed files into readiness categories using deterministic,
+          data-driven path rules.
+        behavioral_focus:
+          - Auth, data, config, deployment, integration, route, and test paths
+            classify correctly.
+          - Ignore rules do not hide lockfiles or relevant config.
+          - Classifier evidence includes category and path.
+      - slug: 06-b2g-prs-dependency-detector
+        goal: |
+          Detect dependency additions, removals, version changes, package
+          manager conflicts, and production-sensitive dependency category
+          introductions.
+        behavioral_focus:
+          - package.json diffs are correct.
+          - Stripe, Resend, Supabase, auth, database, AI, monitoring, and
+            validation packages produce categorized signals.
+          - Manifest/lockfile mismatch signals are generated.
+      - slug: 07-b2g-prs-env-secret-detector
+        goal: |
+          Detect new environment variable references, .env.example coverage,
+          .env files, and secret-looking values with redacted output.
+        behavioral_focus:
+          - Env var patterns are detected across supported syntaxes.
+          - New env vars are compared with base state.
+          - Missing or stale .env.example signals appear.
+          - Secret values never appear in snapshot, receipt, or handoff output.
+      - slug: 08-b2g-prs-readiness-composer
+        goal: |
+          Combine detector outputs into final state, confidence, top concerns,
+          safe-looking areas, and limitations.
+        behavioral_focus:
+          - Green, Yellow, and Red fixture cases classify correctly.
+          - Critical signals force Red.
+          - Top concerns are ordered by severity and evidence.
+          - Safe-looking areas are suppressed when supporting data is
+            unavailable.
+      - slug: 09-b2g-prs-report-generators
+        goal: |
+          Generate Markdown export receipts and ADC Fix handoff reports from
+          ReadinessSnapshot.
+        behavioral_focus:
+          - Receipt output matches golden Markdown.
+          - Handoff output matches golden Markdown.
+          - Reports include limitations.
+          - Reports never expose secret values.
+          - ADC Fix language is helpful and non-coercive.
+      - slug: 10-b2g-prs-extension-ui-panel
+        goal: |
+          Display readiness state, top metrics, top concerns, safe-looking
+          areas, evidence drawer, and actions in the B2G extension.
+        behavioral_focus:
+          - Green, Yellow, and Red states render correctly.
+          - Partial snapshots render confidence and limitations.
+          - Copy receipt and generate handoff actions are wired.
+          - UI does not block the existing export flow unless explicitly
+            configured.
+      - slug: 11-b2g-prs-public-surface-detector
+        goal: |
+          Detect route, API, admin, upload, billing, webhook, login, signup, and
+          dashboard surface changes using path and lightweight content
+          heuristics.
+        behavioral_focus:
+          - Next.js app/pages routes normalize to route paths.
+          - New API routes are detected.
+          - Admin, upload, webhook, billing, auth, and dashboard names produce
+            appropriate signals.
+      - slug: 12-b2g-prs-test-ci-maintainability-detector
+        goal: |
+          Detect test/CI readiness, deleted tests, large file thresholds, file
+          growth, and backup/temp/copy files.
+        behavioral_focus:
+          - Test scripts and test files are detected.
+          - Deleted tests produce signals.
+          - Files crossing line thresholds produce signals.
+          - Backup/temp filenames produce low or medium signals.
+      - slug: 13-b2g-prs-history-baseline-engine
+        goal: |
+          Analyze GitHub commit history or prior B2G snapshots to detect unusual
+          change size, hotspots, dependency drift, and repeated sensitive-area
+          churn.
+        behavioral_focus:
+          - Median and percentile baselines work.
+          - Insufficient history produces limitations, not false claims.
+          - Hotspot files are identified from fixture history.
+          - Large-export signals appear only when thresholds are met.
+      - slug: 14-b2g-prs-commit-marker-integration
+        goal: |
+          Optionally append compact PRS metadata to commit bodies and parse
+          prior PRS markers from history.
+        behavioral_focus:
+          - Commit marker format is generated correctly.
+          - Prior markers parse into history records.
+          - User setting controls whether marker inclusion is enabled.
+      - slug: 15-b2g-prs-e2e-fixtures-regression
+        goal: |
+          Add end-to-end fixture tests that run zip inventory, diff, detectors,
+          composer, and reports together.
+        behavioral_focus:
+          - UI-only export returns Green.
+          - Auth plus env export returns Yellow or Red as specified.
+          - Secret file export returns Red and redacts values.
+          - Large historical export returns Yellow or Red based on category
+            combinations.
+    mvp_definition:
+      included:
+        - Zip inventory.
+        - GitHub base comparison.
+        - Changed, added, and deleted metrics.
+        - Sensitive path classifier.
+        - Dependency diff.
+        - Env var detector.
+        - .env file detection.
+        - Basic readiness composer.
+        - UI summary.
+        - Export receipt Markdown.
+      plus_adc_crossover:
+        - Generate ADC Fix handoff report button.
+        - Handoff report template.
+        - Privacy guardrails.
+        - No auto-upload behavior.
+        - Explicit optional link to ADC Fix.
+    open_decisions:
+      - Where prior snapshots should live for MVP.
+      - Whether receipts are included in commits by default; current
+        recommendation is opt-in.
+      - Whether Red should block export; current recommendation is warning
+        only for MVP.
+      - Whether ADC Fix CTA appears for every state or mainly Yellow/Red.
+      - Whether history should prefer only B2G commits or fallback to recent
+        repository commits with confidence labels.
+      - How much user configurability belongs in MVP versus data-driven
+        internal rules.
+temptations:
+  - risk: Do not promote this parent epic directly or combine detector logic, UI, GitHub integration, and report generation in one implementation manifest.
+    instead: Split one implementation-sized child draft at a time, add fixture-backed behavioral tests, confirm red phase, then promote only that child.
+  - risk: Do not describe PRS as an AI review, security audit, vulnerability scanner, or guarantee of production readiness.
+    instead: Use static, evidence-based language that explains what changed, why it matters, what to review, and what limitations apply.
+  - risk: Do not hide critical safety warnings behind a Pro gate or turn ADC Fix crossover into a hard gate.
+    instead: Always surface critical facts such as .env inclusion or likely secrets, and reserve Pro value for depth, evidence, history, receipts, and handoff workflow.
+  - risk: Do not log, render, upload, or persist raw secret-looking values while scanning exports.
+    instead: Redact at the lowest detector/output boundary and test snapshots, receipts, and handoff reports for absence of secret values.
+  - risk: Do not make GitHub history, rate-limit-sensitive calls, or full line-level diffs required for every snapshot.
+    instead: Produce visible partial snapshots with confidence and limitations when comparison, history, or expensive scans are unavailable.

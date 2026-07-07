@@ -1,0 +1,415 @@
+# draft-kind: child-planning-inventory
+schema: '2'
+goal: |
+  Add the Production Readiness Snapshot domain model foundation, fixture
+  structure, golden output harness, and shared redaction helpers needed by
+  later PRS child manifests.
+description: |
+  Child draft for the b2g-production-readiness-snapshot parent epic. This is
+  planning inventory only and is not promotion-ready until the planned
+  behavioral tests and golden fixtures exist, red phase is confirmed, and
+  behavioral MAID validation passes after promotion.
+
+  This slice establishes the stable TypeScript vocabulary for PRS without
+  implementing zip parsing, GitHub adapters, diffing, detectors, UI, reports, or
+  history analysis. The intent is to give later children shared domain types
+  and deterministic fixture utilities so downstream contracts do not each invent
+  their own snapshot shape.
+temptations:
+  - risk: 'Do not let downstream detector drafts define their own incompatible snapshot, signal, or evidence shapes.'
+    instead: 'Centralize PRS domain contracts in the domain foundation and have later drafts import those types.'
+  - risk: 'Do not store or assert raw secret-looking fixture values in golden snapshots.'
+    instead: 'Run fixture outputs through the shared redaction helper and assert redacted markers plus evidence labels.'
+  - risk: 'Do not make the fixture loader depend on wall-clock time, random IDs, network calls, or extension runtime globals.'
+    instead: 'Use deterministic fixture files and injected timestamps or static golden data.'
+type: feature
+files:
+  create:
+    - path: src/production-readiness/domain.ts
+      artifacts:
+        - kind: type
+          name: ReadinessState
+          type: "'green' | 'yellow' | 'red'"
+          description: Planned user-facing PRS state union.
+        - kind: type
+          name: SignalSeverity
+          type: "'info' | 'low' | 'medium' | 'high' | 'critical'"
+          description: Planned deterministic signal severity union.
+        - kind: type
+          name: SnapshotConfidence
+          type: "'low' | 'medium' | 'high'"
+          description: Planned confidence union for complete and partial data states.
+        - kind: type
+          name: ReadinessCategory
+          type: "'identity_access' | 'data_persistence' | 'secrets_config' | 'deployment_ops' | 'external_integrations' | 'public_surface' | 'testing_recovery' | 'maintainability' | 'change_history'"
+          description: Planned category union from the PRS reference document.
+        - kind: interface
+          name: RepositoryRef
+          description: Planned repository owner/name identity for snapshot context.
+        - kind: attribute
+          name: owner
+          of: RepositoryRef
+          type: string
+        - kind: attribute
+          name: name
+          of: RepositoryRef
+          type: string
+        - kind: interface
+          name: GitRefSummary
+          description: Planned Git base ref summary used for compare context and receipt output.
+        - kind: attribute
+          name: ref
+          of: GitRefSummary
+          type: string
+        - kind: attribute
+          name: sha
+          of: GitRefSummary
+          type: string
+        - kind: attribute
+          name: compareUrl
+          of: GitRefSummary
+          type: string | undefined
+        - kind: interface
+          name: CandidateExportSummary
+          description: Planned candidate Bolt export summary used by snapshots, receipts, and handoff reports.
+        - kind: attribute
+          name: id
+          of: CandidateExportSummary
+          type: string
+        - kind: attribute
+          name: label
+          of: CandidateExportSummary
+          type: string
+        - kind: attribute
+          name: zipSizeBytes
+          of: CandidateExportSummary
+          type: number
+        - kind: attribute
+          name: generatedFrom
+          of: CandidateExportSummary
+          type: "'bolt-export-zip'"
+        - kind: interface
+          name: CategorySummary
+          description: Planned per-category summary of signal count, highest severity, and evidence paths.
+        - kind: attribute
+          name: category
+          of: CategorySummary
+          type: ReadinessCategory
+        - kind: attribute
+          name: signalCount
+          of: CategorySummary
+          type: number
+        - kind: attribute
+          name: highestSeverity
+          of: CategorySummary
+          type: SignalSeverity
+        - kind: attribute
+          name: evidence
+          of: CategorySummary
+          type: EvidenceRef[]
+        - kind: interface
+          name: TrendSummary
+          description: Planned history trend summary for unusual size, hotspots, dependency drift, and churn evidence.
+        - kind: attribute
+          name: id
+          of: TrendSummary
+          type: string
+        - kind: attribute
+          name: label
+          of: TrendSummary
+          type: string
+        - kind: attribute
+          name: evidence
+          of: TrendSummary
+          type: EvidenceRef[]
+        - kind: interface
+          name: SnapshotOutputRefs
+          description: Planned references to generated receipt, handoff, debug, or commit-marker outputs.
+        - kind: attribute
+          name: receiptMarkdown
+          of: SnapshotOutputRefs
+          type: string | undefined
+        - kind: attribute
+          name: adcFixHandoffMarkdown
+          of: SnapshotOutputRefs
+          type: string | undefined
+        - kind: attribute
+          name: debugJson
+          of: SnapshotOutputRefs
+          type: string | undefined
+        - kind: attribute
+          name: commitMarker
+          of: SnapshotOutputRefs
+          type: string | undefined
+        - kind: interface
+          name: PartialDataNotice
+          description: Planned limitation record for unavailable GitHub comparison, history, large-file scans, or rate-limited data.
+        - kind: attribute
+          name: source
+          of: PartialDataNotice
+          type: "'github_base' | 'history' | 'zip_scan' | 'large_file_diff' | 'rate_limit' | 'detector'"
+        - kind: attribute
+          name: message
+          of: PartialDataNotice
+          type: string
+        - kind: attribute
+          name: confidenceImpact
+          of: PartialDataNotice
+          type: SnapshotConfidence
+        - kind: interface
+          name: EvidenceRef
+          description: Planned evidence reference object for file, dependency, env var, route, metric, commit, and pattern evidence.
+        - kind: attribute
+          name: kind
+          of: EvidenceRef
+          type: "'file' | 'dependency' | 'env_var' | 'route' | 'metric' | 'commit' | 'pattern'"
+        - kind: attribute
+          name: label
+          of: EvidenceRef
+          type: string
+        - kind: attribute
+          name: path
+          of: EvidenceRef
+          type: string | undefined
+        - kind: attribute
+          name: before
+          of: EvidenceRef
+          type: string | number | boolean | undefined
+        - kind: attribute
+          name: after
+          of: EvidenceRef
+          type: string | number | boolean | undefined
+        - kind: attribute
+          name: redacted
+          of: EvidenceRef
+          type: boolean | undefined
+        - kind: interface
+          name: ReadinessSignal
+          description: Planned deterministic signal object with category, severity, title, message, evidence, and optional suggested review.
+        - kind: attribute
+          name: id
+          of: ReadinessSignal
+          type: string
+        - kind: attribute
+          name: category
+          of: ReadinessSignal
+          type: ReadinessCategory
+        - kind: attribute
+          name: severity
+          of: ReadinessSignal
+          type: SignalSeverity
+        - kind: attribute
+          name: title
+          of: ReadinessSignal
+          type: string
+        - kind: attribute
+          name: message
+          of: ReadinessSignal
+          type: string
+        - kind: attribute
+          name: evidence
+          of: ReadinessSignal
+          type: EvidenceRef[]
+        - kind: attribute
+          name: suggestedReview
+          of: ReadinessSignal
+          type: string | undefined
+        - kind: attribute
+          name: deterministic
+          of: ReadinessSignal
+          type: 'true'
+        - kind: interface
+          name: ComparisonSummary
+          description: Planned changed, added, deleted, renamed, line, binary, and sensitive-change summary.
+        - kind: attribute
+          name: changedFiles
+          of: ComparisonSummary
+          type: number
+        - kind: attribute
+          name: addedFiles
+          of: ComparisonSummary
+          type: number
+        - kind: attribute
+          name: deletedFiles
+          of: ComparisonSummary
+          type: number
+        - kind: attribute
+          name: renamedFiles
+          of: ComparisonSummary
+          type: number | undefined
+        - kind: attribute
+          name: addedLines
+          of: ComparisonSummary
+          type: number | undefined
+        - kind: attribute
+          name: deletedLines
+          of: ComparisonSummary
+          type: number | undefined
+        - kind: attribute
+          name: binaryFilesChanged
+          of: ComparisonSummary
+          type: number
+        - kind: attribute
+          name: sensitiveFilesChanged
+          of: ComparisonSummary
+          type: number
+        - kind: attribute
+          name: packageManifestChanged
+          of: ComparisonSummary
+          type: boolean
+        - kind: attribute
+          name: lockfileChanged
+          of: ComparisonSummary
+          type: boolean
+        - kind: attribute
+          name: envExampleChanged
+          of: ComparisonSummary
+          type: boolean
+        - kind: attribute
+          name: routeSurfaceChanged
+          of: ComparisonSummary
+          type: boolean
+        - kind: interface
+          name: ReadinessStateSummary
+          description: Planned state summary with user-facing copy, confidence, top concerns, and safe-looking areas.
+        - kind: attribute
+          name: state
+          of: ReadinessStateSummary
+          type: ReadinessState
+        - kind: attribute
+          name: confidence
+          of: ReadinessStateSummary
+          type: SnapshotConfidence
+        - kind: attribute
+          name: internalScore
+          of: ReadinessStateSummary
+          type: number
+        - kind: attribute
+          name: headline
+          of: ReadinessStateSummary
+          type: string
+        - kind: attribute
+          name: recommendedAction
+          of: ReadinessStateSummary
+          type: string
+        - kind: attribute
+          name: topConcerns
+          of: ReadinessStateSummary
+          type: string[]
+        - kind: attribute
+          name: safeLookingAreas
+          of: ReadinessStateSummary
+          type: string[]
+        - kind: interface
+          name: ReadinessSnapshot
+          description: Planned schema-versioned PRS result object consumed by composers, UI, receipts, and ADC Fix handoff reports.
+        - kind: attribute
+          name: schemaVersion
+          of: ReadinessSnapshot
+          type: "'b2g.prs.snapshot.v1'"
+        - kind: attribute
+          name: generatedAt
+          of: ReadinessSnapshot
+          type: string
+        - kind: attribute
+          name: repository
+          of: ReadinessSnapshot
+          type: RepositoryRef
+        - kind: attribute
+          name: base
+          of: ReadinessSnapshot
+          type: GitRefSummary
+        - kind: attribute
+          name: candidate
+          of: ReadinessSnapshot
+          type: CandidateExportSummary
+        - kind: attribute
+          name: comparison
+          of: ReadinessSnapshot
+          type: ComparisonSummary
+        - kind: attribute
+          name: state
+          of: ReadinessSnapshot
+          type: ReadinessStateSummary
+        - kind: attribute
+          name: categories
+          of: ReadinessSnapshot
+          type: CategorySummary[]
+        - kind: attribute
+          name: signals
+          of: ReadinessSnapshot
+          type: ReadinessSignal[]
+        - kind: attribute
+          name: trends
+          of: ReadinessSnapshot
+          type: TrendSummary[] | undefined
+        - kind: attribute
+          name: outputs
+          of: ReadinessSnapshot
+          type: SnapshotOutputRefs
+        - kind: attribute
+          name: limitations
+          of: ReadinessSnapshot
+          type: string[]
+    - path: src/production-readiness/redaction.ts
+      artifacts:
+        - kind: function
+          name: redactSensitiveValue
+          args:
+            - name: value
+              type: string
+          returns: string
+          description: Planned helper that masks secret-looking values while preserving useful evidence context.
+        - kind: function
+          name: redactEvidenceRef
+          args:
+            - name: evidence
+              type: EvidenceRef
+          returns: EvidenceRef
+          description: Planned helper that redacts before and after evidence values without dropping path or label context.
+    - path: src/production-readiness/test-fixtures/prsFixtures.ts
+      artifacts:
+        - kind: function
+          name: loadPrsFixture
+          args:
+            - name: name
+              type: string
+          returns: PrsFixture
+          description: Planned deterministic fixture loader for PRS unit tests.
+        - kind: type
+          name: PrsFixture
+          type: '{ name: string; files: FixtureFile[]; goldenSnapshot?: ReadinessSnapshot }'
+          description: Planned fixture shape shared by PRS child tests.
+    - path: src/production-readiness/__tests__/domain-models-fixtures.test.ts
+      artifacts:
+        - kind: test_function
+          name: domain objects satisfy the expected snapshot schema
+          description: Required planned behavioral test before promotion.
+        - kind: test_function
+          name: golden snapshot fixture loading is deterministic
+          description: Required planned behavioral test before promotion.
+        - kind: test_function
+          name: redaction helpers hide secret values while preserving evidence names and paths
+          description: Required planned behavioral test before promotion.
+  read:
+    - docs/b2g_production_readiness_snapshot_reference.md
+    - manifests/drafts/b2g-production-readiness-snapshot.manifest.yaml
+    - docs/draft-manifest-workflow.md
+    - src/lib/types
+validate:
+  - pnpm exec vitest run src/production-readiness/__tests__/domain-models-fixtures.test.ts
+  - ./scripts/maid validate manifests/01-b2g-prs-domain-models-fixtures.manifest.yaml --mode behavioral
+  - pnpm lint
+  - pnpm check
+created: '2026-07-07T12:56:53+08:00'
+metadata:
+  tags:
+    - production-readiness
+    - domain-model
+    - fixtures
+    - redaction
+  priority: high
+  status: planning
+  promotable: false
+  parent_epic: b2g-production-readiness-snapshot
+  source_document: docs/b2g_production_readiness_snapshot_reference.md
