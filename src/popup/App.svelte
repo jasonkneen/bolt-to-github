@@ -1,3 +1,41 @@
+<script context="module" lang="ts">
+  const POPUP_CONTEXT_UPGRADE_TYPES = [
+    'general',
+    'fileChanges',
+    'pushReminders',
+    'branchSelector',
+    'issues',
+    'commits',
+  ] as const;
+
+  type PopupContextPremiumFeature = import('$lib/constants/premiumFeatures').PremiumFeature;
+  type PopupContextUpgradeModalType = import('$lib/utils/upgradeModal').UpgradeModalType;
+  type PopupContextUpgradeFeature = (typeof POPUP_CONTEXT_UPGRADE_TYPES)[number];
+  type PopupContextApplyUpgradeModalState = (
+    feature: string,
+    reason: string,
+    features: PopupContextPremiumFeature[]
+  ) => void;
+  type PopupContextUpgradeModalStateSetter = (
+    type: PopupContextUpgradeModalType,
+    setState: PopupContextApplyUpgradeModalState
+  ) => void;
+
+  function isPopupContextUpgradeFeature(value: string): value is PopupContextUpgradeFeature {
+    return (POPUP_CONTEXT_UPGRADE_TYPES as readonly string[]).includes(value);
+  }
+
+  export function openTrackedUpgradeModalFromPopupContext(
+    upgradeFeature: string,
+    setUpgradeState: PopupContextUpgradeModalStateSetter,
+    applyState: PopupContextApplyUpgradeModalState
+  ): void {
+    const validFeature = isPopupContextUpgradeFeature(upgradeFeature) ? upgradeFeature : 'general';
+
+    setUpgradeState(validFeature, applyState);
+  }
+</script>
+
 <script lang="ts">
   import IssueManager from '$lib/components/IssueManager.svelte';
   import NewsletterModal from '$lib/components/NewsletterModal.svelte';
@@ -462,29 +500,17 @@
       case 'upgrade':
         // Show upgrade modal with the specified feature
         if (upgradeFeature) {
-          // Import upgrade modal utility to get the configuration
-          const { getUpgradeModalConfig } = await import('$lib/utils/upgradeModal');
           try {
-            // Ensure the upgradeFeature is a valid key
-            const validFeature = [
-              'general',
-              'fileChanges',
-              'pushReminders',
-              'branchSelector',
-              'issues',
-            ].includes(upgradeFeature)
-              ? (upgradeFeature as
-                  | 'issues'
-                  | 'general'
-                  | 'fileChanges'
-                  | 'pushReminders'
-                  | 'branchSelector')
-              : ('general' as const);
-            const config = getUpgradeModalConfig(validFeature);
-            upgradeModalConfig.feature = config.feature;
-            upgradeModalConfig.reason = config.reason;
-            upgradeModalConfig.features = config.features;
-            modalStates.upgrade = true;
+            openTrackedUpgradeModalFromPopupContext(
+              upgradeFeature,
+              setUpgradeModalState,
+              (feature, reason, features) => {
+                upgradeModalConfig.feature = feature;
+                upgradeModalConfig.reason = reason;
+                upgradeModalConfig.features = features;
+                modalStates.upgrade = true;
+              }
+            );
           } catch (error) {
             logger.error('Error loading upgrade modal config:', error);
             // Fallback to general upgrade modal

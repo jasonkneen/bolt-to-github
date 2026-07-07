@@ -5,7 +5,7 @@
 import { render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import App from '../App.svelte';
+import App, { openTrackedUpgradeModalFromPopupContext } from '../App.svelte';
 
 vi.unmock('$lib/components/ui/modal/Modal.svelte');
 vi.unmock('$lib/components/ui/button');
@@ -313,17 +313,14 @@ describe('App.svelte - Component Tests', () => {
       writable: true,
       configurable: true,
     });
-
-    Object.defineProperty(document, 'documentElement', {
-      value: {
-        classList: {
-          add: vi.fn(),
-          remove: vi.fn(),
-        },
-      },
+    Object.defineProperty(globalThis, 'chrome', {
+      value: chromeMocks,
       writable: true,
       configurable: true,
     });
+
+    vi.spyOn(document.documentElement.classList, 'add').mockImplementation(() => undefined);
+    vi.spyOn(document.documentElement.classList, 'remove').mockImplementation(() => undefined);
 
     window.addEventListener = vi.fn();
   });
@@ -568,6 +565,31 @@ describe('App.svelte - Component Tests', () => {
       await waitFor(() => {
         expect(upgradeButton).toBeInTheDocument();
       });
+    });
+  });
+
+  describe('Popup Context', () => {
+    it('openTrackedUpgradeModalFromPopupContext opens pending upgrade context through the tracked upgrade state seam', () => {
+      const applyState = vi.fn();
+      const setUpgradeState = vi.fn((_type, setState) => {
+        setState('file-changes', 'Upgrade reason', []);
+      });
+
+      openTrackedUpgradeModalFromPopupContext('fileChanges', setUpgradeState, applyState);
+
+      expect(setUpgradeState).toHaveBeenCalledWith('fileChanges', expect.any(Function));
+      expect(applyState).toHaveBeenCalledWith('file-changes', 'Upgrade reason', []);
+    });
+
+    it('openTrackedUpgradeModalFromPopupContext preserves commits context and defaults unknown values', () => {
+      const applyState = vi.fn();
+      const setUpgradeState = vi.fn();
+
+      openTrackedUpgradeModalFromPopupContext('commits', setUpgradeState, applyState);
+      openTrackedUpgradeModalFromPopupContext('unknown-feature', setUpgradeState, applyState);
+
+      expect(setUpgradeState).toHaveBeenNthCalledWith(1, 'commits', applyState);
+      expect(setUpgradeState).toHaveBeenNthCalledWith(2, 'general', applyState);
     });
   });
 
