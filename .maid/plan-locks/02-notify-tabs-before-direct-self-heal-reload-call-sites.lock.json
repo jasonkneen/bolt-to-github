@@ -1,0 +1,63 @@
+{
+  "manifest_path": "manifests/02-notify-tabs-before-direct-self-heal-reload-call-sites.manifest.yaml",
+  "manifest_hash": "sha256:1b1e1103601463a886fa829a9555acc20b7ab17a7920540575ad8f7f25db4e27",
+  "test_hashes": {
+    "src/lib/utils/__tests__/reloadNotification.test.ts": "sha256:4043b758f567431a3c961aa068a0887cd2a41f45b316679e2106dededbd0a441",
+    "src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts": "sha256:c349efc50fb2e861623a34584a3ecfdad9fa301d610ef3e7d8f7898395d82c0d",
+    "src/background/__tests__/BackgroundService.reload.test.ts": "sha256:96c18ece3258a0b6e79e60d59c5edfbf6b1c70ef20524d247ff3f6786b3a591a"
+  },
+  "created_at": "2026-07-07T11:51:40.943313+00:00",
+  "revision": 1,
+  "revisions": [],
+  "red_evidence": {
+    "red": false,
+    "captured_at": "2026-07-07T11:51:55.893066+00:00",
+    "commands": [
+      {
+        "command": "pnpm exec vitest run src/lib/utils/__tests__/reloadNotification.test.ts src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts",
+        "exit_code": 0,
+        "output_tail": "\n RUN  v1.6.1 /home/atomrem/projects/codefrost-dev/bolt-to-github\n\n \u2713 src/lib/utils/__tests__/reloadNotification.test.ts  (4 tests) 3ms\n \u2713 src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts  (7 tests) 8ms\n\n Test Files  2 passed (2)\n      Tests  11 passed (11)\n   Start at  19:51:41\n   Duration  619ms (transform 143ms, setup 103ms, collect 149ms, tests 11ms, environment 375ms, prepare 79ms)\n",
+        "classification": "not_red"
+      },
+      {
+        "command": "pnpm exec vitest run src/content/services/__tests__/SupabaseAuthService.reload.test.ts src/background/__tests__/BackgroundService.reload.test.ts",
+        "exit_code": 0,
+        "output_tail": "\n RUN  v1.6.1 /home/atomrem/projects/codefrost-dev/bolt-to-github\n\n \u2713 src/content/services/__tests__/SupabaseAuthService.reload.test.ts  (15 tests) 13ms\n \u2713 src/background/__tests__/BackgroundService.reload.test.ts  (14 tests) 417ms\n\n Test Files  2 passed (2)\n      Tests  29 passed (29)\n   Start at  19:51:42\n   Duration  1.22s (transform 286ms, setup 105ms, collect 371ms, tests 430ms, environment 390ms, prepare 83ms)\n",
+        "classification": "not_red"
+      },
+      {
+        "command": "pnpm lint",
+        "exit_code": 0,
+        "output_tail": "\n> bolt-to-github@1.3.20 lint /home/atomrem/projects/codefrost-dev/bolt-to-github\n> eslint \"src/**/*.{js,ts,svelte}\"\n",
+        "classification": "not_red"
+      },
+      {
+        "command": "pnpm check",
+        "exit_code": 0,
+        "output_tail": "\n> bolt-to-github@1.3.20 check /home/atomrem/projects/codefrost-dev/bolt-to-github\n> svelte-check --tsconfig ./tsconfig.json\n\n\n====================================\nLoading svelte-check in workspace: /home/atomrem/projects/codefrost-dev/bolt-to-github\nGetting Svelte diagnostics...\n\n====================================\nsvelte-check found 0 errors and 0 warnings",
+        "classification": "not_red"
+      }
+    ]
+  },
+  "_manifest_contract": {
+    "artifacts": [
+      "src/background/BackgroundService.ts:class:BackgroundService",
+      "src/background/BackgroundService.ts:class:BackgroundService:kind=class",
+      "src/background/__tests__/BackgroundService.reload.test.ts:background reload requests notify bolt tabs while scheduling the self-heal alarm",
+      "src/background/__tests__/BackgroundService.reload.test.ts:background reload requests notify bolt tabs while scheduling the self-heal alarm:kind=test_function",
+      "src/content/services/SupabaseAuthService.ts:class:SupabaseAuthService",
+      "src/content/services/SupabaseAuthService.ts:class:SupabaseAuthService:kind=class"
+    ],
+    "test_files": [
+      "src/background/__tests__/BackgroundService.reload.test.ts",
+      "src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts",
+      "src/lib/utils/__tests__/reloadNotification.test.ts"
+    ],
+    "validate_commands": [
+      "pnpm exec vitest run src/lib/utils/__tests__/reloadNotification.test.ts src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts",
+      "pnpm exec vitest run src/content/services/__tests__/SupabaseAuthService.reload.test.ts src/background/__tests__/BackgroundService.reload.test.ts",
+      "pnpm lint",
+      "pnpm check"
+    ]
+  }
+}

@@ -3,6 +3,7 @@
 import { SUPABASE_CONFIG } from '../../lib/constants/supabase';
 import { githubSettingsActions } from '../../lib/stores/githubSettings';
 import { createLogger } from '../../lib/utils/logger';
+import { notifyBoltTabsAboutReload } from '../../lib/utils/reloadNotification';
 
 const logger = createLogger('SupabaseAuthService');
 
@@ -2190,6 +2191,10 @@ export class SupabaseAuthService {
 
       if (typeof chrome.alarms?.create === 'function') {
         try {
+          void notifyBoltTabsAboutReload().catch((notificationError) => {
+            logger.warn('Failed to send reload notification to tabs:', notificationError);
+          });
+
           const RELOAD_DELAY_MINUTES = 3 / 60; // 3 seconds = 0.05 minutes
           await chrome.alarms.create('self-heal-reload', {
             delayInMinutes: RELOAD_DELAY_MINUTES,

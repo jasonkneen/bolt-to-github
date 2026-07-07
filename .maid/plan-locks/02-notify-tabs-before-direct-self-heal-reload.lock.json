@@ -1,0 +1,106 @@
+{
+  "manifest_path": "manifests/02-notify-tabs-before-direct-self-heal-reload.manifest.yaml",
+  "manifest_hash": "sha256:b345935125e4d4f0e8b10e8b501f062b7ef21b86e55e5745ba8817f466af0ac2",
+  "test_hashes": {
+    "src/lib/utils/__tests__/reloadNotification.test.ts": "sha256:4043b758f567431a3c961aa068a0887cd2a41f45b316679e2106dededbd0a441",
+    "src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts": "sha256:c349efc50fb2e861623a34584a3ecfdad9fa301d610ef3e7d8f7898395d82c0d"
+  },
+  "created_at": "2026-07-07T11:29:14.800401+00:00",
+  "revision": 5,
+  "revisions": [
+    {
+      "prior_manifest_hash": "sha256:aa367f09a9e6ef7838b741c5c7abe129872d890a5b13aaa5219744579036facd",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/reloadNotification.test.ts": "sha256:0d74ed6215583694564500b8277110c8605cd86716d91f3c03dad6f09cd5c0dc",
+        "src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts": "sha256:e12b2b1b2384a532847ac43358f3d0b97f97a170bef7e5f82db53274f31a5b05"
+      },
+      "revised_at": "2026-07-07T11:32:42.396580+00:00",
+      "reason": "Refine self-heal notification ordering assertion to compare against the self-heal alarm call"
+    },
+    {
+      "prior_manifest_hash": "sha256:aa367f09a9e6ef7838b741c5c7abe129872d890a5b13aaa5219744579036facd",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/reloadNotification.test.ts": "sha256:0d74ed6215583694564500b8277110c8605cd86716d91f3c03dad6f09cd5c0dc",
+        "src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts": "sha256:c349efc50fb2e861623a34584a3ecfdad9fa301d610ef3e7d8f7898395d82c0d"
+      },
+      "revised_at": "2026-07-07T11:40:37.133122+00:00",
+      "reason": "Add default reload notification payload assertions after implementation review"
+    },
+    {
+      "prior_manifest_hash": "sha256:aa367f09a9e6ef7838b741c5c7abe129872d890a5b13aaa5219744579036facd",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/reloadNotification.test.ts": "sha256:b9f1b07721d60034568c0973ed4312c3faabd4783c76224bf53c5ee3610bbcc9",
+        "src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts": "sha256:c349efc50fb2e861623a34584a3ecfdad9fa301d610ef3e7d8f7898395d82c0d"
+      },
+      "revised_at": "2026-07-07T11:44:32.490653+00:00",
+      "reason": "Add tabs.query failure behavioral coverage after implementation review"
+    },
+    {
+      "prior_manifest_hash": "sha256:8344ede4ba64028146297bf7547560186ba7b483e94dd596f21d8dde22a19d27",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/reloadNotification.test.ts": "sha256:4043b758f567431a3c961aa068a0887cd2a41f45b316679e2106dededbd0a441",
+        "src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts": "sha256:c349efc50fb2e861623a34584a3ecfdad9fa301d610ef3e7d8f7898395d82c0d"
+      },
+      "revised_at": "2026-07-07T11:51:08.921730+00:00",
+      "reason": "Add completed Outcome record after ready implementation review"
+    }
+  ],
+  "red_evidence": {
+    "red": true,
+    "captured_at": "2026-07-07T11:29:30.081373+00:00",
+    "commands": [
+      {
+        "command": "pnpm exec vitest run src/lib/utils/__tests__/reloadNotification.test.ts src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts",
+        "exit_code": 1,
+        "output_tail": "\n FAIL  src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts > SupabaseAuthService - self-heal execution (fix-auth-self-heal-reload-execution) > notifies bolt tabs before scheduling the direct self-heal reload alarm\nAssertionError: expected [] to have a length of 1 but got +0\n\n- Expected\n+ Received\n\n- 1\n+ 0\n\n \u276f src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts:156:39\n    154|     await failAuthTimes(authService, maxFailures);\n    155| \n    156|     expect(reloadNotificationCalls()).toHaveLength(1);\n       |                                       ^\n    157|     expect(selfHealAlarmCalls()).toHaveLength(1);\n    158|     expect((mockChromeTabs.sendMessage as Mock).mock.invocationCallOrd\u2026\n\n\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af[2/2]\u23af\n",
+        "classification": "red"
+      },
+      {
+        "command": "pnpm exec vitest run src/content/services/__tests__/SupabaseAuthService.reload.test.ts src/background/__tests__/BackgroundService.reload.test.ts",
+        "exit_code": 0,
+        "output_tail": "\n RUN  v1.6.1 /home/atomrem/projects/codefrost-dev/bolt-to-github\n\n \u2713 src/content/services/__tests__/SupabaseAuthService.reload.test.ts  (15 tests) 12ms\n \u2713 src/background/__tests__/BackgroundService.reload.test.ts  (13 tests) 357ms\n\n Test Files  2 passed (2)\n      Tests  28 passed (28)\n   Start at  19:29:16\n   Duration  1.05s (transform 268ms, setup 97ms, collect 344ms, tests 369ms, environment 400ms, prepare 103ms)\n",
+        "classification": "not_red"
+      },
+      {
+        "command": "pnpm lint",
+        "exit_code": 0,
+        "output_tail": "\n> bolt-to-github@1.3.20 lint /home/atomrem/projects/codefrost-dev/bolt-to-github\n> eslint \"src/**/*.{js,ts,svelte}\"\n",
+        "classification": "not_red"
+      },
+      {
+        "command": "pnpm check",
+        "exit_code": 1,
+        "output_tail": "\n> bolt-to-github@1.3.20 check /home/atomrem/projects/codefrost-dev/bolt-to-github\n> svelte-check --tsconfig ./tsconfig.json\n\n\n====================================\nLoading svelte-check in workspace: /home/atomrem/projects/codefrost-dev/bolt-to-github\nGetting Svelte diagnostics...\n\n/home/atomrem/projects/codefrost-dev/bolt-to-github/src/lib/utils/__tests__/reloadNotification.test.ts:5:43\nError: Cannot find module '../reloadNotification' or its corresponding type declarations. \nimport type { Mock } from 'vitest';\nimport { notifyBoltTabsAboutReload } from '../reloadNotification';\n\n\n\n====================================\nsvelte-check found 1 error and 0 warnings in 1 file\n\u2009ELIFECYCLE\u2009 Command failed with exit code 1.",
+        "classification": "red"
+      }
+    ]
+  },
+  "_manifest_contract": {
+    "artifacts": [
+      "src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts:notifies bolt tabs before scheduling the direct self-heal reload alarm",
+      "src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts:notifies bolt tabs before scheduling the direct self-heal reload alarm:kind=test_function",
+      "src/lib/utils/__tests__/reloadNotification.test.ts:broadcasts the reload notification with countdown to every bolt.new tab",
+      "src/lib/utils/__tests__/reloadNotification.test.ts:broadcasts the reload notification with countdown to every bolt.new tab:kind=test_function",
+      "src/lib/utils/__tests__/reloadNotification.test.ts:resolves silently when a tab has no content script listener",
+      "src/lib/utils/__tests__/reloadNotification.test.ts:resolves silently when a tab has no content script listener:kind=test_function",
+      "src/lib/utils/__tests__/reloadNotification.test.ts:resolves silently when chrome.tabs is unavailable",
+      "src/lib/utils/__tests__/reloadNotification.test.ts:resolves silently when chrome.tabs is unavailable:kind=test_function",
+      "src/lib/utils/__tests__/reloadNotification.test.ts:resolves silently when tabs query fails",
+      "src/lib/utils/__tests__/reloadNotification.test.ts:resolves silently when tabs query fails:kind=test_function",
+      "src/lib/utils/reloadNotification.ts:function:notifyBoltTabsAboutReload",
+      "src/lib/utils/reloadNotification.ts:function:notifyBoltTabsAboutReload:arg=options:type={ message?: string; countdownSeconds?: number }:default=None",
+      "src/lib/utils/reloadNotification.ts:function:notifyBoltTabsAboutReload:kind=function",
+      "src/lib/utils/reloadNotification.ts:function:notifyBoltTabsAboutReload:returns=Promise<void>"
+    ],
+    "test_files": [
+      "src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts",
+      "src/lib/utils/__tests__/reloadNotification.test.ts"
+    ],
+    "validate_commands": [
+      "pnpm exec vitest run src/lib/utils/__tests__/reloadNotification.test.ts src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts",
+      "pnpm exec vitest run src/content/services/__tests__/SupabaseAuthService.reload.test.ts src/background/__tests__/BackgroundService.reload.test.ts",
+      "pnpm lint",
+      "pnpm check"
+    ]
+  }
+}

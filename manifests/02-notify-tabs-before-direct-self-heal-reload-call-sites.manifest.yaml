@@ -1,0 +1,163 @@
+schema: '2'
+goal: Declare reload notification call-site rewires for direct self-heal parity
+type: fix
+description: |
+  Companion contract for 02-notify-tabs-before-direct-self-heal-reload.
+  The promoted draft intentionally described call-site rewires in
+  BackgroundService and SupabaseAuthService, but placed those production files
+  under files.read. This additive manifest makes the two production edits
+  explicit and writable without changing the behavioral contract: both reload
+  paths must use the shared best-effort bolt.new tab notification helper before
+  scheduling the self-heal reload alarm.
+files:
+  edit:
+    - path: src/background/BackgroundService.ts
+      artifacts:
+        - kind: class
+          name: BackgroundService
+          description: |
+            The RELOAD_EXTENSION message path delegates bolt.new reload
+            notification delivery to notifyBoltTabsAboutReload before
+            scheduling the self-heal reload alarm.
+    - path: src/content/services/SupabaseAuthService.ts
+      artifacts:
+        - kind: class
+          name: SupabaseAuthService
+          description: |
+            The direct chrome.alarms self-heal reload path calls
+            notifyBoltTabsAboutReload before scheduling the self-heal reload
+            alarm, and notification failures do not block alarm scheduling.
+    - path: src/background/__tests__/BackgroundService.reload.test.ts
+      artifacts:
+        - kind: test_function
+          name: background reload requests notify bolt tabs while scheduling the self-heal alarm
+          description: |
+            Verifies the RELOAD_EXTENSION fallback path still sends
+            SHOW_EXTENSION_RELOAD_NOTIFICATION to bolt.new tabs while
+            scheduling the self-heal reload alarm.
+  read:
+    - manifests/02-notify-tabs-before-direct-self-heal-reload.manifest.yaml
+    - src/lib/utils/reloadNotification.ts
+    - src/lib/utils/__tests__/reloadNotification.test.ts
+    - src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts
+validate:
+  - pnpm exec vitest run src/lib/utils/__tests__/reloadNotification.test.ts src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts
+  - pnpm exec vitest run src/content/services/__tests__/SupabaseAuthService.reload.test.ts src/background/__tests__/BackgroundService.reload.test.ts
+  - pnpm lint
+  - pnpm check
+created: '2026-07-07T11:31:00Z'
+metadata:
+  tags:
+    - auth
+    - self-heal
+    - reliability
+    - retention-plan-a4
+  priority: medium
+  status: completed
+outcome:
+  status: completed
+  summary: |
+    Added the explicit production call-site contract for the reload-notification
+    parity fix. BackgroundService's RELOAD_EXTENSION fallback path and
+    SupabaseAuthService's direct chrome.alarms self-heal path both delegate to
+    notifyBoltTabsAboutReload while preserving non-blocking reload scheduling.
+    The companion manifest also records the BackgroundService fallback
+    regression test added during implementation review.
+  rationale: |
+    The promoted primary manifest intentionally described BackgroundService and
+    SupabaseAuthService as call-site rewires but placed those files under
+    files.read, so the MAID scope hook denied the production edits. This
+    additive companion manifest made the two call-site edits and the
+    BackgroundService regression test machine-checkable without changing the
+    shared helper contract or duplicating notification logic.
+  lessons:
+    - lesson_type: companion-scope-contract
+      summary: |
+        When a promoted manifest describes production call-site rewires, the
+        writable file scope must also declare those call sites. If a companion
+        scope manifest is needed, plan-lock it and capture outcome evidence so
+        the workflow remains auditable.
+      tags:
+        - maid
+        - scope
+        - implementation-review
+      paths:
+        - manifests/02-notify-tabs-before-direct-self-heal-reload-call-sites.manifest.yaml
+        - src/background/BackgroundService.ts
+        - src/content/services/SupabaseAuthService.ts
+    - lesson_type: background-fallback-regression-coverage
+      summary: |
+        Refactoring an inline background notification loop into a shared helper
+        needs a regression assertion on the old fallback path, not just success
+        handling when notification delivery fails.
+      tags:
+        - background
+        - mv3
+        - regression-coverage
+      paths:
+        - src/background/BackgroundService.ts
+        - src/background/__tests__/BackgroundService.reload.test.ts
+  review_notes:
+    - source: Poincare read-only implementation review
+      severity: needs-changes
+      summary: |
+        Found that the BackgroundService RELOAD_EXTENSION fallback still needed
+        explicit notification-emission coverage after the inline loop was
+        replaced. Fixed by adding a regression test that verifies the fallback
+        path queries bolt.new tabs, sends the default reload notification, and
+        schedules self-heal-reload.
+    - source: Banach read-only implementation review
+      severity: needs-changes
+      summary: |
+        Found this companion scope contract lacked plan-lock/red-evidence and
+        that .maid/active-manifest remained as local task state. Fixed by
+        locking the companion manifest with red evidence and stopping the
+        active MAID task.
+    - source: Kuhn read-only implementation review
+      severity: ready
+      summary: |
+        Ready to merge. Confirmed both previous review rounds were fixed, both
+        plan locks were present and clean, .maid/active-manifest was absent,
+        and focused validation plus git diff hygiene passed.
+  validation:
+    - command:
+        - ./scripts/maid
+        - plan
+        - status
+        - manifests/02-notify-tabs-before-direct-self-heal-reload-call-sites.manifest.yaml
+      status: passed
+      summary: Plan lock revision 1 matched manifest and behavioral test hashes; red evidence recorded.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/02-notify-tabs-before-direct-self-heal-reload-call-sites.manifest.yaml
+        - --mode
+        - behavioral
+      status: passed
+      summary: Behavioral validation passed for the companion call-site contract.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/02-notify-tabs-before-direct-self-heal-reload-call-sites.manifest.yaml
+        - --mode
+        - implementation
+      status: passed
+      summary: Implementation validation passed for the companion call-site contract.
+    - command:
+        - pnpm
+        - exec
+        - vitest
+        - run
+        - src/lib/utils/__tests__/reloadNotification.test.ts
+        - src/background/__tests__/BackgroundService.reload.test.ts
+        - src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts
+        - src/content/services/__tests__/SupabaseAuthService.reload.test.ts
+      status: passed
+      summary: 40 focused reload-notification and reload-regression tests passed.
+    - command:
+        - ./scripts/maid
+        - test
+        - --manifest-dir
+        - manifests
+      status: passed
+      summary: MAID test runner passed all five selected command groups, including batched Vitest, lint, check, build, and test:ci gates.

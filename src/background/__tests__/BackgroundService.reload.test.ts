@@ -197,6 +197,34 @@ describe('BackgroundService - Extension Reload Behavior', () => {
       expect(sendResponse).toHaveBeenCalledWith({ success: true });
     });
 
+    it('background reload requests notify bolt tabs while scheduling the self-heal alarm', async () => {
+      mockTabs.query.mockResolvedValueOnce([{ id: 7, url: 'https://bolt.new/~/test-project' }]);
+      const sendResponse = vi.fn();
+
+      const returnValue = runtimeMessageListener(
+        { type: 'RELOAD_EXTENSION', data: { reason: 'auth failure' } },
+        {},
+        sendResponse
+      );
+
+      expect(returnValue).toBe(true);
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(mockTabs.query).toHaveBeenCalledWith({ url: 'https://bolt.new/*' });
+      expect(mockTabs.sendMessage).toHaveBeenCalledWith(7, {
+        type: 'SHOW_EXTENSION_RELOAD_NOTIFICATION',
+        data: {
+          message: 'Extension needs to restart to fix authentication. Restarting in 3 seconds...',
+          countdown: 3,
+        },
+      });
+      expect(mockAlarms.create).toHaveBeenCalledWith('self-heal-reload', {
+        delayInMinutes: 3 / 60,
+      });
+      expect(sendResponse).toHaveBeenCalledWith({ success: true });
+    });
+
     it('runtime listener returns literal true synchronously for async response branches', () => {
       const sendResponse = vi.fn();
 

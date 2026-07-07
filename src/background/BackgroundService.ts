@@ -15,6 +15,7 @@ import type {
 } from '../lib/types';
 import { createLogger, getLogStorage } from '../lib/utils/logger';
 import { extractProjectIdFromUrl } from '../lib/utils/projectId';
+import { notifyBoltTabsAboutReload } from '../lib/utils/reloadNotification';
 import { analytics } from '../services/AnalyticsService';
 import { resolveExtensionPageTitle } from '../lib/utils/analytics';
 import { BoltProjectSyncService } from '../services/BoltProjectSyncService';
@@ -1810,29 +1811,9 @@ export class BackgroundService {
         }),
       });
 
-      // Send notification to all bolt.new tabs about the reload (best effort)
-      try {
-        const tabs = await chrome.tabs.query({ url: 'https://bolt.new/*' });
-        for (const tab of tabs) {
-          if (tab.id) {
-            chrome.tabs
-              .sendMessage(tab.id, {
-                type: 'SHOW_EXTENSION_RELOAD_NOTIFICATION',
-                data: {
-                  message:
-                    'Extension needs to restart to fix authentication. Restarting in 3 seconds...',
-                  countdown: 3,
-                },
-              })
-              .catch(() => {
-                // Tab might not have content script injected - ignore
-              });
-          }
-        }
-      } catch (notificationError) {
+      void notifyBoltTabsAboutReload().catch((notificationError) => {
         logger.warn('Failed to send reload notification to tabs:', notificationError);
-        // Continue with reload even if notification fails
-      }
+      });
 
       // Schedule extension reload using chrome.alarms (reliable in Manifest V3 service workers)
       // setTimeout is unreliable as service workers can go inactive
