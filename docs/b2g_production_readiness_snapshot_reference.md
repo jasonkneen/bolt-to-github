@@ -2022,3 +2022,469 @@ Longer description:
 The core promise:
 
 > Do not blindly deploy a Bolt export. First, get a production readiness snapshot.
+
+================
+
+Yes — I strongly agree with **teaser states over hard gates** for this module.
+
+For B2G, the free version should not feel like:
+
+> “We scanned your export. Pay to see anything.”
+
+It should feel like:
+
+> “Here is the basic production-readiness signal. Pro gives you the full evidence trail, history, receipts, and handoff workflow.”
+
+That fits B2G much better because the extension already touches a sensitive workflow: source code, GitHub, exports, commits. A hard blank gate would feel untrustworthy.
+
+## My recommended rule
+
+**Free = orientation and basic safety signal.**
+**Pro = depth, evidence, history, documentation, and workflow acceleration.**
+
+In other words, do not gate the fact that something happened. Gate the deeper usefulness around understanding it, tracking it, documenting it, and acting on it.
+
+## Free users should get “Snapshot Lite”
+
+Free users should see enough to understand whether the export is boring, interesting, or production-sensitive.
+
+I would include:
+
+```text
+Production Readiness Snapshot Lite
+
+Status: Yellow
+38 files changed
+5 files added
+2 files deleted
+
+Sensitive areas touched:
+- Configuration / env
+- Dependencies
+- Public routes
+
+Full Production Readiness Snapshot is Pro.
+```
+
+Free should include these features:
+
+| Feature                                       | Free? | Why                                         |
+| --------------------------------------------- | ----: | ------------------------------------------- |
+| Changed file count                            |   Yes | Basic orientation.                          |
+| Added / modified / deleted counts             |   Yes | Makes the export understandable.            |
+| Overall readiness state: Green / Yellow / Red |   Yes | This is the teaser anchor.                  |
+| Sensitive categories touched                  |   Yes | Strong teaser without giving full evidence. |
+| Top 1–2 general concerns                      |   Yes | Makes free useful.                          |
+| Basic “review before deploy” language         |   Yes | Builds trust.                               |
+| Critical safety warnings                      |   Yes | Should not be paywalled.                    |
+| Pro CTA                                       |   Yes | Natural conversion point.                   |
+
+The key is that free users should understand the **shape** of the issue, but not get the full diagnostic package.
+
+## Critical warnings should never be fully gated
+
+This is important.
+
+If B2G detects something like:
+
+- `.env` included in the export
+- likely secret committed
+- mass deletion spike
+- lockfile/package mismatch
+- GitHub workflow or deployment config deletion
+- unusually destructive export
+
+Then free users should still see enough to avoid damage.
+
+Bad:
+
+```text
+Critical issue detected. Upgrade to Pro to view.
+```
+
+Better:
+
+```text
+Critical warning: A .env-like file appears in this export.
+Do not commit secrets.
+
+Pro unlocks the full evidence drawer and remediation checklist.
+```
+
+You can still gate the full detailed report, but do not hide the safety-critical fact itself. That is a trust-building decision.
+
+## Pro should unlock the “Full Production Readiness Snapshot”
+
+Pro should be where the module becomes genuinely powerful.
+
+I would Pro-gate these:
+
+| Feature                      | Pro? | Notes                                                                      |
+| ---------------------------- | ---: | -------------------------------------------------------------------------- |
+| Detailed concern list        |  Yes | Full list of detected concerns, grouped by readiness area.                 |
+| Evidence drawer              |  Yes | File paths, rule IDs, diff context, affected sections.                     |
+| History baseline             |  Yes | “This export is 4.2× larger than your usual export.”                       |
+| Trend analysis               |  Yes | Dependency drift, file growth, churn, route growth.                        |
+| Markdown receipt             |  Yes | Useful artifact for commits, issues, PRs, audits.                          |
+| ADC Fix handoff report       |  Yes | Strong paid crossover.                                                     |
+| Detailed dependency diff     |  Yes | Package names, version changes, category mapping.                          |
+| Env/config report            |  Yes | Full env var list, `.env.example` mismatch, public/private classification. |
+| Public route/API surface map |  Yes | Detailed route list and endpoint changes.                                  |
+| Test/CI readiness details    |  Yes | Deleted tests, missing scripts, disabled checks, CI changes.               |
+| Rollback/checkpoint guidance |  Yes | Compare links, previous export references, “last low-risk export.”         |
+| Export history dashboard     |  Yes | Long-term retention feature.                                               |
+| Saved snapshots              |  Yes | Gives users a reason to keep using B2G.                                    |
+
+This makes Pro about **memory and evidence**, not just “more warnings.”
+
+That is the right kind of paid value.
+
+## The exact gating line I would use
+
+### Free
+
+```text
+What changed?
+What sensitive categories were touched?
+Is this export Green, Yellow, or Red?
+Is there any obvious critical stop sign?
+```
+
+### Pro
+
+```text
+Why did B2G classify it that way?
+Which exact files caused the concern?
+How unusual is this compared with my project history?
+What should I review before deploying?
+Can I save/share this as a receipt?
+Can I generate an ADC Fix handoff?
+```
+
+That is a clean boundary.
+
+## Suggested free vs Pro UI
+
+### Free state
+
+```text
+Production Readiness Snapshot Lite
+
+Yellow — Review before deploying
+
+38 files changed
+5 added · 31 modified · 2 deleted
+
+Sensitive categories touched:
+- Configuration / env
+- Dependencies
+- Public routes
+
+1 critical warning:
+- Possible env/config issue detected
+
+Unlock Pro for:
+- Full concern list
+- Evidence drawer
+- History baseline
+- Markdown receipt
+- ADC Fix handoff
+```
+
+### Pro state
+
+```text
+Production Readiness Snapshot
+
+Yellow — Review before deploying
+
+Main concerns:
+1. New env vars detected but .env.example was not updated.
+2. package.json and lockfile changed heavily.
+3. New public API route added without nearby test coverage.
+4. This export is 4.2× larger than your usual export.
+
+Evidence:
+- src/app/api/contact/route.ts
+- package.json
+- package-lock.json
+- src/lib/env.ts
+
+History:
+- Largest export in the last 14 days
+- package.json changed in 3 of the last 5 exports
+- src/App.tsx grew by 420 lines since last export
+
+Actions:
+- Copy Markdown Receipt
+- Create GitHub Issue
+- Generate ADC Fix Handoff
+```
+
+That feels fair.
+
+## I would avoid gating the normal B2G workflow
+
+The core export-to-GitHub value should stay free, or at least stay available in whatever form users already expect.
+
+Do not make users feel like:
+
+> “The extension used to export my project, but now it mainly nags me to pay.”
+
+So I would avoid gating:
+
+- basic zip detection
+- GitHub connection
+- repository selection
+- commit/push flow
+- basic changed-file summary
+- basic readiness state
+- critical safety warnings
+
+Pro should enhance the workflow, not interrupt it.
+
+## Best Pro-gated features by conversion strength
+
+If you want the strongest paid reasons, I would prioritize these first:
+
+### 1. History baseline
+
+This is probably the highest-value Pro feature.
+
+```text
+This export changed 62 files.
+Your normal export changes 11 files.
+This is 5.6× larger than usual.
+```
+
+Generic stats are nice. Project-relative stats feel intelligent.
+
+### 2. Evidence drawer
+
+This turns the scanner from a badge into a tool.
+
+```text
+Concern: Env/config changed
+
+Evidence:
+- src/lib/env.ts references RESEND_API_KEY
+- .env.example was not updated
+- package.json added resend
+```
+
+### 3. Markdown receipt
+
+This gives users an artifact.
+
+```text
+Copy receipt
+Save to repo
+Add to commit body
+Create GitHub issue
+```
+
+Receipts are very aligned with your “flight recorder” concept.
+
+### 4. ADC Fix handoff
+
+This is the ecosystem bridge.
+
+Free can show the CTA, but Pro should generate the proper structured report.
+
+```text
+Generate ADC Fix Handoff Report
+```
+
+The free version could still have:
+
+```text
+This export may be a good candidate for deeper review.
+```
+
+But the full handoff document should be Pro.
+
+### 5. Trend dashboard
+
+This creates retention.
+
+```text
+Dependency count over time
+Largest files
+Churn hotspots
+Export size history
+Sensitive-change frequency
+```
+
+This gives users a reason to keep using the extension after the first push.
+
+## One nuance: ADC Fix handoff could have two levels
+
+I would probably do this:
+
+### Free
+
+```text
+Copy basic summary for ADC Fix
+```
+
+This includes:
+
+- readiness state
+- changed file count
+- sensitive categories touched
+- basic warning count
+
+### Pro
+
+```text
+Generate full ADC Fix Handoff Report
+```
+
+This includes:
+
+- detailed concerns
+- evidence paths
+- historical baseline
+- route/env/dependency changes
+- suggested review areas
+- GitHub compare link
+- Markdown export
+
+That keeps the funnel open without giving away the full paid value.
+
+## Should B2G stay open-source?
+
+My answer: **yes, but as open-core / trust-first, not necessarily with every Pro capability fully open.**
+
+B2G touches source code, GitHub, and project exports. Open source gives you a major trust advantage. Users can inspect what the extension does, especially around GitHub permissions and whether code is uploaded anywhere. That matters even more if you later add production-readiness scanning.
+
+But there is a practical monetization issue:
+
+> If all Pro logic lives entirely in an open-source browser extension, Pro gating is mostly an honor system.
+
+A motivated user can build from source and bypass the UI lock. That may be fine at small scale, but you should be aware of it.
+
+## The model I would use
+
+Keep this open-source:
+
+```text
+B2G Core
+- Bolt export detection
+- GitHub push workflow
+- Basic diff summary
+- Snapshot Lite
+- Rule engine interfaces
+- A basic public set of readiness rules
+- Critical warning detection
+- Privacy-first local scanning model
+```
+
+Keep this paid/private or service-backed:
+
+```text
+B2G Pro
+- License/account system
+- Full evidence drawer
+- Historical baseline engine
+- Saved snapshot history
+- Markdown receipt generator
+- ADC Fix handoff generator
+- Advanced rule packs
+- GitHub issue/PR comment automation
+- Team/project dashboard later
+```
+
+That gives you the best of both worlds:
+
+- open-source trust
+- free utility
+- paid depth
+- ADC Fix crossover
+- no hard blank gate
+
+## I would not close-source the existing extension abruptly
+
+If B2G is already open-source, I would avoid suddenly making the existing value closed.
+
+Better:
+
+```text
+B2G remains open-source.
+The new Production Readiness Snapshot Lite is included.
+B2G Pro adds deeper evidence, history, receipts, and handoff workflows.
+```
+
+That feels additive rather than extractive.
+
+It also aligns with your broader ecosystem: MAID Runner as open-source prevention infrastructure, B2G as open-source export/readiness trail, and ADC Fix as the deeper paid diagnosis/repair path.
+
+## Payment/licensing note
+
+Chrome Web Store’s old native paid-extension and in-app-purchase flow is no longer the path; Google’s own deprecation notes say developers affected by Chrome Web Store Payments needed to migrate to another payment processor and another way to track licenses, and the timeline says new paid extensions/in-app items were permanently disabled back in 2020. ([GitHub][1])
+
+So B2G Pro would likely need your own license system, Stripe/Lemon Squeezy/Paddle-style checkout, or a small backend that validates entitlement. Also, because the extension handles user/project/GitHub-related data, keep permissions narrow, disclose data handling clearly, and avoid automatic code upload; Chrome’s policies emphasize accurate privacy disclosures, limited user-data use, narrow permissions, and transparency around data practices. ([Chrome for Developers][2])
+
+## My recommended final packaging
+
+I would package it like this:
+
+### B2G Free
+
+**Export Bolt to GitHub with a basic production-readiness teaser.**
+
+Includes:
+
+- GitHub export flow
+- changed file count
+- added/modified/deleted summary
+- Green/Yellow/Red state
+- sensitive categories touched
+- critical warning visibility
+- Pro CTA
+
+### B2G Pro
+
+**Full Production Readiness Snapshot for serious AI-built apps.**
+
+Includes:
+
+- detailed concerns
+- evidence drawer
+- history baseline
+- dependency/env/route/test reports
+- Markdown receipt
+- GitHub issue/PR handoff
+- ADC Fix handoff report
+- saved snapshot history
+
+### ADC Fix
+
+**Deep production-readiness review and repair path.**
+
+Includes:
+
+- human/LLM-assisted diagnosis
+- prioritized launch blockers
+- concrete fix plan
+- implementation guidance or done-for-you repair
+
+## The product line should be this
+
+```text
+B2G Free:
+“Did this export touch anything production-sensitive?”
+
+B2G Pro:
+“Show me exactly what changed, why it matters, and give me a receipt.”
+
+ADC Fix:
+“Help me fix the production-readiness problems before launch.”
+```
+
+That is a clean ladder.
+
+My strongest recommendation: **keep B2G open-source at the core, add Snapshot Lite to free, and make Pro about evidence/history/artifacts/handoff — not basic safety.**
+
+[1]: https://github.com/GoogleChrome/developer.chrome.com/blob/main/site/en/docs/webstore/cws-payments-deprecation/index.md 'developer.chrome.com/site/en/docs/webstore/cws-payments-deprecation/index.md at main · GoogleChrome/developer.chrome.com · GitHub'
+[2]: https://developer.chrome.com/docs/webstore/program-policies/policies 'Chrome Web Store - Program Policies  |  Chrome for Developers'
