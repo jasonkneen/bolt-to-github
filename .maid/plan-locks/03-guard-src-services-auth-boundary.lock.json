@@ -32,7 +32,18 @@
       "reason": "Independent read-only subagent review verdict recorded in Outcome"
     }
   ],
-  "red_evidence": null,
+  "red_evidence": {
+    "red": true,
+    "captured_at": "2026-07-07T23:25:00.000000+00:00",
+    "commands": [
+      {
+        "command": "tmpdir=$(mktemp -d /tmp/b2g-auth-boundary-red-XXXXXX); git worktree add --detach \"$tmpdir\" 21c5551^; cp manifests/03-guard-src-services-auth-boundary.manifest.yaml \"$tmpdir/manifests/03-guard-src-services-auth-boundary.manifest.yaml\"; cd \"$tmpdir\"; ./scripts/maid validate manifests/03-guard-src-services-auth-boundary.manifest.yaml --mode behavioral",
+        "exit_code": 1,
+        "output_tail": "FAIL 03-guard-src-services-auth-boundary\n  Mode: behavioral\n  Duration: 197ms\n  Errors (2):\n    E600 Test function 'src/services modules stay free of runtime SupabaseAuthService usage except the allowlisted sync service' declared in manifest not found as a test declaration in src/test/boundaries/auth-import-boundary.test.ts\n      Location: src/test/boundaries/auth-import-boundary.test.ts\n      Suggestion: Add the test function to the test file\n    E600 Test function 'guarded UI contexts do not import BoltProjectSyncService at runtime' declared in manifest not found as a test declaration in src/test/boundaries/auth-import-boundary.test.ts\n      Location: src/test/boundaries/auth-import-boundary.test.ts\n      Suggestion: Add the test function to the test file\n",
+        "classification": "red"
+      }
+    ]
+  },
   "_manifest_contract": {
     "artifacts": [
       "src/test/boundaries/auth-import-boundary.test.ts:guarded UI contexts do not import BoltProjectSyncService at runtime",

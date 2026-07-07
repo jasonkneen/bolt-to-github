@@ -2,11 +2,11 @@
   "manifest_path": "manifests/02-notify-tabs-before-direct-self-heal-reload.manifest.yaml",
   "manifest_hash": "sha256:b345935125e4d4f0e8b10e8b501f062b7ef21b86e55e5745ba8817f466af0ac2",
   "test_hashes": {
-    "src/lib/utils/__tests__/reloadNotification.test.ts": "sha256:4043b758f567431a3c961aa068a0887cd2a41f45b316679e2106dededbd0a441",
+    "src/lib/utils/__tests__/reloadNotification.test.ts": "sha256:9661c07b6d7aa38df4e3f3df1742c56b32cddf6dc1ac67e9b9b3bba53d6eb388",
     "src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts": "sha256:c349efc50fb2e861623a34584a3ecfdad9fa301d610ef3e7d8f7898395d82c0d"
   },
   "created_at": "2026-07-07T11:29:14.800401+00:00",
-  "revision": 5,
+  "revision": 6,
   "revisions": [
     {
       "prior_manifest_hash": "sha256:aa367f09a9e6ef7838b741c5c7abe129872d890a5b13aaa5219744579036facd",
@@ -43,6 +43,15 @@
       },
       "revised_at": "2026-07-07T11:51:08.921730+00:00",
       "reason": "Add completed Outcome record after ready implementation review"
+    },
+    {
+      "prior_manifest_hash": "sha256:b345935125e4d4f0e8b10e8b501f062b7ef21b86e55e5745ba8817f466af0ac2",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/reloadNotification.test.ts": "sha256:4043b758f567431a3c961aa068a0887cd2a41f45b316679e2106dededbd0a441",
+        "src/content/services/__tests__/SupabaseAuthService.self-heal-execution.test.ts": "sha256:c349efc50fb2e861623a34584a3ecfdad9fa301d610ef3e7d8f7898395d82c0d"
+      },
+      "revised_at": "2026-07-07T23:23:38.926602+00:00",
+      "reason": "Refresh reloadNotification test hash after companion review coverage while preserving recorded red evidence"
     }
   ],
   "red_evidence": {
