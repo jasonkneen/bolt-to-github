@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 const sourceRoot = join(process.cwd(), 'src');
 const guardedRuntimeRoots = ['content/', 'lib/', 'pages/', 'popup/'];
+const runtimeAuthServiceAllowlist = new Set(['services/BoltProjectSyncService.ts']);
 
 function productionSourceFiles(directory: string): string[] {
   return readdirSync(directory).flatMap((entry) => {
@@ -39,22 +40,32 @@ function isSkippedDirectory(path: string): boolean {
   );
 }
 
-function runtimeSupabaseAuthUsage(source: string): string[] {
+function runtimeModuleUsage(source: string, identifier: string): string[] {
+  const escapedIdentifier = identifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const patterns = [
-    /^\s*import\s+['"][^'"]*SupabaseAuthService['"];?/gm,
-    /^\s*(?:import|export)\s+[^;]*?\s+from\s+['"][^'"]*SupabaseAuthService['"];?/gm,
-    /import\s*\(\s*['"][^'"]*SupabaseAuthService['"]\s*\)/gm,
-    /\bSupabaseAuthService\s*\.\s*getInstance\s*\(/gm,
-    /\bnew\s+SupabaseAuthService\s*\(/gm,
+    new RegExp(`^\\s*import\\s+['"][^'"]*${escapedIdentifier}['"];?`, 'gm'),
+    /^\s*(?:import|export)\s+[^;]*?\s+from\s+['"][^'"]*['"];?/gm,
+    new RegExp(`import\\s*\\(\\s*['"][^'"]*${escapedIdentifier}['"]\\s*\\)`, 'gm'),
+    new RegExp(`\\b${escapedIdentifier}\\s*\\.\\s*getInstance\\s*\\(`, 'gm'),
+    new RegExp(`\\bnew\\s+${escapedIdentifier}\\s*\\(`, 'gm'),
   ];
 
   return patterns
     .flatMap((pattern) => source.match(pattern) ?? [])
-    .filter((match) => !isTypeOnlyStaticAuthStatement(match))
+    .filter((match) => match.includes(identifier))
+    .filter((match) => !isTypeOnlyStaticStatement(match))
     .map((match) => match.trim().replace(/\s+/g, ' '));
 }
 
-function isTypeOnlyStaticAuthStatement(statement: string): boolean {
+function runtimeSupabaseAuthUsage(source: string): string[] {
+  return runtimeModuleUsage(source, 'SupabaseAuthService');
+}
+
+function runtimeBoltProjectSyncServiceUsage(source: string): string[] {
+  return runtimeModuleUsage(source, 'BoltProjectSyncService');
+}
+
+function isTypeOnlyStaticStatement(statement: string): boolean {
   const normalized = statement.trim().replace(/\s+/g, ' ');
 
   if (/^(import|export) type\b/.test(normalized)) {
@@ -102,6 +113,26 @@ describe('auth import boundaries', () => {
         import { type AuthState as AuthStateAlias } from '../../content/services/SupabaseAuthService';
       `)
     ).toEqual([]);
+
+    expect(
+      runtimeBoltProjectSyncServiceUsage(`
+        import { BoltProjectSyncService } from '../../services/BoltProjectSyncService';
+        import { BoltProjectSyncService as SyncService } from '../../services';
+        export { BoltProjectSyncService } from '../../services/BoltProjectSyncService';
+        export { BoltProjectSyncService as ExportedSyncService } from '../../services';
+        const syncService = new BoltProjectSyncService();
+        const lazySyncService = import('../../services/BoltProjectSyncService');
+        import type { BoltProjectSyncService as SyncServiceType } from '../../services/BoltProjectSyncService';
+        import { type BoltProjectSyncService as SyncServiceTypeAlias } from '../../services';
+      `)
+    ).toEqual([
+      "import { BoltProjectSyncService } from '../../services/BoltProjectSyncService';",
+      "import { BoltProjectSyncService as SyncService } from '../../services';",
+      "export { BoltProjectSyncService } from '../../services/BoltProjectSyncService';",
+      "export { BoltProjectSyncService as ExportedSyncService } from '../../services';",
+      "import('../../services/BoltProjectSyncService')",
+      'new BoltProjectSyncService(',
+    ]);
   });
 
   it('SupabaseAuthService is only imported from background code', () => {
@@ -116,6 +147,36 @@ describe('auth import boundaries', () => {
       }
 
       const matches = runtimeSupabaseAuthUsage(readFileSync(path, 'utf8'));
+      return matches.map((match) => `${relativePath}: ${match.trim()}`);
+    });
+
+    expect(violations).toEqual([]);
+  });
+
+  it('src/services modules stay free of runtime SupabaseAuthService usage except the allowlisted sync service', () => {
+    const violations = productionSourceFiles(join(sourceRoot, 'services')).flatMap((path) => {
+      const relativePath = toSourceRelativePath(path);
+
+      if (runtimeAuthServiceAllowlist.has(relativePath)) {
+        return [];
+      }
+
+      const matches = runtimeSupabaseAuthUsage(readFileSync(path, 'utf8'));
+      return matches.map((match) => `${relativePath}: ${match.trim()}`);
+    });
+
+    expect(violations).toEqual([]);
+  });
+
+  it('guarded UI contexts do not import BoltProjectSyncService at runtime', () => {
+    const violations = productionSourceFiles(sourceRoot).flatMap((path) => {
+      const relativePath = toSourceRelativePath(path);
+
+      if (!guardedRuntimeRoots.some((guardedRoot) => relativePath.startsWith(guardedRoot))) {
+        return [];
+      }
+
+      const matches = runtimeBoltProjectSyncServiceUsage(readFileSync(path, 'utf8'));
       return matches.map((match) => `${relativePath}: ${match.trim()}`);
     });
 
