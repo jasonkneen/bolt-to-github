@@ -1,0 +1,261 @@
+schema: '2'
+goal: Show free users a quiet, dismissible "see what changed in this push (Pro)" teaser at the post-push success moment, frequency-capped and fully measurable.
+description: |
+  The successful-push confirmation is the highest-goodwill moment in the
+  product, but free users get no discovery of the file-changes Pro feature
+  there. retention-conversion-plan Workstream C2 calls for a dismissible
+  teaser at that moment instead of interruptive modals. UIManager already
+  reacts to uploadStatus success (it resets the push reminder state there),
+  which is the natural call-site seam.
+
+  Rationale for design choices:
+  - Sprout a dedicated PostPushTeaserService instead of growing UIManager:
+    the show/suppress policy (premium status, dismissal, frequency cap)
+    becomes pure decision logic testable with fakes, and UIManager only
+    gains a one-line call at its existing success branch (call-site rewire,
+    uncontracted read).
+  - All hidden inputs are injected per repo testability rules: premium
+    status lookup, notification display, storage, analytics, and clock arrive as
+    constructor collaborators, so tests use an in-memory storage fake and a
+    fixed clock, no mocking of chrome globals inside policy logic.
+  - The teaser renders through the existing NotificationManager notification
+    surface (dismissible, with upgrade and "don't show again" actions) — no new UI primitives.
+    The upgrade URL carries
+    utm_source=extension&utm_medium=content&utm_campaign=upgrade&
+    utm_content=post_push_teaser, and impressions/clicks are recorded via
+    the trackUpgradeFunnelEvent helper contracted in the
+    01-instrument-upgrade-funnel-events draft (context post_push_teaser), so
+    this surface lands in the same C1 baseline.
+  - Suppression policy: never for premium users, never after the user picks
+    "don't show again" (persisted flag), and at most once per 7 days
+    otherwise. Sequencing note from the plan: promote this draft only after
+    the C1 instrumentation baseline exists; the teaser's copy and frequency
+    cap are expected to be tuned against that data.
+
+  Depends on: 01-instrument-upgrade-funnel-events draft (trackUpgradeFunnelEvent).
+type: feature
+files:
+  create:
+  - path: src/content/services/PostPushTeaserService.ts
+    artifacts:
+    - kind: interface
+      name: PostPushTeaserDeps
+      description: Injected collaborators so the teaser policy is testable without chrome globals.
+    - kind: attribute
+      name: isPremium
+      of: PostPushTeaserDeps
+      type: () => Promise<boolean>
+      description: Resolves the current premium status (backed by PremiumService in production).
+    - kind: attribute
+      name: isAuthenticated
+      of: PostPushTeaserDeps
+      type: () => Promise<boolean>
+      description: Resolves whether the current user is authenticated so signed-out users never see the teaser.
+    - kind: attribute
+      name: showTeaser
+      of: PostPushTeaserDeps
+      type: '(options: { message: string; upgradeUrl: string; onUpgrade: () => void; onDismissForever: () => void }) => void'
+      description: Displays the dismissible teaser (backed by NotificationManager.showNotification in production).
+    - kind: attribute
+      name: storage
+      of: PostPushTeaserDeps
+      type: '{ get: (keys: string[]) => Promise<Record<string, unknown>>; set: (items: Record<string, unknown>) => Promise<void> }'
+      description: Persistence seam for the dismissed-forever flag and last-shown timestamp (chrome.storage.local in production).
+    - kind: attribute
+      name: now
+      of: PostPushTeaserDeps
+      type: () => number
+      description: Injected clock for the frequency cap; tests use fixed timestamps.
+    - kind: attribute
+      name: trackUpgradeEvent
+      of: PostPushTeaserDeps
+      type: "(stage: 'modal_shown' | 'cta_clicked', metadata: { context: string; medium: 'content' }) => void"
+      description: Analytics seam backed by trackUpgradeFunnelEvent in production.
+    - kind: class
+      name: PostPushTeaserService
+      description: |
+        Owns the post-push teaser policy. Constructor only assigns the
+        injected deps (no I/O). The UTM-tagged upgrade URL uses
+        utm_content=post_push_teaser; impressions and upgrade clicks are
+        reported through trackUpgradeFunnelEvent with context
+        post_push_teaser.
+    - kind: method
+      name: maybeShowTeaser
+      of: PostPushTeaserService
+      args: []
+      returns: Promise<boolean>
+      description: |
+        Called after a successful push. Returns true and shows the
+        teaser only when the user is authenticated non-premium, has not
+        dismissed forever, and the last-shown timestamp is more than 7
+        days old (or absent); persists the new timestamp when shown.
+        Returns false otherwise and on any dependency failure — the
+        teaser must never surface an error into the push success flow.
+  - path: src/content/services/__tests__/PostPushTeaserService.test.ts
+    artifacts:
+    - kind: test_function
+      name: shows the teaser to a free user who has never seen it and persists the shown timestamp
+    - kind: test_function
+      name: never shows the teaser to a premium user
+    - kind: test_function
+      name: never shows the teaser to a signed-out user
+    - kind: test_function
+      name: honors the dismissed-forever flag across calls
+    - kind: test_function
+      name: suppresses the teaser within the 7-day frequency window and shows again after it
+    - kind: test_function
+      name: returns false without throwing when premium lookup storage or notification display fails
+    - kind: test_function
+      name: teaser upgrade URL carries post_push_teaser UTM attribution
+  scope:
+  - path: src/content/UIManager.ts
+    reason: Wire the post-push success branch to PostPushTeaserService without contracting UIManager's broad public API.
+  - path: src/content/__tests__/UIManager.test.ts
+    reason: Assert the post-push success call site invokes the teaser service after successful GitHub uploads.
+  read:
+  - src/content/UIManager.ts
+  - src/content/__tests__/UIManager.test.ts
+  - src/content/managers/NotificationManager.ts
+  - src/content/services/PremiumService.ts
+  - src/lib/utils/analytics.ts
+  - src/lib/utils/upgradeModal.ts
+validate:
+- pnpm exec vitest run src/content/services/__tests__/PostPushTeaserService.test.ts src/content/__tests__/UIManager.test.ts
+- pnpm lint
+- pnpm check
+created: '2026-07-07T12:29:44Z'
+metadata:
+  tags:
+  - conversion
+  - premium
+  - content-ui
+  - retention-plan-c2
+  priority: medium
+temptations:
+- risk: Do not call chrome.storage, Date.now, trackUpgradeFunnelEvent, or PremiumService.getInstance directly inside the policy logic.
+  instead: Inject storage, clock, analytics, authentication lookup, and premium lookup through PostPushTeaserDeps and wire real implementations only at the UIManager composition point.
+- risk: Do not let a teaser failure (storage error, notification error) break or delay the push success path.
+  instead: Catch everything inside maybeShowTeaser and return false; the success flow proceeds identically whether the teaser shows or not.
+- risk: Do not grow UIManager with inline teaser policy or add another notification primitive.
+  instead: One call to maybeShowTeaser at the existing status success branch; rendering reuses the existing showNotification action surface.
+- risk: Do not test the frequency cap with real time or sleeps.
+  instead: Drive the injected now() with fixed timestamps on both sides of the 7-day boundary.
+- risk: Do not show the teaser to signed-out users or turn it into a repeated nag when data is missing.
+  instead: Treat missing or unreadable state as "do not show" except for the genuinely-first-time case (no dismissal flag, no timestamp, confirmed free user).
+outcome:
+  status: completed
+  summary: |
+    Free authenticated users now get a quiet post-push Pro teaser after a
+    successful GitHub upload. The teaser is suppressed for premium and signed-out
+    users, honors a persisted "don't show again" flag, and is capped to once per
+    seven days. The upgrade URL carries content-surface UTM attribution, and
+    impressions plus CTA clicks use the existing upgrade funnel event helper
+    with context post_push_teaser.
+  rationale: |
+    The post-push success branch is the natural high-goodwill discovery moment
+    for File Changes Pro, but the policy needed to stay out of UIManager. A
+    dedicated PostPushTeaserService keeps premium/auth/storage/time/analytics
+    inputs injected and testable while UIManager only composes production
+    adapters and calls maybeShowTeaser at the existing success branch.
+  lessons:
+    - lesson_type: post-push-teaser-display-before-cap
+      summary: |
+        Persist frequency-cap state only after the notification display adapter
+        succeeds. Otherwise a display failure can silently suppress a teaser the
+        user never saw.
+      tags:
+        - conversion
+        - notification
+        - resilience
+      paths:
+        - src/content/services/PostPushTeaserService.ts
+        - src/content/services/__tests__/PostPushTeaserService.test.ts
+    - lesson_type: content-upgrade-cta-attribution
+      summary: |
+        Direct content-script upgrade prompts should carry utm_medium=content
+        and record upgrade_modal_shown / upgrade_cta_clicked through the shared
+        trackUpgradeFunnelEvent boundary rather than adding a new analytics path.
+      tags:
+        - analytics
+        - conversion
+        - content-script
+      paths:
+        - src/content/UIManager.ts
+        - src/lib/utils/analytics.ts
+  review_notes:
+    - source: maid-implementation-reviewer subagent Ohm
+      severity: needs-changes
+      summary: |
+        Found that last-shown state was persisted before notification display
+        succeeded, which could frequency-cap a teaser that never appeared, and
+        found leftover .maid/active-manifest local task state. Fixed both by
+        moving timestamp persistence after showTeaser, adding failure coverage,
+        revising the plan lock to revision 3 with red evidence, and stopping the
+        active task.
+    - source: maid-implementation-reviewer subagent Raman
+      severity: ready
+      summary: |
+        Ready to merge. Confirmed changed scope matches the promoted manifest,
+        the draft removal is expected, .maid/active-manifest is absent, plan
+        lock revision 3 has red evidence, focused tests pass, and worktree-scoped
+        implementation validation passes.
+  validation:
+    - command:
+        - ./scripts/maid
+        - plan
+        - status
+        - manifests/04-post-push-pro-teaser.manifest.yaml
+      status: passed
+      summary: Plan lock revision 3 matched manifest and behavioral test hashes; red evidence recorded.
+    - command:
+        - pnpm
+        - exec
+        - vitest
+        - run
+        - src/content/services/__tests__/PostPushTeaserService.test.ts
+        - src/content/__tests__/UIManager.test.ts
+      status: passed
+      summary: 34 focused tests passed, covering teaser policy, persistence, UTM attribution, analytics, failure suppression, and UIManager success-branch wiring.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/04-post-push-pro-teaser.manifest.yaml
+        - --mode
+        - behavioral
+      status: passed
+      summary: Behavioral validation passed for the promoted manifest.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/04-post-push-pro-teaser.manifest.yaml
+        - --mode
+        - implementation
+        - --worktree-scope
+        - --include-tests
+      status: passed
+      summary: Worktree-scoped implementation validation passed for the promoted manifest.
+    - command:
+        - ./scripts/maid
+        - test
+        - --manifest
+        - manifests/04-post-push-pro-teaser.manifest.yaml
+      status: passed
+      summary: Manifest test runner passed focused Vitest, lint, and check commands.
+    - command:
+        - pnpm
+        - build
+      status: passed
+      summary: Production extension build passed with existing Vite chunk and dynamic-import warnings.
+    - command:
+        - pnpm
+        - test:ci
+      status: passed
+      summary: Full Vitest suite passed, 187 files and 4306 tests.
+    - command:
+        - ./scripts/maid
+        - verify
+        - --require-plan-lock
+        - --require-red-evidence
+        - --summary
+      status: failed-known-brownfield
+      summary: Schema, behavioral, implementation, and coherence stages passed; file_tracking still fails on the known brownfield undeclared-file backlog with 226 undeclared files.
