@@ -4,6 +4,7 @@ import { SUPABASE_CONFIG } from '../../lib/constants/supabase';
 import { githubSettingsActions } from '../../lib/stores/githubSettings';
 import { createLogger } from '../../lib/utils/logger';
 import { notifyBoltTabsAboutReload } from '../../lib/utils/reloadNotification';
+import { stableGitHubAppInstallationId } from './githubAppIdentity';
 
 const logger = createLogger('SupabaseAuthService');
 
@@ -1959,15 +1960,27 @@ export class SupabaseAuthService {
         if (data.type === 'github_app' && data.access_token) {
           logger.info('✅ GitHub App installation found, syncing to extension...');
 
-          // Store GitHub App data in extension storage
-          await chrome.storage.local.set({
-            githubAppInstallationId: data.installation_id || Date.now(), // Fallback ID
+          // Store only stable GitHub App identity data. A synthetic changing ID can
+          // turn storage-driven auth recovery into an Edge Function invocation loop.
+          const installationId = stableGitHubAppInstallationId(data.installation_id);
+          if (installationId === undefined) {
+            logger.error(
+              'get-github-token contract violation: missing or invalid installation_id; refusing to synthesize GitHub App identity'
+            );
+            await chrome.storage.local.remove('githubAppInstallationId');
+            return;
+          }
+
+          const githubAppData: Record<string, unknown> = {
+            githubAppInstallationId: installationId,
             githubAppUsername: data.github_username,
             githubAppAccessToken: data.access_token,
             githubAppExpiresAt: data.expires_at,
             githubAppScopes: data.scopes,
             authenticationMethod: 'github_app',
-          });
+          };
+
+          await chrome.storage.local.set(githubAppData);
 
           // Trigger settings store sync to auto-populate repoOwner
           try {
