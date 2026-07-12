@@ -19,6 +19,8 @@ export class GitHubAppAuthenticationStrategy implements IAuthenticationStrategy 
   private githubAppService: GitHubAppService;
   private cachedToken: string | null = null;
   private tokenExpiresAt: Date | null = null;
+  private userTokenIdentity: string | null = null;
+  private authGeneration = 0;
 
   constructor() {
     this.githubAppService = new GitHubAppService();
@@ -40,16 +42,22 @@ export class GitHubAppAuthenticationStrategy implements IAuthenticationStrategy 
       return this.cachedToken;
     }
 
+    const generation = this.authGeneration;
+
     try {
       const tokenResponse = await this.githubAppService.getAccessToken();
 
-      this.cachedToken = tokenResponse.access_token;
-      this.tokenExpiresAt = new Date(tokenResponse.expires_at);
+      if (generation === this.authGeneration) {
+        this.cachedToken = tokenResponse.access_token;
+        this.tokenExpiresAt = new Date(tokenResponse.expires_at);
+      }
 
-      return this.cachedToken;
+      return tokenResponse.access_token;
     } catch (error) {
-      this.cachedToken = null;
-      this.tokenExpiresAt = null;
+      if (generation === this.authGeneration) {
+        this.cachedToken = null;
+        this.tokenExpiresAt = null;
+      }
 
       if (error instanceof Error && error.message.includes('Re-authentication required')) {
         throw new Error(
@@ -108,6 +116,8 @@ export class GitHubAppAuthenticationStrategy implements IAuthenticationStrategy 
    * Refresh GitHub App token
    */
   async refreshToken(): Promise<string> {
+    const generation = this.authGeneration;
+
     try {
       // Clear cached token to force refresh
       this.cachedToken = null;
@@ -115,10 +125,12 @@ export class GitHubAppAuthenticationStrategy implements IAuthenticationStrategy 
 
       const tokenResponse = await this.githubAppService.getAccessToken();
 
-      this.cachedToken = tokenResponse.access_token;
-      this.tokenExpiresAt = new Date(tokenResponse.expires_at);
+      if (generation === this.authGeneration) {
+        this.cachedToken = tokenResponse.access_token;
+        this.tokenExpiresAt = new Date(tokenResponse.expires_at);
+      }
 
-      return this.cachedToken;
+      return tokenResponse.access_token;
     } catch (error) {
       throw new Error(
         `Failed to refresh GitHub App token: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -237,6 +249,12 @@ export class GitHubAppAuthenticationStrategy implements IAuthenticationStrategy 
    * Set user token for Supabase authentication
    */
   setUserToken(token: string): void {
+    if (this.userTokenIdentity !== token) {
+      this.userTokenIdentity = token;
+      this.authGeneration += 1;
+      this.cachedToken = null;
+      this.tokenExpiresAt = null;
+    }
     this.githubAppService.setUserToken(token);
   }
 

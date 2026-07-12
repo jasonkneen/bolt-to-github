@@ -5,6 +5,7 @@
 
 import { SUPABASE_CONFIG } from '../lib/constants/supabase';
 import { createLogger } from '../lib/utils/logger';
+import { SingleFlight } from './githubAppRequestPolicy';
 import type {
   GitHubAppConfig,
   GitHubAppErrorResponse,
@@ -18,6 +19,8 @@ const logger = createLogger('GitHubAppService');
 export class GitHubAppService {
   private readonly supabaseUrl: string;
   private userToken: string | null = null;
+  private tokenRequest = new SingleFlight<GitHubAppTokenResponse>();
+  private tokenRequestIdentity: string | null = null;
 
   constructor() {
     this.supabaseUrl = SUPABASE_CONFIG.URL;
@@ -27,6 +30,10 @@ export class GitHubAppService {
    * Set the user token for Supabase authentication
    */
   setUserToken(token: string): void {
+    if (this.userToken !== token) {
+      this.tokenRequestIdentity = token;
+      this.tokenRequest = new SingleFlight<GitHubAppTokenResponse>();
+    }
     this.userToken = token;
   }
 
@@ -139,34 +146,41 @@ export class GitHubAppService {
    */
   async getAccessToken(): Promise<GitHubAppTokenResponse> {
     const userToken = await this.getUserToken();
-
-    const response = await fetch(`${this.supabaseUrl}/functions/v1/get-github-token`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${userToken}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      const errorData = data as GitHubAppErrorResponse;
-
-      // Handle specific error codes
-      switch (errorData.code) {
-        case 'NO_GITHUB_APP':
-        case 'NO_ACCESS_TOKEN':
-        case 'TOKEN_EXPIRED_NO_REFRESH':
-        case 'TOKEN_RENEWAL_FAILED':
-          // These errors require re-authentication
-          throw new Error(`Re-authentication required: ${errorData.error}`);
-        default:
-          throw new Error(errorData.error || 'Failed to get GitHub token');
-      }
+    if (this.tokenRequestIdentity !== userToken) {
+      this.tokenRequestIdentity = userToken;
+      this.tokenRequest = new SingleFlight<GitHubAppTokenResponse>();
     }
+    const tokenRequest = this.tokenRequest;
 
-    return data as GitHubAppTokenResponse;
+    return tokenRequest.run(async () => {
+      const response = await fetch(`${this.supabaseUrl}/functions/v1/get-github-token`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${userToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const errorData = data as GitHubAppErrorResponse;
+
+        // Handle specific error codes
+        switch (errorData.code) {
+          case 'NO_GITHUB_APP':
+          case 'NO_ACCESS_TOKEN':
+          case 'TOKEN_EXPIRED_NO_REFRESH':
+          case 'TOKEN_RENEWAL_FAILED':
+            // These errors require re-authentication
+            throw new Error(`Re-authentication required: ${errorData.error}`);
+          default:
+            throw new Error(errorData.error || 'Failed to get GitHub token');
+        }
+      }
+
+      return data as GitHubAppTokenResponse;
+    });
   }
 
   /**

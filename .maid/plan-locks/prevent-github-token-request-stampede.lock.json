@@ -1,0 +1,261 @@
+{
+  "manifest_path": "manifests/prevent-github-token-request-stampede.manifest.yaml",
+  "manifest_hash": "sha256:8c5c53ec16e529bbe5379250fb001045b271f6ef48cba6c83ecb4eb24beed588",
+  "test_hashes": {
+    "src/services/__tests__/GitHubAppAuthenticationStrategy.test.ts": "sha256:79c13f7ce6ba858d225ae13c69cd193cf4c2eaa05ac93c77b74d972becf1baca",
+    "src/services/__tests__/UnifiedGitHubService.comprehensive.test.ts": "sha256:049c477df6df9e5dbd8cba69a6cc79fabaa0498236a61a204b4e02db086a7ed4",
+    "src/services/__tests__/githubAppRequestPolicy.test.ts": "sha256:d9f4f9710fe6684ece0285ce2d35211f3cb22a27bd1b1cbbc7a3d414bd488fd7",
+    "src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts": "sha256:cd8b27a9cda224ef454bb99a3505e5be5584e93bec8f21b2cbebd4ed8b831cd6",
+    "src/services/__tests__/GitHubAppService.stampede.test.ts": "sha256:afc2a4559cf10b7b7a9bf8ad5efbf27f584a6f534c02204d8f26e780491ee82a",
+    "src/services/__tests__/UnifiedGitHubService.auth-selection.test.ts": "sha256:c27ea7d8f73dae8156606861ec0ae38b6f3502f428f2ac2afbb23befaf18a065",
+    "src/services/__tests__/GitHubAppService.critical-business-logic.test.ts": "sha256:5e98cb781e178906603405bef89dbc3425fb8e98576f6c6aa4ece662f3ead0ec"
+  },
+  "created_at": "2026-07-12T04:29:44.630621+00:00",
+  "revision": 6,
+  "revisions": [
+    {
+      "prior_manifest_hash": "sha256:a4a90ffb203f78db7018582731b2633b6f37069fa798455e83c02f52abc4ca40",
+      "prior_test_hashes": {
+        "src/services/__tests__/GitHubAppAuthenticationStrategy.test.ts": "sha256:79c13f7ce6ba858d225ae13c69cd193cf4c2eaa05ac93c77b74d972becf1baca",
+        "src/services/__tests__/githubAppRequestPolicy.test.ts": "sha256:5f9daf6dc0be043e4177df47041cb27ff4c89fcf3c9c74222273411bbc0ef7d0",
+        "src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts": "sha256:5e37f8365c7e49f6e7041060029c5ad0865230c4b4e24bf55de500b062259cb2",
+        "src/services/__tests__/UnifiedGitHubService.auth-selection.test.ts": "sha256:7f1549530a6d5d1842fe6fd22b274e915dee6e01154ceb93ea9eafa3943bafe6"
+      },
+      "revised_at": "2026-07-12T04:41:55.797541+00:00",
+      "reason": "Independent review added explicit-config validation and direct GitHubAppService acquisition coalescing coverage; refresh behavioral-test hashes after approved revision 2.",
+      "agent": null,
+      "contract_delta": {
+        "artifacts_added": [
+          "src/services/__tests__/GitHubAppService.stampede.test.ts:coalesces token retrieval shared by direct and validation callers",
+          "src/services/__tests__/GitHubAppService.stampede.test.ts:coalesces token retrieval shared by direct and validation callers:kind=test_function",
+          "src/services/__tests__/GitHubAppService.stampede.test.ts:turns one hundred direct service token requests into one Edge Function request",
+          "src/services/__tests__/GitHubAppService.stampede.test.ts:turns one hundred direct service token requests into one Edge Function request:kind=test_function",
+          "src/services/__tests__/UnifiedGitHubService.auth-selection.test.ts:rejects explicit GitHub App initialization without a stable installation",
+          "src/services/__tests__/UnifiedGitHubService.auth-selection.test.ts:rejects explicit GitHub App initialization without a stable installation:kind=test_function"
+        ],
+        "artifacts_removed": [],
+        "files_added": ["create:src/services/__tests__/GitHubAppService.stampede.test.ts"],
+        "files_removed": [],
+        "validate_commands_added": [
+          "pnpm exec vitest run src/services/__tests__/githubAppRequestPolicy.test.ts src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts src/services/__tests__/GitHubAppService.stampede.test.ts src/services/__tests__/UnifiedGitHubService.auth-selection.test.ts src/services/__tests__/GitHubAppAuthenticationStrategy.test.ts src/services/__tests__/GitHubAppService.critical-business-logic.test.ts"
+        ],
+        "validate_commands_removed": [
+          "pnpm exec vitest run src/services/__tests__/githubAppRequestPolicy.test.ts src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts src/services/__tests__/UnifiedGitHubService.auth-selection.test.ts src/services/__tests__/GitHubAppAuthenticationStrategy.test.ts"
+        ]
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:12714198ae39a97b650ed788d392ac83ea54ab2db41c46b762bc813b45ddcd5c",
+      "prior_test_hashes": {
+        "src/services/__tests__/GitHubAppAuthenticationStrategy.test.ts": "sha256:79c13f7ce6ba858d225ae13c69cd193cf4c2eaa05ac93c77b74d972becf1baca",
+        "src/services/__tests__/githubAppRequestPolicy.test.ts": "sha256:d9f4f9710fe6684ece0285ce2d35211f3cb22a27bd1b1cbbc7a3d414bd488fd7",
+        "src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts": "sha256:2d73a2659cca3719c5071f739ec9ac3f12094cc4a8f90de80dc3e6fc3cc0080d",
+        "src/services/__tests__/GitHubAppService.stampede.test.ts": "sha256:0e86406a32affd5c74c21bf95282304af2e12792d6ad083e498552abb3a4f1af",
+        "src/services/__tests__/UnifiedGitHubService.auth-selection.test.ts": "sha256:c27ea7d8f73dae8156606861ec0ae38b6f3502f428f2ac2afbb23befaf18a065",
+        "src/services/__tests__/GitHubAppService.critical-business-logic.test.ts": "sha256:5e98cb781e178906603405bef89dbc3425fb8e98576f6c6aa4ece662f3ead0ec"
+      },
+      "revised_at": "2026-07-12T04:44:15.042180+00:00",
+      "reason": "Align successful GitHub App fixture with durable installation configuration and lock comprehensive compatibility coverage.",
+      "agent": null,
+      "contract_delta": {
+        "artifacts_added": [],
+        "artifacts_removed": [],
+        "files_added": [
+          "read:src/services/__tests__/UnifiedGitHubService.comprehensive.test.ts",
+          "read:src/services/__tests__/test-fixtures/unified/mocks/MockChromeStorage.ts"
+        ],
+        "files_removed": [],
+        "validate_commands_added": [
+          "pnpm exec vitest run src/services/__tests__/githubAppRequestPolicy.test.ts src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts src/services/__tests__/GitHubAppService.stampede.test.ts src/services/__tests__/UnifiedGitHubService.auth-selection.test.ts src/services/__tests__/GitHubAppAuthenticationStrategy.test.ts src/services/__tests__/GitHubAppService.critical-business-logic.test.ts src/services/__tests__/UnifiedGitHubService.comprehensive.test.ts"
+        ],
+        "validate_commands_removed": [
+          "pnpm exec vitest run src/services/__tests__/githubAppRequestPolicy.test.ts src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts src/services/__tests__/GitHubAppService.stampede.test.ts src/services/__tests__/UnifiedGitHubService.auth-selection.test.ts src/services/__tests__/GitHubAppAuthenticationStrategy.test.ts src/services/__tests__/GitHubAppService.critical-business-logic.test.ts"
+        ]
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:ce2ee7847bd0d04c4f1e25ad7b0697915a29e67a4229acdcbbfd93248b4467b2",
+      "prior_test_hashes": {
+        "src/services/__tests__/GitHubAppAuthenticationStrategy.test.ts": "sha256:79c13f7ce6ba858d225ae13c69cd193cf4c2eaa05ac93c77b74d972becf1baca",
+        "src/services/__tests__/UnifiedGitHubService.comprehensive.test.ts": "sha256:049c477df6df9e5dbd8cba69a6cc79fabaa0498236a61a204b4e02db086a7ed4",
+        "src/services/__tests__/githubAppRequestPolicy.test.ts": "sha256:d9f4f9710fe6684ece0285ce2d35211f3cb22a27bd1b1cbbc7a3d414bd488fd7",
+        "src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts": "sha256:2d73a2659cca3719c5071f739ec9ac3f12094cc4a8f90de80dc3e6fc3cc0080d",
+        "src/services/__tests__/GitHubAppService.stampede.test.ts": "sha256:0e86406a32affd5c74c21bf95282304af2e12792d6ad083e498552abb3a4f1af",
+        "src/services/__tests__/UnifiedGitHubService.auth-selection.test.ts": "sha256:c27ea7d8f73dae8156606861ec0ae38b6f3502f428f2ac2afbb23befaf18a065",
+        "src/services/__tests__/GitHubAppService.critical-business-logic.test.ts": "sha256:5e98cb781e178906603405bef89dbc3425fb8e98576f6c6aa4ece662f3ead0ec"
+      },
+      "revised_at": "2026-07-12T04:52:29.887704+00:00",
+      "reason": "Scope token coalescing and caches to Supabase bearer identity after independent auth/privacy review.",
+      "agent": null,
+      "contract_delta": {
+        "artifacts_added": [
+          "src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts:invalidates a cached GitHub token when the Supabase identity changes",
+          "src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts:invalidates a cached GitHub token when the Supabase identity changes:kind=test_function",
+          "src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts:prevents an older in-flight identity from overwriting the newer token cache",
+          "src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts:prevents an older in-flight identity from overwriting the newer token cache:kind=test_function",
+          "src/services/__tests__/GitHubAppService.stampede.test.ts:keeps in-flight token requests isolated across Supabase identity changes",
+          "src/services/__tests__/GitHubAppService.stampede.test.ts:keeps in-flight token requests isolated across Supabase identity changes:kind=test_function"
+        ],
+        "artifacts_removed": [
+          "src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts:shares one failure and permits a later token retry",
+          "src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts:shares one failure and permits a later token retry:kind=test_function",
+          "src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts:turns one hundred concurrent token requests into one Edge Function request",
+          "src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts:turns one hundred concurrent token requests into one Edge Function request:kind=test_function"
+        ],
+        "files_added": [],
+        "files_removed": [],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:0ae52317fd28cf05f5afab18139618bfecc9d682bcb0226c3e0370464f22ad2b",
+      "prior_test_hashes": {
+        "src/services/__tests__/GitHubAppAuthenticationStrategy.test.ts": "sha256:79c13f7ce6ba858d225ae13c69cd193cf4c2eaa05ac93c77b74d972becf1baca",
+        "src/services/__tests__/UnifiedGitHubService.comprehensive.test.ts": "sha256:049c477df6df9e5dbd8cba69a6cc79fabaa0498236a61a204b4e02db086a7ed4",
+        "src/services/__tests__/githubAppRequestPolicy.test.ts": "sha256:d9f4f9710fe6684ece0285ce2d35211f3cb22a27bd1b1cbbc7a3d414bd488fd7",
+        "src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts": "sha256:7d3b16a80119f295eceb4389126ebaf7e92089e5381f1cf363be7b07e48ab4de",
+        "src/services/__tests__/GitHubAppService.stampede.test.ts": "sha256:afc2a4559cf10b7b7a9bf8ad5efbf27f584a6f534c02204d8f26e780491ee82a",
+        "src/services/__tests__/UnifiedGitHubService.auth-selection.test.ts": "sha256:c27ea7d8f73dae8156606861ec0ae38b6f3502f428f2ac2afbb23befaf18a065",
+        "src/services/__tests__/GitHubAppService.critical-business-logic.test.ts": "sha256:5e98cb781e178906603405bef89dbc3425fb8e98576f6c6aa4ece662f3ead0ec"
+      },
+      "revised_at": "2026-07-12T04:53:55.231104+00:00",
+      "reason": "Correct Vitest 1 spy generic syntax without changing account-switch behavior or assertions.",
+      "agent": null,
+      "contract_delta": {
+        "artifacts_added": [],
+        "artifacts_removed": [],
+        "files_added": [],
+        "files_removed": [],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:0ae52317fd28cf05f5afab18139618bfecc9d682bcb0226c3e0370464f22ad2b",
+      "prior_test_hashes": {
+        "src/services/__tests__/GitHubAppAuthenticationStrategy.test.ts": "sha256:79c13f7ce6ba858d225ae13c69cd193cf4c2eaa05ac93c77b74d972becf1baca",
+        "src/services/__tests__/UnifiedGitHubService.comprehensive.test.ts": "sha256:049c477df6df9e5dbd8cba69a6cc79fabaa0498236a61a204b4e02db086a7ed4",
+        "src/services/__tests__/githubAppRequestPolicy.test.ts": "sha256:d9f4f9710fe6684ece0285ce2d35211f3cb22a27bd1b1cbbc7a3d414bd488fd7",
+        "src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts": "sha256:cd8b27a9cda224ef454bb99a3505e5be5584e93bec8f21b2cbebd4ed8b831cd6",
+        "src/services/__tests__/GitHubAppService.stampede.test.ts": "sha256:afc2a4559cf10b7b7a9bf8ad5efbf27f584a6f534c02204d8f26e780491ee82a",
+        "src/services/__tests__/UnifiedGitHubService.auth-selection.test.ts": "sha256:c27ea7d8f73dae8156606861ec0ae38b6f3502f428f2ac2afbb23befaf18a065",
+        "src/services/__tests__/GitHubAppService.critical-business-logic.test.ts": "sha256:5e98cb781e178906603405bef89dbc3425fb8e98576f6c6aa4ece662f3ead0ec"
+      },
+      "revised_at": "2026-07-12T04:58:12.040489+00:00",
+      "reason": "Record evidence-backed completed Outcome after final Ready to merge review.",
+      "agent": null,
+      "contract_delta": {
+        "artifacts_added": [],
+        "artifacts_removed": [],
+        "files_added": [],
+        "files_removed": [],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    }
+  ],
+  "red_evidence": {
+    "red": true,
+    "captured_at": "2026-07-12T04:52:44.399757+00:00",
+    "commands": [
+      {
+        "command": "pnpm exec vitest run src/services/__tests__/githubAppRequestPolicy.test.ts src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts src/services/__tests__/GitHubAppService.stampede.test.ts src/services/__tests__/UnifiedGitHubService.auth-selection.test.ts src/services/__tests__/GitHubAppAuthenticationStrategy.test.ts src/services/__tests__/GitHubAppService.critical-business-logic.test.ts src/services/__tests__/UnifiedGitHubService.comprehensive.test.ts",
+        "exit_code": 1,
+        "output_tail": "     70| \n     71|     expect(serviceMocks.getAccessToken).toHaveBeenCalledTimes(2);\n       |                                         ^\n     72|     resolveUserB?.(tokenResponse('github-token-b'));\n     73|     await expect(userBRequest).resolves.toBe('github-token-b');\n\n\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af[2/3]\u23af\n\n FAIL  src/services/__tests__/GitHubAppService.stampede.test.ts > GitHubAppService request coalescing > keeps in-flight token requests isolated across Supabase identity changes\nAssertionError: expected \"spy\" to be called 2 times, but got 1 times\n \u276f src/services/__tests__/GitHubAppService.stampede.test.ts:71:46\n     69|     env.service.setUserToken('supabase-user-b');\n     70|     const userBRequest = env.service.getAccessToken();\n     71|     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));\n       |                                              ^\n     72| \n     73|     resolveUserB?.(createTokenResponse('github-token-b'));\n\n\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af[3/3]\u23af\n",
+        "classification": "red"
+      },
+      {
+        "command": "pnpm lint",
+        "exit_code": 0,
+        "output_tail": "\n> bolt-to-github@1.3.20 lint /home/atomrem/projects/codefrost-dev/bolt-to-github\n> eslint \"src/**/*.{js,ts,svelte}\"\n",
+        "classification": "not_red"
+      },
+      {
+        "command": "pnpm check",
+        "exit_code": 1,
+        "output_tail": "\n> bolt-to-github@1.3.20 check /home/atomrem/projects/codefrost-dev/bolt-to-github\n> svelte-check --tsconfig ./tsconfig.json\n\n\n====================================\nLoading svelte-check in workspace: /home/atomrem/projects/codefrost-dev/bolt-to-github\nGetting Svelte diagnostics...\n\n/home/atomrem/projects/codefrost-dev/bolt-to-github/src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts:7:23\nError: Type '(token: string) => void' does not satisfy the constraint 'any[]'. \n  getAccessToken: vi.fn<[], Promise<GitHubAppTokenResponse>>(),\n  setUserToken: vi.fn<(token: string) => void>(),\n}));\n\n\n====================================\nsvelte-check found 1 error and 0 warnings in 1 file\n\u2009ELIFECYCLE\u2009 Command failed with exit code 1.",
+        "classification": "red"
+      }
+    ]
+  },
+  "agent": null,
+  "_manifest_contract": {
+    "artifacts": [
+      "src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts:invalidates a cached GitHub token when the Supabase identity changes",
+      "src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts:invalidates a cached GitHub token when the Supabase identity changes:kind=test_function",
+      "src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts:prevents an older in-flight identity from overwriting the newer token cache",
+      "src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts:prevents an older in-flight identity from overwriting the newer token cache:kind=test_function",
+      "src/services/__tests__/GitHubAppService.stampede.test.ts:coalesces token retrieval shared by direct and validation callers",
+      "src/services/__tests__/GitHubAppService.stampede.test.ts:coalesces token retrieval shared by direct and validation callers:kind=test_function",
+      "src/services/__tests__/GitHubAppService.stampede.test.ts:keeps in-flight token requests isolated across Supabase identity changes",
+      "src/services/__tests__/GitHubAppService.stampede.test.ts:keeps in-flight token requests isolated across Supabase identity changes:kind=test_function",
+      "src/services/__tests__/GitHubAppService.stampede.test.ts:turns one hundred direct service token requests into one Edge Function request",
+      "src/services/__tests__/GitHubAppService.stampede.test.ts:turns one hundred direct service token requests into one Edge Function request:kind=test_function",
+      "src/services/__tests__/UnifiedGitHubService.auth-selection.test.ts:keeps PAT selected when a Supabase session exists without a GitHub App installation",
+      "src/services/__tests__/UnifiedGitHubService.auth-selection.test.ts:keeps PAT selected when a Supabase session exists without a GitHub App installation:kind=test_function",
+      "src/services/__tests__/UnifiedGitHubService.auth-selection.test.ts:keeps explicit PAT selected when a GitHub App installation also exists",
+      "src/services/__tests__/UnifiedGitHubService.auth-selection.test.ts:keeps explicit PAT selected when a GitHub App installation also exists:kind=test_function",
+      "src/services/__tests__/UnifiedGitHubService.auth-selection.test.ts:rejects explicit GitHub App initialization without a stable installation",
+      "src/services/__tests__/UnifiedGitHubService.auth-selection.test.ts:rejects explicit GitHub App initialization without a stable installation:kind=test_function",
+      "src/services/__tests__/UnifiedGitHubService.auth-selection.test.ts:selects GitHub App only when method and installation configuration agree",
+      "src/services/__tests__/UnifiedGitHubService.auth-selection.test.ts:selects GitHub App only when method and installation configuration agree:kind=test_function",
+      "src/services/__tests__/githubAppRequestPolicy.test.ts:preserves explicit PAT selection even when an installation ID exists",
+      "src/services/__tests__/githubAppRequestPolicy.test.ts:preserves explicit PAT selection even when an installation ID exists:kind=test_function",
+      "src/services/__tests__/githubAppRequestPolicy.test.ts:rejects missing or invalid GitHub App configuration",
+      "src/services/__tests__/githubAppRequestPolicy.test.ts:rejects missing or invalid GitHub App configuration:kind=test_function",
+      "src/services/__tests__/githubAppRequestPolicy.test.ts:resets after a shared rejection so a later request can retry",
+      "src/services/__tests__/githubAppRequestPolicy.test.ts:resets after a shared rejection so a later request can retry:kind=test_function",
+      "src/services/__tests__/githubAppRequestPolicy.test.ts:selects GitHub App only for explicit stable installation configuration",
+      "src/services/__tests__/githubAppRequestPolicy.test.ts:selects GitHub App only for explicit stable installation configuration:kind=test_function",
+      "src/services/__tests__/githubAppRequestPolicy.test.ts:shares one operation across one hundred concurrent callers",
+      "src/services/__tests__/githubAppRequestPolicy.test.ts:shares one operation across one hundred concurrent callers:kind=test_function",
+      "src/services/githubAppRequestPolicy.ts:class:SingleFlight",
+      "src/services/githubAppRequestPolicy.ts:class:SingleFlight:kind=class",
+      "src/services/githubAppRequestPolicy.ts:function:resolveStoredGitHubAuthenticationMethod",
+      "src/services/githubAppRequestPolicy.ts:function:resolveStoredGitHubAuthenticationMethod:arg=githubAppInstallationId:type=unknown:default=None",
+      "src/services/githubAppRequestPolicy.ts:function:resolveStoredGitHubAuthenticationMethod:arg=storedAuthenticationMethod:type=unknown:default=None",
+      "src/services/githubAppRequestPolicy.ts:function:resolveStoredGitHubAuthenticationMethod:kind=function",
+      "src/services/githubAppRequestPolicy.ts:function:resolveStoredGitHubAuthenticationMethod:returns='pat' | 'github_app'",
+      "src/services/githubAppRequestPolicy.ts:method:SingleFlight.run",
+      "src/services/githubAppRequestPolicy.ts:method:SingleFlight.run:arg=operation:type=() => Promise<T>:default=None",
+      "src/services/githubAppRequestPolicy.ts:method:SingleFlight.run:kind=method",
+      "src/services/githubAppRequestPolicy.ts:method:SingleFlight.run:of=SingleFlight",
+      "src/services/githubAppRequestPolicy.ts:method:SingleFlight.run:returns=Promise<T>"
+    ],
+    "files": {
+      "create": [
+        "src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts",
+        "src/services/__tests__/GitHubAppService.stampede.test.ts",
+        "src/services/__tests__/UnifiedGitHubService.auth-selection.test.ts",
+        "src/services/__tests__/githubAppRequestPolicy.test.ts",
+        "src/services/githubAppRequestPolicy.ts"
+      ],
+      "edit": [],
+      "read": [
+        "src/content/services/githubAppIdentity.ts",
+        "src/services/GitHubAppAuthenticationStrategy.ts",
+        "src/services/GitHubAppService.ts",
+        "src/services/UnifiedGitHubService.ts",
+        "src/services/__tests__/GitHubAppAuthenticationStrategy.test.ts",
+        "src/services/__tests__/UnifiedGitHubService.comprehensive.test.ts",
+        "src/services/__tests__/test-fixtures/unified/mocks/MockChromeStorage.ts",
+        "src/services/types/authentication.ts"
+      ]
+    },
+    "test_files": [
+      "src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts",
+      "src/services/__tests__/GitHubAppAuthenticationStrategy.test.ts",
+      "src/services/__tests__/GitHubAppService.critical-business-logic.test.ts",
+      "src/services/__tests__/GitHubAppService.stampede.test.ts",
+      "src/services/__tests__/UnifiedGitHubService.auth-selection.test.ts",
+      "src/services/__tests__/UnifiedGitHubService.comprehensive.test.ts",
+      "src/services/__tests__/githubAppRequestPolicy.test.ts"
+    ],
+    "validate_commands": [
+      "pnpm exec vitest run src/services/__tests__/githubAppRequestPolicy.test.ts src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts src/services/__tests__/GitHubAppService.stampede.test.ts src/services/__tests__/UnifiedGitHubService.auth-selection.test.ts src/services/__tests__/GitHubAppAuthenticationStrategy.test.ts src/services/__tests__/GitHubAppService.critical-business-logic.test.ts src/services/__tests__/UnifiedGitHubService.comprehensive.test.ts",
+      "pnpm lint",
+      "pnpm check"
+    ]
+  }
+}
