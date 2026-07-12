@@ -1,0 +1,182 @@
+{
+  "manifest_path": "manifests/repair-e2e-lifecycle-storage-contracts.manifest.yaml",
+  "manifest_hash": "sha256:0363b59eef22f8cb4a0a3a53324b7bcc67db0ab884f8cf38a4c6d2914feee5c9",
+  "test_hashes": {
+    "src/test/e2e-helpers/popup-helpers.test.ts": "sha256:cc81bcd9951b62ad2e864c110c588176d6941b2ba5f0864ce9a34dab201b9cf8"
+  },
+  "created_at": "2026-07-12T03:35:05.162053+00:00",
+  "revision": 6,
+  "revisions": [
+    {
+      "prior_manifest_hash": "sha256:7970bfa995372c75274cf82cf4e1595eef661d8f07e1c842b38d91af6d7b2047",
+      "prior_test_hashes": {
+        "e2e/lifecycle.spec.ts": "sha256:bbc92b9b387e86949a568502274c073a11812523a1e3c94ca84c4f842468443d"
+      },
+      "revised_at": "2026-07-12T03:55:31.502691+00:00",
+      "reason": "Separate successful Playwright release evidence from the MAID fast gate after E231; original revision retains genuine browser red evidence",
+      "agent": null,
+      "contract_delta": {
+        "artifacts_added": [
+          "src/test/e2e-helpers/popup-helpers.test.ts:pins lifecycle E2E to current storage keys and popup URL",
+          "src/test/e2e-helpers/popup-helpers.test.ts:pins lifecycle E2E to current storage keys and popup URL:kind=test_function"
+        ],
+        "artifacts_removed": [],
+        "files_added": ["edit:src/test/e2e-helpers/popup-helpers.test.ts"],
+        "files_removed": [],
+        "validate_commands_added": [
+          "pnpm check",
+          "pnpm exec vitest run src/test/e2e-helpers/popup-helpers.test.ts",
+          "pnpm lint"
+        ],
+        "validate_commands_removed": [
+          "pnpm exec playwright test --project=chromium --reporter=list",
+          "pnpm exec playwright test e2e/lifecycle.spec.ts --project=chromium --reporter=list"
+        ]
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:dea04616a34fdb523be15a6cbc6d12ec745134f35376485bfa252e9fbd7424a6",
+      "prior_test_hashes": {
+        "e2e/lifecycle.spec.ts": "sha256:5e4e0282c931150b91665e5b2894bfc34aec2b20dfb4bbf2c7be4bc6375991f0",
+        "src/test/e2e-helpers/popup-helpers.test.ts": "sha256:cc81bcd9951b62ad2e864c110c588176d6941b2ba5f0864ce9a34dab201b9cf8"
+      },
+      "revised_at": "2026-07-12T03:57:17.835508+00:00",
+      "reason": "Fast lifecycle source-contract test fails against stale storage keys and popup URL, preserving Playwright as manual release evidence",
+      "agent": null,
+      "contract_delta": {
+        "artifacts_added": [],
+        "artifacts_removed": [],
+        "files_added": [],
+        "files_removed": [],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:dea04616a34fdb523be15a6cbc6d12ec745134f35376485bfa252e9fbd7424a6",
+      "prior_test_hashes": {
+        "e2e/lifecycle.spec.ts": "sha256:bbc92b9b387e86949a568502274c073a11812523a1e3c94ca84c4f842468443d",
+        "src/test/e2e-helpers/popup-helpers.test.ts": "sha256:cc81bcd9951b62ad2e864c110c588176d6941b2ba5f0864ce9a34dab201b9cf8"
+      },
+      "revised_at": "2026-07-12T03:58:52.874423+00:00",
+      "reason": "Final fast-gate contract fails against stale lifecycle storage keys and popup URL",
+      "agent": null,
+      "contract_delta": {
+        "artifacts_added": [],
+        "artifacts_removed": [
+          "e2e/helpers/popup.ts:function:openPopup",
+          "e2e/helpers/popup.ts:function:openPopup:kind=function",
+          "e2e/helpers/storage.ts:function:getGitHubSettings",
+          "e2e/helpers/storage.ts:function:getGitHubSettings:kind=function",
+          "e2e/helpers/storage.ts:function:setupGitHubAppAuth",
+          "e2e/helpers/storage.ts:function:setupGitHubAppAuth:kind=function",
+          "e2e/helpers/storage.ts:function:setupPATAuth",
+          "e2e/helpers/storage.ts:function:setupPATAuth:kind=function",
+          "e2e/lifecycle.spec.ts:should handle service worker restart",
+          "e2e/lifecycle.spec.ts:should handle service worker restart:kind=test_function",
+          "e2e/lifecycle.spec.ts:should handle storage changes from other contexts",
+          "e2e/lifecycle.spec.ts:should handle storage changes from other contexts:kind=test_function",
+          "e2e/lifecycle.spec.ts:should maintain GitHub App authentication after update",
+          "e2e/lifecycle.spec.ts:should maintain GitHub App authentication after update:kind=test_function",
+          "e2e/lifecycle.spec.ts:should maintain extension state across tab switches",
+          "e2e/lifecycle.spec.ts:should maintain extension state across tab switches:kind=test_function",
+          "e2e/lifecycle.spec.ts:should persist settings after extension reload",
+          "e2e/lifecycle.spec.ts:should persist settings after extension reload:kind=test_function",
+          "e2e/lifecycle.spec.ts:should preserve repository settings across sessions",
+          "e2e/lifecycle.spec.ts:should preserve repository settings across sessions:kind=test_function"
+        ],
+        "files_added": ["read:e2e/helpers/popup.ts", "read:e2e/helpers/storage.ts"],
+        "files_removed": [
+          "edit:e2e/helpers/popup.ts",
+          "edit:e2e/helpers/storage.ts",
+          "edit:e2e/lifecycle.spec.ts"
+        ],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:86878811dba549b7814cb5d5ef847dc6df7a5f9792683c6835794cab59f30524",
+      "prior_test_hashes": {
+        "src/test/e2e-helpers/popup-helpers.test.ts": "sha256:cc81bcd9951b62ad2e864c110c588176d6941b2ba5f0864ce9a34dab201b9cf8"
+      },
+      "revised_at": "2026-07-12T03:59:06.413258+00:00",
+      "reason": "Record green lifecycle implementation while preserving genuine fast-test red evidence",
+      "agent": null,
+      "contract_delta": {
+        "artifacts_added": [],
+        "artifacts_removed": [],
+        "files_added": [],
+        "files_removed": [],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:86878811dba549b7814cb5d5ef847dc6df7a5f9792683c6835794cab59f30524",
+      "prior_test_hashes": {
+        "src/test/e2e-helpers/popup-helpers.test.ts": "sha256:cc81bcd9951b62ad2e864c110c588176d6941b2ba5f0864ce9a34dab201b9cf8"
+      },
+      "revised_at": "2026-07-12T04:02:45.375767+00:00",
+      "reason": "Capture reviewed completed Outcome and validation evidence",
+      "agent": null,
+      "contract_delta": {
+        "artifacts_added": [],
+        "artifacts_removed": [],
+        "files_added": [],
+        "files_removed": [],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    }
+  ],
+  "red_evidence": {
+    "red": true,
+    "captured_at": "2026-07-12T03:59:06.095740+00:00",
+    "commands": [
+      {
+        "command": "pnpm exec vitest run src/test/e2e-helpers/popup-helpers.test.ts",
+        "exit_code": 1,
+        "output_tail": "+       });\n+\n+       expect(hasChrome).toBe(true);\n+\n+       await page.close();\n+     });\n+   });\n+ });\n+\n\n \u276f src/test/e2e-helpers/popup-helpers.test.ts:54:27\n     52|     const lifecycleSpec = readFileSync(join(process.cwd(), 'e2e/lifecy\u2026\n     53| \n     54|     expect(lifecycleSpec).toContain('settingsBefore.authenticationMeth\u2026\n       |                           ^\n     55|     expect(lifecycleSpec).toContain('settingsAfter.githubAppInstallati\u2026\n     56|     expect(lifecycleSpec).toContain('/src/popup/index.html');\n\n\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af[1/1]\u23af\n",
+        "classification": "red"
+      },
+      {
+        "command": "pnpm lint",
+        "exit_code": 0,
+        "output_tail": "\n> bolt-to-github@1.3.20 lint /home/atomrem/projects/codefrost-dev/bolt-to-github\n> eslint \"src/**/*.{js,ts,svelte}\"\n",
+        "classification": "not_red"
+      },
+      {
+        "command": "pnpm check",
+        "exit_code": 0,
+        "output_tail": "\n> bolt-to-github@1.3.20 check /home/atomrem/projects/codefrost-dev/bolt-to-github\n> svelte-check --tsconfig ./tsconfig.json\n\n\n====================================\nLoading svelte-check in workspace: /home/atomrem/projects/codefrost-dev/bolt-to-github\nGetting Svelte diagnostics...\n\n====================================\nsvelte-check found 0 errors and 0 warnings",
+        "classification": "not_red"
+      }
+    ]
+  },
+  "agent": null,
+  "_manifest_contract": {
+    "artifacts": [
+      "src/test/e2e-helpers/popup-helpers.test.ts:pins lifecycle E2E to current storage keys and popup URL",
+      "src/test/e2e-helpers/popup-helpers.test.ts:pins lifecycle E2E to current storage keys and popup URL:kind=test_function"
+    ],
+    "files": {
+      "create": [],
+      "edit": ["src/test/e2e-helpers/popup-helpers.test.ts"],
+      "read": [
+        "e2e/helpers/popup.ts",
+        "e2e/helpers/storage.ts",
+        "manifest.json",
+        "src/background/BackgroundService.ts",
+        "src/lib/services/chromeStorage.ts",
+        "src/popup/index.html"
+      ]
+    },
+    "test_files": ["src/test/e2e-helpers/popup-helpers.test.ts"],
+    "validate_commands": [
+      "pnpm exec vitest run src/test/e2e-helpers/popup-helpers.test.ts",
+      "pnpm lint",
+      "pnpm check"
+    ]
+  }
+}

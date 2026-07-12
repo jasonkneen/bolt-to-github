@@ -4,6 +4,15 @@ import type { NotificationOptions } from '../types/UITypes';
 import { UIManager } from '../UIManager';
 import type { UploadStatusState } from '$lib/types';
 
+const postPushTeaserMaybeShow = vi.hoisted(() => vi.fn(async () => true));
+const postPushTeaserConstructor = vi.hoisted(() => vi.fn());
+
+vi.mock('../services/PostPushTeaserService', () => ({
+  PostPushTeaserService: postPushTeaserConstructor.mockImplementation(() => ({
+    maybeShowTeaser: postPushTeaserMaybeShow,
+  })),
+}));
+
 vi.mock('../../services/settings', () => ({
   SettingsService: {
     setProjectId: vi.fn().mockResolvedValue(undefined),
@@ -40,6 +49,14 @@ global.chrome = {
       set: vi.fn().mockResolvedValue(undefined) as unknown as typeof chrome.storage.local.set,
       remove: vi.fn().mockResolvedValue(undefined) as unknown as typeof chrome.storage.local.remove,
     },
+    sync: {
+      get: vi.fn().mockResolvedValue({}) as unknown as typeof chrome.storage.sync.get,
+      set: vi.fn().mockResolvedValue(undefined) as unknown as typeof chrome.storage.sync.set,
+    },
+    onChanged: {
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+    },
   },
   tabs: {
     create: vi.fn(),
@@ -51,6 +68,8 @@ describe('UIManager', () => {
 
   beforeEach(() => {
     UIManager.resetInstance();
+    postPushTeaserMaybeShow.mockClear();
+    postPushTeaserConstructor.mockClear();
 
     mockMessageHandler = {
       sendMessage: vi.fn(),
@@ -147,6 +166,25 @@ describe('UIManager', () => {
       };
 
       expect(() => uiManager.updateUploadStatus(status)).not.toThrow();
+    });
+
+    it('shows the post-push pro teaser after a successful GitHub upload', async () => {
+      const uiManager = UIManager.initialize(mockMessageHandler);
+
+      uiManager.updateUploadStatus({
+        status: 'uploading',
+        progress: 40,
+        message: 'Uploading...',
+      });
+      uiManager.updateUploadStatus({
+        status: 'success',
+        progress: 100,
+        message: 'Pushed to GitHub',
+      });
+      await Promise.resolve();
+
+      expect(postPushTeaserConstructor).toHaveBeenCalledOnce();
+      expect(postPushTeaserMaybeShow).toHaveBeenCalledOnce();
     });
   });
 

@@ -1,3 +1,83 @@
+<script context="module" lang="ts">
+  import type { GitHubConnectionResult } from '$lib/utils/githubConnection';
+
+  const POPUP_CONTEXT_UPGRADE_TYPES = [
+    'general',
+    'fileChanges',
+    'pushReminders',
+    'branchSelector',
+    'issues',
+    'commits',
+  ] as const;
+
+  type PopupContextPremiumFeature = import('$lib/constants/premiumFeatures').PremiumFeature;
+  type PopupContextUpgradeModalType = import('$lib/utils/upgradeModal').UpgradeModalType;
+  type PopupContextUpgradeFeature = (typeof POPUP_CONTEXT_UPGRADE_TYPES)[number];
+  type PopupContextApplyUpgradeModalState = (
+    feature: string,
+    reason: string,
+    features: PopupContextPremiumFeature[]
+  ) => void;
+  type PopupContextUpgradeModalStateSetter = (
+    type: PopupContextUpgradeModalType,
+    setState: PopupContextApplyUpgradeModalState
+  ) => void;
+  export async function reconcilePopupGitHubConnection(
+    checkConnection: () => Promise<GitHubConnectionResult>,
+    refreshSettings: () => Promise<void>,
+    showStatus: (message: string, duration: number) => void
+  ): Promise<GitHubConnectionResult> {
+    const connection = await checkConnection();
+    if (!connection.connected) {
+      if (connection.reason === 'not_connected') {
+        await refreshSettings();
+      }
+      showStatus(connection.message, 10000);
+    }
+    return connection;
+  }
+
+  export async function runPopupGitHubAction(
+    checkConnection: () => Promise<GitHubConnectionResult>,
+    refreshSettings: () => Promise<void>,
+    showStatus: (message: string, duration: number) => void,
+    action: () => Promise<void>
+  ): Promise<boolean> {
+    const connection = await reconcilePopupGitHubConnection(
+      checkConnection,
+      refreshSettings,
+      showStatus
+    );
+    if (!connection.connected) {
+      return false;
+    }
+
+    await action();
+    return true;
+  }
+
+  export function canOpenPopupGitHubSurface(
+    connectionReady: boolean,
+    requirementsMet: boolean
+  ): boolean {
+    return connectionReady && requirementsMet;
+  }
+
+  function isPopupContextUpgradeFeature(value: string): value is PopupContextUpgradeFeature {
+    return (POPUP_CONTEXT_UPGRADE_TYPES as readonly string[]).includes(value);
+  }
+
+  export function openTrackedUpgradeModalFromPopupContext(
+    upgradeFeature: string,
+    setUpgradeState: PopupContextUpgradeModalStateSetter,
+    applyState: PopupContextApplyUpgradeModalState
+  ): void {
+    const validFeature = isPopupContextUpgradeFeature(upgradeFeature) ? upgradeFeature : 'general';
+
+    setUpgradeState(validFeature, applyState);
+  }
+</script>
+
 <script lang="ts">
   import IssueManager from '$lib/components/IssueManager.svelte';
   import NewsletterModal from '$lib/components/NewsletterModal.svelte';
@@ -14,7 +94,8 @@
   import { createLogger } from '$lib/utils/logger';
   import { setUpgradeModalState, type UpgradeModalType } from '$lib/utils/upgradeModal';
   import { closePopupWindow, isWindowMode, openPopupWindow } from '$lib/utils/windowMode';
-  import { ExternalLink, Minimize2 } from 'lucide-svelte';
+  import { checkGitHubConnection, checkPopupGitHubConnection } from '$lib/utils/githubConnection';
+  import { ExternalLink, LoaderCircle, Minimize2 } from 'lucide-svelte';
   import { onDestroy, onMount } from 'svelte';
   import { STORAGE_KEY } from '../background/TempRepoManager';
   import { SubscriptionService } from '../services/SubscriptionService';
@@ -96,6 +177,17 @@
 
   // Effective GitHub token for different auth methods
   let effectiveGithubToken = '';
+  let githubConnectionChecking = true;
+  let githubConnectionReady = false;
+  const githubConnectionInitialization = reconcilePopupGitHubConnection(
+    () => checkPopupGitHubConnection(),
+    () => githubSettingsActions.initialize(),
+    (message, duration) => uiStateActions.showStatus(message, duration)
+  ).then((connection) => {
+    githubConnectionReady = connection.connected;
+    githubConnectionChecking = false;
+    return connection;
+  });
 
   // Add pending popup context state
   let pendingPopupContext = '';
@@ -113,6 +205,7 @@
 
   // Reactive check for valid authentication for ProjectsList display
   $: hasValidAuthenticationForProjectsList = !!(
+    githubConnectionReady &&
     githubSettings.hasInitialSettings &&
     githubSettings.repoOwner &&
     ((githubSettings.authenticationMethod === 'github_app' &&
@@ -201,9 +294,11 @@
     // Detect window mode
     isInWindowMode = isWindowMode();
 
+    const connection = await githubConnectionInitialization;
+
     // Initialize stores
     projectSettingsActions.initialize();
-    githubSettingsActions.initialize();
+    await githubSettingsActions.initialize();
     uploadStateActions.initializePort();
     premiumStatusActions.initialize();
 
@@ -220,17 +315,19 @@
     ChromeMessagingService.addPortMessageHandler(handleFileChangesMessage);
 
     // Check for pending file changes first
-    const pendingChanges = await chrome.storage.local.get('pendingFileChanges');
-    if (pendingChanges.pendingFileChanges) {
-      logger.info('Found pending file changes:', pendingChanges.pendingFileChanges);
-      const fileChangesMap = new Map(Object.entries(pendingChanges.pendingFileChanges)) as Map<
-        string,
-        import('../services/FilePreviewService').FileChange
-      >;
-      fileChangesActions.setFileChanges(fileChangesMap);
-      fileChangesActions.showModal();
-      await chrome.storage.local.remove('pendingFileChanges');
-      logger.info('Cleared pending file changes from storage');
+    if (connection.connected) {
+      const pendingChanges = await chrome.storage.local.get('pendingFileChanges');
+      if (pendingChanges.pendingFileChanges) {
+        logger.info('Found pending file changes:', pendingChanges.pendingFileChanges);
+        const fileChangesMap = new Map(Object.entries(pendingChanges.pendingFileChanges)) as Map<
+          string,
+          import('../services/FilePreviewService').FileChange
+        >;
+        fileChangesActions.setFileChanges(fileChangesMap);
+        fileChangesActions.showModal();
+        await chrome.storage.local.remove('pendingFileChanges');
+        logger.info('Cleared pending file changes from storage');
+      }
     }
 
     // Detect current project
@@ -409,7 +506,12 @@
     switch (context) {
       case 'issues':
         // Only show issues if we have valid settings and are on a Bolt project
-        if (settingsValid && projectId && githubSettings.githubToken) {
+        if (
+          canOpenPopupGitHubSurface(
+            githubConnectionReady,
+            Boolean(settingsValid && projectId && githubSettings.githubToken)
+          )
+        ) {
           logger.info('🎯 Opening issues modal');
           modalStates.issues = true;
         } else {
@@ -462,29 +564,17 @@
       case 'upgrade':
         // Show upgrade modal with the specified feature
         if (upgradeFeature) {
-          // Import upgrade modal utility to get the configuration
-          const { getUpgradeModalConfig } = await import('$lib/utils/upgradeModal');
           try {
-            // Ensure the upgradeFeature is a valid key
-            const validFeature = [
-              'general',
-              'fileChanges',
-              'pushReminders',
-              'branchSelector',
-              'issues',
-            ].includes(upgradeFeature)
-              ? (upgradeFeature as
-                  | 'issues'
-                  | 'general'
-                  | 'fileChanges'
-                  | 'pushReminders'
-                  | 'branchSelector')
-              : ('general' as const);
-            const config = getUpgradeModalConfig(validFeature);
-            upgradeModalConfig.feature = config.feature;
-            upgradeModalConfig.reason = config.reason;
-            upgradeModalConfig.features = config.features;
-            modalStates.upgrade = true;
+            openTrackedUpgradeModalFromPopupContext(
+              upgradeFeature,
+              setUpgradeModalState,
+              (feature, reason, features) => {
+                upgradeModalConfig.feature = feature;
+                upgradeModalConfig.reason = reason;
+                upgradeModalConfig.features = features;
+                modalStates.upgrade = true;
+              }
+            );
           } catch (error) {
             logger.error('Error loading upgrade modal config:', error);
             // Fallback to general upgrade modal
@@ -553,16 +643,23 @@
   }
 
   async function showStoredFileChanges() {
-    const success = await fileChangesActions.loadStoredFileChanges(projectId);
-    if (!success) {
-      // Try to request from content script
-      try {
-        await fileChangesActions.requestFileChangesFromContentScript();
-        uiStateActions.showStatus('Calculating file changes...', 5000);
-      } catch {
-        uiStateActions.showStatus('Cannot show file changes: Not on a Bolt project page');
+    githubConnectionReady = await runPopupGitHubAction(
+      () => checkGitHubConnection(),
+      () => githubSettingsActions.initialize(),
+      (message, duration) => uiStateActions.showStatus(message, duration),
+      async () => {
+        const success = await fileChangesActions.loadStoredFileChanges(projectId);
+        if (!success) {
+          // Try to request from content script
+          try {
+            await fileChangesActions.requestFileChangesFromContentScript();
+            uiStateActions.showStatus('Calculating file changes...', 5000);
+          } catch {
+            uiStateActions.showStatus('Cannot show file changes: Not on a Bolt project page');
+          }
+        }
       }
-    }
+    );
   }
 
   async function handleDeleteTempRepo() {
@@ -769,7 +866,19 @@
       </CardDescription>
     </CardHeader>
     <CardContent>
-      {#if displayMode === DISPLAY_MODES.TABS}
+      {#if githubConnectionChecking}
+        <div
+          role="status"
+          aria-live="polite"
+          class="flex flex-col items-center justify-center gap-3 py-8 text-center"
+        >
+          <LoaderCircle class="h-7 w-7 animate-spin text-blue-400" aria-hidden="true" />
+          <div class="space-y-1">
+            <p class="text-sm font-medium text-slate-200">Checking GitHub connection</p>
+            <p class="text-xs text-slate-500">This should only take a moment</p>
+          </div>
+        </div>
+      {:else if displayMode === DISPLAY_MODES.TABS}
         <TabsView
           {uiState}
           {githubSettings}
@@ -801,10 +910,12 @@
     </CardContent>
   </Card>
 
-  <FileChangesModal
-    bind:show={fileChangesState.showModal}
-    bind:fileChanges={fileChangesState.fileChanges}
-  />
+  {#if githubConnectionReady}
+    <FileChangesModal
+      bind:show={fileChangesState.showModal}
+      bind:fileChanges={fileChangesState.fileChanges}
+    />
+  {/if}
 
   <TempRepoModal
     bind:show={uiState.showTempRepoModal}
@@ -844,7 +955,7 @@
   />
 
   <!-- Issues modal -->
-  {#if settingsValid && effectiveGithubToken && githubSettings.repoOwner && githubSettings.repoName}
+  {#if canOpenPopupGitHubSurface(githubConnectionReady, Boolean(settingsValid && effectiveGithubToken && githubSettings.repoOwner && githubSettings.repoName))}
     <IssueManager
       bind:show={modalStates.issues}
       githubToken={effectiveGithubToken}

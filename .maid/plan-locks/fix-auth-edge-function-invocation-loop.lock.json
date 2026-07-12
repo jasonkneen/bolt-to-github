@@ -1,0 +1,98 @@
+{
+  "manifest_path": "manifests/fix-auth-edge-function-invocation-loop.manifest.yaml",
+  "manifest_hash": "sha256:84025729ffc9b159d31a34b7132487267ac0b82f8299ae12d6b56a25c7d3d74f",
+  "test_hashes": {
+    "src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts": "sha256:8fae3df5c91b15eb421da92f5b39b2e1eab1282e894c2a487d1eab1f0d6dfbd6",
+    "src/background/__tests__/BackgroundService.storage-recovery.test.ts": "sha256:e1cad0399e0667b70b69f7a3884f692ed83d026fcc057c88b26b84c1dc7da797"
+  },
+  "created_at": "2026-07-11T22:13:44.695329+00:00",
+  "revision": 2,
+  "revisions": [
+    {
+      "prior_manifest_hash": "sha256:4c8ca49f7582214f7c8b08d690583161b3aebc972bce73f1e75692cb1278b34c",
+      "prior_test_hashes": {
+        "src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts": "sha256:8fae3df5c91b15eb421da92f5b39b2e1eab1282e894c2a487d1eab1f0d6dfbd6",
+        "src/background/__tests__/BackgroundService.storage-recovery.test.ts": "sha256:e1cad0399e0667b70b69f7a3884f692ed83d026fcc057c88b26b84c1dc7da797"
+      },
+      "revised_at": "2026-07-11T22:16:18.797535+00:00",
+      "reason": "Capture final reviewed Outcome evidence after implementation review",
+      "agent": {
+        "model": "gpt-5",
+        "provider": "openai",
+        "client": "codex",
+        "skills": ["maid-implementer"],
+        "source": "flags"
+      },
+      "contract_delta": {
+        "artifacts_added": [],
+        "artifacts_removed": [],
+        "files_added": [],
+        "files_removed": [],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    }
+  ],
+  "red_evidence": {
+    "red": true,
+    "captured_at": "2026-07-11T22:13:58.001361+00:00",
+    "commands": [
+      {
+        "command": "pnpm exec vitest run src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts src/background/__tests__/BackgroundService.storage-recovery.test.ts",
+        "exit_code": 1,
+        "output_tail": " Test Files  1 failed | 1 passed (2)\n      Tests  5 passed (5)\n   Start at  06:13:45\n   Duration  656ms (transform 97ms, setup 120ms, collect 82ms, tests 10ms, environment 369ms, prepare 113ms)\n\n\n\u23af\u23af\u23af\u23af\u23af\u23af Failed Suites 1 \u23af\u23af\u23af\u23af\u23af\u23af\u23af\n\n FAIL  src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts [ src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts ]\nError: Failed to resolve import \"../githubAppIdentity\" from \"src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts\". Does the file exist?\n \u276f TransformPluginContext._formatError node_modules/.pnpm/vite@5.4.21_@types+node@22.19.18/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49258:41\n \u276f TransformPluginContext.error node_modules/.pnpm/vite@5.4.21_@types+node@22.19.18/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49253:16\n \u276f normalizeUrl node_modules/.pnpm/vite@5.4.21_@types+node@22.19.18/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64307:23\n \u276f async file:/home/atomrem/projects/codefrost-dev/bolt-to-github/node_modules/.pnpm/vite@5.4.21_@types+node@22.19.18/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64439:39\n \u276f TransformPluginContext.transform node_modules/.pnpm/vite@5.4.21_@types+node@22.19.18/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7\n \u276f PluginContainer.transform node_modules/.pnpm/vite@5.4.21_@types+node@22.19.18/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18\n \u276f loadAndTransform node_modules/.pnpm/vite@5.4.21_@types+node@22.19.18/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27\n\n\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af[1/1]\u23af\n",
+        "classification": "red"
+      },
+      {
+        "command": "pnpm lint",
+        "exit_code": 0,
+        "output_tail": "\n> bolt-to-github@1.3.20 lint /home/atomrem/projects/codefrost-dev/bolt-to-github\n> eslint \"src/**/*.{js,ts,svelte}\"\n",
+        "classification": "not_red"
+      },
+      {
+        "command": "pnpm check",
+        "exit_code": 1,
+        "output_tail": "Loading svelte-check in workspace: /home/atomrem/projects/codefrost-dev/bolt-to-github\nGetting Svelte diagnostics...\n\n/home/atomrem/projects/codefrost-dev/bolt-to-github/src/content/services/SupabaseAuthService.ts:7:47\nError: Cannot find module './githubAppIdentity' or its corresponding type declarations. \nimport { notifyBoltTabsAboutReload } from '../../lib/utils/reloadNotification';\nimport { stableGitHubAppInstallationId } from './githubAppIdentity';\n\n\n\n/home/atomrem/projects/codefrost-dev/bolt-to-github/src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts:47:47\nError: Cannot find module '../githubAppIdentity' or its corresponding type declarations. \nimport { SupabaseAuthService } from '../SupabaseAuthService';\nimport { stableGitHubAppInstallationId } from '../githubAppIdentity';\n\n\n\n====================================\nsvelte-check found 2 errors and 0 warnings in 2 files\n\u2009ELIFECYCLE\u2009 Command failed with exit code 1.",
+        "classification": "red"
+      }
+    ]
+  },
+  "agent": {
+    "model": "gpt-5",
+    "provider": "openai",
+    "client": "codex",
+    "skills": ["maid-planner"],
+    "source": "flags"
+  },
+  "_manifest_contract": {
+    "artifacts": [
+      "src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts:accepts only a stable positive server-provided installation ID",
+      "src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts:accepts only a stable positive server-provided installation ID:kind=test_function",
+      "src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts:does not synthesize a changing installation ID when the edge response omits it",
+      "src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts:does not synthesize a changing installation ID when the edge response omits it:kind=test_function",
+      "src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts:persists the exact positive installation ID supplied by the edge response",
+      "src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts:persists the exact positive installation ID supplied by the edge response:kind=test_function",
+      "src/content/services/githubAppIdentity.ts:function:stableGitHubAppInstallationId",
+      "src/content/services/githubAppIdentity.ts:function:stableGitHubAppInstallationId:arg=installationId:type=number | null | undefined:default=None",
+      "src/content/services/githubAppIdentity.ts:function:stableGitHubAppInstallationId:kind=function",
+      "src/content/services/githubAppIdentity.ts:function:stableGitHubAppInstallationId:returns=number | undefined"
+    ],
+    "files": {
+      "create": [
+        "src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts",
+        "src/content/services/githubAppIdentity.ts"
+      ],
+      "edit": [],
+      "read": ["docs/supabase-github-functions.md", "src/content/services/SupabaseAuthService.ts"]
+    },
+    "test_files": [
+      "src/background/__tests__/BackgroundService.storage-recovery.test.ts",
+      "src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts"
+    ],
+    "validate_commands": [
+      "pnpm exec vitest run src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts src/background/__tests__/BackgroundService.storage-recovery.test.ts",
+      "pnpm lint",
+      "pnpm check"
+    ]
+  }
+}

@@ -1,0 +1,121 @@
+{
+  "manifest_path": "manifests/04-post-push-pro-teaser.manifest.yaml",
+  "manifest_hash": "sha256:7130e6b8af484738b1ffa9737fcdd3f95d4f960b599edda8cb0a007fdcbcaa31",
+  "test_hashes": {
+    "src/content/__tests__/UIManager.test.ts": "sha256:0546baf7a6d3ce008adfb302559d3df0d3cf91fd64706ee072e50ceda52cb71c",
+    "src/content/services/__tests__/PostPushTeaserService.test.ts": "sha256:9fa67be9854a668e8cc5d090ef2d472df35c316be9755ae85966b6b54e80f11d"
+  },
+  "created_at": "2026-07-07T12:33:48.851887+00:00",
+  "revision": 4,
+  "revisions": [
+    {
+      "prior_manifest_hash": "sha256:76cf43d350d29422178c07c1adb93935acd9b57b367831311b9c9785088663b5",
+      "prior_test_hashes": {
+        "src/content/services/__tests__/PostPushTeaserService.test.ts": "sha256:137843d1991c22c701c49be1c1b0a49409162733d6f41bc174e91a78f4572663"
+      },
+      "revised_at": "2026-07-07T12:35:50.828677+00:00",
+      "reason": "Correct seven-day frequency boundary test fixture before implementation validation"
+    },
+    {
+      "prior_manifest_hash": "sha256:9e8a72595e4c443b8559447542301c331ecf6de5f073a563201a9ea2a85ae0d2",
+      "prior_test_hashes": {
+        "src/content/__tests__/UIManager.test.ts": "sha256:0546baf7a6d3ce008adfb302559d3df0d3cf91fd64706ee072e50ceda52cb71c",
+        "src/content/services/__tests__/PostPushTeaserService.test.ts": "sha256:ca10d5f325e2319a1b71afd3c2aaee43f5377235569a4109f4496f22d12527e9"
+      },
+      "revised_at": "2026-07-07T12:41:28.724575+00:00",
+      "reason": "Add notification-display failure red evidence from implementation review"
+    },
+    {
+      "prior_manifest_hash": "sha256:0737c27b4a0efe2cb0ee11dd1553f3f6fd7a0c1c5a919dcab842fc6bc18ce863",
+      "prior_test_hashes": {
+        "src/content/__tests__/UIManager.test.ts": "sha256:0546baf7a6d3ce008adfb302559d3df0d3cf91fd64706ee072e50ceda52cb71c",
+        "src/content/services/__tests__/PostPushTeaserService.test.ts": "sha256:9fa67be9854a668e8cc5d090ef2d472df35c316be9755ae85966b6b54e80f11d"
+      },
+      "revised_at": "2026-07-07T12:46:38.363097+00:00",
+      "reason": "Capture reviewed outcome evidence"
+    }
+  ],
+  "red_evidence": {
+    "red": true,
+    "captured_at": "2026-07-07T12:41:45.573429+00:00",
+    "commands": [
+      {
+        "command": "pnpm exec vitest run src/content/services/__tests__/PostPushTeaserService.test.ts src/content/__tests__/UIManager.test.ts",
+        "exit_code": 1,
+        "output_tail": " \u276f TransformPluginContext.transform node_modules/.pnpm/vite@5.4.21_@types+node@22.19.18/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:64366:7\n \u276f PluginContainer.transform node_modules/.pnpm/vite@5.4.21_@types+node@22.19.18/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:49099:18\n \u276f loadAndTransform node_modules/.pnpm/vite@5.4.21_@types+node@22.19.18/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:51978:27\n\n\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af[1/2]\u23af\n\n\u23af\u23af\u23af\u23af\u23af\u23af\u23af Failed Tests 1 \u23af\u23af\u23af\u23af\u23af\u23af\u23af\n\n FAIL  src/content/__tests__/UIManager.test.ts > UIManager > Upload Status API > shows the post-push pro teaser after a successful GitHub upload\nAssertionError: expected \"spy\" to be called once, but got 0 times\n \u276f src/content/__tests__/UIManager.test.ts:186:41\n    184|       await Promise.resolve();\n    185| \n    186|       expect(postPushTeaserConstructor).toHaveBeenCalledOnce();\n       |                                         ^\n    187|       expect(postPushTeaserMaybeShow).toHaveBeenCalledOnce();\n    188|     });\n\n\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af[2/2]\u23af\n",
+        "classification": "red"
+      },
+      {
+        "command": "pnpm lint",
+        "exit_code": 0,
+        "output_tail": "\n> bolt-to-github@1.3.20 lint /home/atomrem/projects/codefrost-dev/bolt-to-github\n> eslint \"src/**/*.{js,ts,svelte}\"\n",
+        "classification": "not_red"
+      },
+      {
+        "command": "pnpm check",
+        "exit_code": 1,
+        "output_tail": "    await expect(service.maybeShowTeaser()).resolves.toBe(false);\n\n\n/home/atomrem/projects/codefrost-dev/bolt-to-github/src/content/services/__tests__/PostPushTeaserService.test.ts:162:32\nError: 'options' is of type 'unknown'. \n    const options = vi.mocked(deps.showTeaser).mock.calls[0][0] as ShowTeaserOptions;\n    const upgradeUrl = new URL(options.upgradeUrl);\n\n\n\n/home/atomrem/projects/codefrost-dev/bolt-to-github/src/content/services/__tests__/PostPushTeaserService.test.ts:171:5\nError: 'options' is of type 'unknown'. \n\n    options.onUpgrade();\n\n\n\n====================================\nsvelte-check found 4 errors and 0 warnings in 1 file\n\u2009ELIFECYCLE\u2009 Command failed with exit code 1.",
+        "classification": "red"
+      }
+    ]
+  },
+  "_manifest_contract": {
+    "artifacts": [
+      "src/content/services/PostPushTeaserService.ts:attribute:PostPushTeaserDeps.isAuthenticated",
+      "src/content/services/PostPushTeaserService.ts:attribute:PostPushTeaserDeps.isAuthenticated:kind=attribute",
+      "src/content/services/PostPushTeaserService.ts:attribute:PostPushTeaserDeps.isAuthenticated:of=PostPushTeaserDeps",
+      "src/content/services/PostPushTeaserService.ts:attribute:PostPushTeaserDeps.isAuthenticated:type=() => Promise<boolean>",
+      "src/content/services/PostPushTeaserService.ts:attribute:PostPushTeaserDeps.isPremium",
+      "src/content/services/PostPushTeaserService.ts:attribute:PostPushTeaserDeps.isPremium:kind=attribute",
+      "src/content/services/PostPushTeaserService.ts:attribute:PostPushTeaserDeps.isPremium:of=PostPushTeaserDeps",
+      "src/content/services/PostPushTeaserService.ts:attribute:PostPushTeaserDeps.isPremium:type=() => Promise<boolean>",
+      "src/content/services/PostPushTeaserService.ts:attribute:PostPushTeaserDeps.now",
+      "src/content/services/PostPushTeaserService.ts:attribute:PostPushTeaserDeps.now:kind=attribute",
+      "src/content/services/PostPushTeaserService.ts:attribute:PostPushTeaserDeps.now:of=PostPushTeaserDeps",
+      "src/content/services/PostPushTeaserService.ts:attribute:PostPushTeaserDeps.now:type=() => number",
+      "src/content/services/PostPushTeaserService.ts:attribute:PostPushTeaserDeps.showTeaser",
+      "src/content/services/PostPushTeaserService.ts:attribute:PostPushTeaserDeps.showTeaser:kind=attribute",
+      "src/content/services/PostPushTeaserService.ts:attribute:PostPushTeaserDeps.showTeaser:of=PostPushTeaserDeps",
+      "src/content/services/PostPushTeaserService.ts:attribute:PostPushTeaserDeps.showTeaser:type=(options: { message: string; upgradeUrl: string; onUpgrade: () => void; onDismissForever: () => void }) => void",
+      "src/content/services/PostPushTeaserService.ts:attribute:PostPushTeaserDeps.storage",
+      "src/content/services/PostPushTeaserService.ts:attribute:PostPushTeaserDeps.storage:kind=attribute",
+      "src/content/services/PostPushTeaserService.ts:attribute:PostPushTeaserDeps.storage:of=PostPushTeaserDeps",
+      "src/content/services/PostPushTeaserService.ts:attribute:PostPushTeaserDeps.storage:type={ get: (keys: string[]) => Promise<Record<string, unknown>>; set: (items: Record<string, unknown>) => Promise<void> }",
+      "src/content/services/PostPushTeaserService.ts:attribute:PostPushTeaserDeps.trackUpgradeEvent",
+      "src/content/services/PostPushTeaserService.ts:attribute:PostPushTeaserDeps.trackUpgradeEvent:kind=attribute",
+      "src/content/services/PostPushTeaserService.ts:attribute:PostPushTeaserDeps.trackUpgradeEvent:of=PostPushTeaserDeps",
+      "src/content/services/PostPushTeaserService.ts:attribute:PostPushTeaserDeps.trackUpgradeEvent:type=(stage: 'modal_shown' | 'cta_clicked', metadata: { context: string; medium: 'content' }) => void",
+      "src/content/services/PostPushTeaserService.ts:class:PostPushTeaserService",
+      "src/content/services/PostPushTeaserService.ts:class:PostPushTeaserService:kind=class",
+      "src/content/services/PostPushTeaserService.ts:interface:PostPushTeaserDeps",
+      "src/content/services/PostPushTeaserService.ts:interface:PostPushTeaserDeps:kind=interface",
+      "src/content/services/PostPushTeaserService.ts:method:PostPushTeaserService.maybeShowTeaser",
+      "src/content/services/PostPushTeaserService.ts:method:PostPushTeaserService.maybeShowTeaser:kind=method",
+      "src/content/services/PostPushTeaserService.ts:method:PostPushTeaserService.maybeShowTeaser:of=PostPushTeaserService",
+      "src/content/services/PostPushTeaserService.ts:method:PostPushTeaserService.maybeShowTeaser:returns=Promise<boolean>",
+      "src/content/services/__tests__/PostPushTeaserService.test.ts:honors the dismissed-forever flag across calls",
+      "src/content/services/__tests__/PostPushTeaserService.test.ts:honors the dismissed-forever flag across calls:kind=test_function",
+      "src/content/services/__tests__/PostPushTeaserService.test.ts:never shows the teaser to a premium user",
+      "src/content/services/__tests__/PostPushTeaserService.test.ts:never shows the teaser to a premium user:kind=test_function",
+      "src/content/services/__tests__/PostPushTeaserService.test.ts:never shows the teaser to a signed-out user",
+      "src/content/services/__tests__/PostPushTeaserService.test.ts:never shows the teaser to a signed-out user:kind=test_function",
+      "src/content/services/__tests__/PostPushTeaserService.test.ts:returns false without throwing when premium lookup storage or notification display fails",
+      "src/content/services/__tests__/PostPushTeaserService.test.ts:returns false without throwing when premium lookup storage or notification display fails:kind=test_function",
+      "src/content/services/__tests__/PostPushTeaserService.test.ts:shows the teaser to a free user who has never seen it and persists the shown timestamp",
+      "src/content/services/__tests__/PostPushTeaserService.test.ts:shows the teaser to a free user who has never seen it and persists the shown timestamp:kind=test_function",
+      "src/content/services/__tests__/PostPushTeaserService.test.ts:suppresses the teaser within the 7-day frequency window and shows again after it",
+      "src/content/services/__tests__/PostPushTeaserService.test.ts:suppresses the teaser within the 7-day frequency window and shows again after it:kind=test_function",
+      "src/content/services/__tests__/PostPushTeaserService.test.ts:teaser upgrade URL carries post_push_teaser UTM attribution",
+      "src/content/services/__tests__/PostPushTeaserService.test.ts:teaser upgrade URL carries post_push_teaser UTM attribution:kind=test_function"
+    ],
+    "test_files": [
+      "src/content/__tests__/UIManager.test.ts",
+      "src/content/services/__tests__/PostPushTeaserService.test.ts"
+    ],
+    "validate_commands": [
+      "pnpm exec vitest run src/content/services/__tests__/PostPushTeaserService.test.ts src/content/__tests__/UIManager.test.ts",
+      "pnpm lint",
+      "pnpm check"
+    ]
+  }
+}

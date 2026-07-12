@@ -28,6 +28,11 @@ interface UserPreferenceDetails {
   newValue?: string | number | boolean;
 }
 
+const UPGRADE_FUNNEL_EVENT_TYPES: Record<'modal_shown' | 'cta_clicked', string> = {
+  modal_shown: 'upgrade_modal_shown',
+  cta_clicked: 'upgrade_cta_clicked',
+};
+
 /**
  * Send analytics event to background script (useful for content scripts and popup)
  */
@@ -40,6 +45,23 @@ export function sendAnalyticsToBackground(eventType: string, eventData: Analytic
     });
   } catch (error) {
     logger.debug('Failed to send analytics to background:', error);
+  }
+}
+
+export function trackUpgradeFunnelEvent(
+  stage: 'modal_shown' | 'cta_clicked',
+  metadata: { context: string; medium: 'popup' | 'content' }
+): void {
+  try {
+    sendAnalyticsToBackground('extension_event', {
+      eventType: UPGRADE_FUNNEL_EVENT_TYPES[stage],
+      details: {
+        context: metadata.context,
+        medium: metadata.medium,
+      },
+    });
+  } catch (error) {
+    logger.debug('Failed to send upgrade funnel analytics:', error);
   }
 }
 

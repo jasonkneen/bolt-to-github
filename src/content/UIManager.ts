@@ -15,8 +15,10 @@ import { NotificationManager } from './managers/NotificationManager';
 import { UploadStatusManager } from './managers/UploadStatusManager';
 import { WhatsNewManager } from './managers/WhatsNewManager';
 import { PremiumService } from './services/PremiumService';
+import { PostPushTeaserService } from './services/PostPushTeaserService';
 import { PushReminderService } from './services/PushReminderService';
 import { UIStateManager } from './services/UIStateManager';
+import { trackUpgradeFunnelEvent } from '$lib/utils/analytics';
 import type { NotificationOptions } from './types/UITypes';
 
 // Define the state structure for type safety
@@ -59,6 +61,7 @@ export class UIManager {
   // Add services
   private pushReminderService: PushReminderService;
   private premiumService: PremiumService;
+  private postPushTeaserService: PostPushTeaserService;
   private whatsNewManager: WhatsNewManager;
 
   // Store original history functions for cleanup
@@ -117,6 +120,43 @@ export class UIManager {
     // Initialize PremiumService
     logger.info('🔊 Initializing PremiumService');
     this.premiumService = new PremiumService();
+
+    this.postPushTeaserService = new PostPushTeaserService({
+      isPremium: () => this.premiumService.isPremium(),
+      isAuthenticated: async () => this.premiumService.getStatus().isAuthenticated,
+      showTeaser: ({ message, upgradeUrl, onUpgrade, onDismissForever }) => {
+        this.notificationManager.showNotification({
+          type: 'info',
+          message,
+          duration: 10000,
+          actions: [
+            {
+              text: 'See Changes',
+              variant: 'primary',
+              action: () => {
+                onUpgrade();
+                try {
+                  window.open(upgradeUrl, '_blank');
+                } catch {
+                  chrome.tabs.create({ url: upgradeUrl });
+                }
+              },
+            },
+            {
+              text: "Don't show again",
+              variant: 'secondary',
+              action: onDismissForever,
+            },
+          ],
+        });
+      },
+      storage: {
+        get: (keys: string[]) => chrome.storage.local.get(keys),
+        set: (items: Record<string, unknown>) => chrome.storage.local.set(items),
+      },
+      now: () => Date.now(),
+      trackUpgradeEvent: trackUpgradeFunnelEvent,
+    });
 
     // Initialize WhatsNewManager
     logger.info('🔊 Initializing WhatsNewManager');
@@ -512,6 +552,7 @@ export class UIManager {
       // Reset push reminder state when upload completes successfully
       if (status.status === 'success') {
         this.pushReminderService.resetReminderState();
+        void this.postPushTeaserService.maybeShowTeaser();
       }
     }
 

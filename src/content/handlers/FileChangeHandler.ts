@@ -4,6 +4,7 @@ import type { MessageHandler } from '../MessageHandler';
 import { FilePreviewService, type FileChange } from '../../services/FilePreviewService';
 import type { PremiumService } from '../services/PremiumService';
 import { createLogger } from '$lib/utils/logger';
+import { checkGitHubConnection } from '$lib/utils/githubConnection';
 
 const logger = createLogger('FileChangeHandler');
 
@@ -56,6 +57,24 @@ export class FileChangeHandler implements IFileChangeHandler {
    * Replaces the previous handleShowChangedFiles method from UIManager
    */
   public async showChangedFiles(): Promise<void> {
+    const connection = await checkGitHubConnection();
+    if (!connection.connected) {
+      if (this.uploadStatusManager) {
+        this.uploadStatusManager.updateStatus({
+          status: 'error',
+          message: connection.message,
+          progress: 0,
+        });
+      } else {
+        this.notificationManager.showNotification({
+          type: 'error',
+          message: connection.message,
+          duration: 10000,
+        });
+      }
+      return;
+    }
+
     /* Check premium status */
     if (!this.premiumService) {
       logger.warn('PremiumService not available for file changes check');
@@ -442,6 +461,11 @@ export class FileChangeHandler implements IFileChangeHandler {
    * Useful for programmatic access to file changes
    */
   public async getChangedFiles(forceRefresh: boolean = false): Promise<Map<string, FileChange>> {
+    const connection = await checkGitHubConnection();
+    if (!connection.connected) {
+      throw new Error(connection.message);
+    }
+
     if (forceRefresh) {
       await this.filePreviewService.loadProjectFiles(true);
     }

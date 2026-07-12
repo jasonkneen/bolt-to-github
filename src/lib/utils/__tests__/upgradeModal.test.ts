@@ -6,9 +6,22 @@ import {
   type UpgradeModalType,
   type UpgradeModalData,
 } from '../upgradeModal';
+import { trackUpgradeFunnelEvent } from '../analytics';
 import { UPGRADE_MODAL_CONFIGS, PREMIUM_FEATURES } from '../../constants/premiumFeatures';
 
+function setChromeRuntime(sendMessage?: ReturnType<typeof vi.fn>) {
+  Object.defineProperty(globalThis, 'chrome', {
+    value: sendMessage ? { runtime: { sendMessage } } : {},
+    writable: true,
+    configurable: true,
+  });
+}
+
 describe('upgradeModal', () => {
+  afterEach(() => {
+    Reflect.deleteProperty(globalThis, 'chrome');
+  });
+
   describe('getUpgradeModalConfig', () => {
     it('should return correct config for general upgrade type', () => {
       const result = getUpgradeModalConfig('general');
@@ -174,6 +187,28 @@ describe('upgradeModal', () => {
       expect(capturedEvent?.detail).toHaveProperty('reason');
       expect(capturedEvent?.detail).toHaveProperty('features');
     });
+
+    it('triggerUpgradeModal records a modal_shown event with the modal type context', () => {
+      const sendMessage = vi.fn();
+      setChromeRuntime(sendMessage);
+
+      triggerUpgradeModal('fileChanges');
+
+      expect(sendMessage).toHaveBeenCalledWith({
+        type: 'ANALYTICS_EVENT',
+        eventType: 'extension_event',
+        eventData: {
+          eventType: 'upgrade_modal_shown',
+          details: {
+            context: 'fileChanges',
+            medium: 'popup',
+          },
+        },
+      });
+      expect(window.dispatchEvent).toHaveBeenCalledTimes(1);
+      expect(capturedEvent?.type).toBe('showUpgrade');
+      expect(capturedEvent?.detail).toEqual(UPGRADE_MODAL_CONFIGS.fileChanges);
+    });
   });
 
   describe('setUpgradeModalState', () => {
@@ -267,6 +302,71 @@ describe('upgradeModal', () => {
 
       const calledFeatures = setState.mock.calls[0][2];
       expect(calledFeatures).toBe(PREMIUM_FEATURES);
+    });
+
+    it('setUpgradeModalState records a modal_shown event and still applies the config', () => {
+      const sendMessage = vi.fn();
+      const setState = vi.fn();
+      setChromeRuntime(sendMessage);
+
+      setUpgradeModalState('branchSelector', setState);
+
+      expect(sendMessage).toHaveBeenCalledWith({
+        type: 'ANALYTICS_EVENT',
+        eventType: 'extension_event',
+        eventData: {
+          eventType: 'upgrade_modal_shown',
+          details: {
+            context: 'branchSelector',
+            medium: 'popup',
+          },
+        },
+      });
+      expect(setState).toHaveBeenCalledWith(
+        UPGRADE_MODAL_CONFIGS.branchSelector.feature,
+        UPGRADE_MODAL_CONFIGS.branchSelector.reason,
+        UPGRADE_MODAL_CONFIGS.branchSelector.features
+      );
+    });
+
+    it('upgrade modal triggers still work when analytics messaging is unavailable', () => {
+      const setState = vi.fn();
+      const dispatchEventSpy = vi.spyOn(window, 'dispatchEvent').mockReturnValue(true);
+      setChromeRuntime();
+
+      expect(() => triggerUpgradeModal('issues')).not.toThrow();
+      expect(() => setUpgradeModalState('issues', setState)).not.toThrow();
+
+      expect(dispatchEventSpy).toHaveBeenCalledTimes(1);
+      expect(setState).toHaveBeenCalledWith(
+        UPGRADE_MODAL_CONFIGS.issues.feature,
+        UPGRADE_MODAL_CONFIGS.issues.reason,
+        UPGRADE_MODAL_CONFIGS.issues.features
+      );
+    });
+  });
+
+  describe('trackUpgradeFunnelEvent', () => {
+    it('trackUpgradeFunnelEvent sends upgrade funnel events through the extension_event envelope', () => {
+      const sendMessage = vi.fn();
+      setChromeRuntime(sendMessage);
+
+      trackUpgradeFunnelEvent('cta_clicked', {
+        context: 'issues',
+        medium: 'popup',
+      });
+
+      expect(sendMessage).toHaveBeenCalledWith({
+        type: 'ANALYTICS_EVENT',
+        eventType: 'extension_event',
+        eventData: {
+          eventType: 'upgrade_cta_clicked',
+          details: {
+            context: 'issues',
+            medium: 'popup',
+          },
+        },
+      });
     });
   });
 

@@ -8,6 +8,7 @@ import type { IAuthenticationStrategy } from './interfaces/IAuthenticationStrate
 import type { AuthenticationConfig, AuthenticationType } from './types/authentication';
 // Removed GitHubService import to eliminate circular dependency
 import { AuthenticationStrategyFactory } from './AuthenticationStrategyFactory';
+import { resolveStoredGitHubAuthenticationMethod } from './githubAppRequestPolicy';
 import { createLogger } from '$lib/utils/logger';
 import type {
   GitHubBranch,
@@ -24,6 +25,7 @@ const logger = createLogger('UnifiedGitHubService');
 
 export class UnifiedGitHubService {
   private strategy: IAuthenticationStrategy | null = null;
+  private initializationPromise: Promise<void> | null = null;
   // Removed fallbackGitHubService to eliminate circular dependency
   private factory: AuthenticationStrategyFactory;
 
@@ -39,7 +41,7 @@ export class UnifiedGitHubService {
       this.strategy = this.factory.createPATStrategy(authConfig);
     } else {
       // New configuration object - initialize asynchronously
-      this.initializeStrategy(authConfig).catch((error) => {
+      this.initializationPromise = this.initializeStrategy(authConfig).catch((error) => {
         logger.error('Failed to initialize authentication strategy:', error);
         // Set strategy to null so getStrategy() will try to auto-detect
         this.strategy = null;
@@ -54,6 +56,15 @@ export class UnifiedGitHubService {
     if (config.type === 'pat' && config.token) {
       this.strategy = this.factory.createPATStrategy(config.token);
     } else if (config.type === 'github_app') {
+      const storedMethod = await this.getConfiguredAuthMethod();
+      if (storedMethod !== 'github_app') {
+        logger.warn(
+          '⚠️ Explicit GitHub App configuration is missing a stable installation; using PAT'
+        );
+        this.strategy = this.factory.createStrategy('pat');
+        return;
+      }
+
       // Get user token from SupabaseAuthService for GitHub App authentication
       const userToken = await this.getUserToken();
 
@@ -63,7 +74,7 @@ export class UnifiedGitHubService {
         logger.warn('⚠️ No user token found - GitHub App authentication may fail');
       }
 
-      this.strategy = this.factory.createGitHubAppStrategy(userToken);
+      this.strategy = await this.factory.createGitHubAppStrategy(userToken);
     } else {
       throw new Error('Invalid authentication configuration');
     }
@@ -86,6 +97,11 @@ export class UnifiedGitHubService {
    * Get the current authentication strategy
    */
   private async getStrategy(): Promise<IAuthenticationStrategy> {
+    if (!this.strategy && this.initializationPromise) {
+      await this.initializationPromise;
+      this.initializationPromise = null;
+    }
+
     if (!this.strategy) {
       // Auto-detect current strategy if not explicitly set
       const authMethod = await this.getConfiguredAuthMethod();
@@ -95,7 +111,10 @@ export class UnifiedGitHubService {
         const userToken = await this.getUserToken();
         this.strategy = this.factory.createGitHubAppStrategy(userToken);
       } else {
-        this.strategy = await this.factory.getCurrentStrategy();
+        // Keep the resolved PAT decision authoritative. Delegating back to the
+        // factory's legacy default could select GitHub App again when neither
+        // strategy is configured and recreate the NO_GITHUB_APP request path.
+        this.strategy = this.factory.createStrategy('pat');
       }
     }
     return this.strategy;
@@ -107,20 +126,16 @@ export class UnifiedGitHubService {
    */
   private async getConfiguredAuthMethod(): Promise<'pat' | 'github_app'> {
     try {
-      // First, check if GitHub App authentication is available and valid
-      const userToken = await this.getUserToken();
-      if (userToken) {
-        logger.info('🔍 GitHub App authentication detected, prioritizing over PAT');
-        // Update stored preference to reflect reality
-        await chrome.storage.local.set({ authenticationMethod: 'github_app' });
-        return 'github_app';
-      }
+      const storage = await chrome.storage.local.get([
+        'authenticationMethod',
+        'githubAppInstallationId',
+      ]);
+      const storedMethod = resolveStoredGitHubAuthenticationMethod(
+        storage.authenticationMethod,
+        storage.githubAppInstallationId
+      );
 
-      // Fallback to stored preference or PAT
-      const result = await chrome.storage.local.get(['authenticationMethod']);
-      const storedMethod = result.authenticationMethod || 'pat';
-
-      logger.info(`🔍 No GitHub App authentication found, using ${storedMethod}`);
+      logger.info(`🔍 Using stored ${storedMethod} authentication configuration`);
       return storedMethod;
     } catch (error) {
       logger.warn('Failed to get authentication method:', error);

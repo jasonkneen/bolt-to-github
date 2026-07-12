@@ -162,6 +162,11 @@ export class MockChromeStorage {
 
   loadAuthenticationMethod(method: 'pat' | 'github_app' = 'pat'): void {
     this.localStorage.set('authenticationMethod', method);
+    if (method === 'github_app') {
+      this.localStorage.set('githubAppInstallationId', 12345678);
+    } else {
+      this.localStorage.delete('githubAppInstallationId');
+    }
   }
 
   loadSupabaseToken(token?: string): void {

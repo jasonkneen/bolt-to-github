@@ -15,6 +15,8 @@ import type {
 } from '../lib/types';
 import { createLogger, getLogStorage } from '../lib/utils/logger';
 import { extractProjectIdFromUrl } from '../lib/utils/projectId';
+import { checkGitHubConnection } from '../lib/utils/githubConnection';
+import { notifyBoltTabsAboutReload } from '../lib/utils/reloadNotification';
 import { analytics } from '../services/AnalyticsService';
 import { resolveExtensionPageTitle } from '../lib/utils/analytics';
 import { BoltProjectSyncService } from '../services/BoltProjectSyncService';
@@ -1036,12 +1038,20 @@ export class BackgroundService {
         const errorMessage =
           decodeError instanceof Error ? decodeError.message : String(decodeError);
         const isGitHubError = errorMessage.includes('GitHub API Error');
+        const isAuthenticationError =
+          /authentication|re-authenticate|reconnect your GitHub account|NO_GITHUB_APP|NO_ACCESS_TOKEN|TOKEN_EXPIRED_NO_REFRESH|TOKEN_RENEWAL_FAILED/i.test(
+            errorMessage
+          );
 
         // Track upload failure
         await analytics.trackGitHubOperation('upload_failed', false, {
           ...uploadMetadata,
           duration,
-          error_type: isGitHubError ? 'github_api' : 'processing',
+          error_type: isAuthenticationError
+            ? 'authentication'
+            : isGitHubError
+              ? 'github_api'
+              : 'processing',
           error_message: errorMessage,
         });
 
@@ -1062,7 +1072,9 @@ export class BackgroundService {
           'push_failed'
         );
 
-        if (isGitHubError) {
+        if (isAuthenticationError) {
+          throw decodeError instanceof Error ? decodeError : new Error(errorMessage);
+        } else if (isGitHubError) {
           // Extract the original GitHub error message if available
           const originalMessage =
             (decodeError as Error & { originalMessage?: string }).originalMessage ||
@@ -1259,6 +1271,14 @@ export class BackgroundService {
     logger.info('🔄 Handling Push to GitHub action');
 
     try {
+      const connection = await checkGitHubConnection({
+        getAuthState: async () => this.supabaseAuthService.getAuthState(),
+        syncGitHubApp: () => this.supabaseAuthService.syncGitHubApp(),
+      });
+      if (!connection.connected) {
+        return { success: false, error: connection.message };
+      }
+
       // Find the active tab with bolt.new URL
       const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
       const boltTab = tabs.find((tab) => tab.url?.includes('bolt.new'));
@@ -1810,29 +1830,9 @@ export class BackgroundService {
         }),
       });
 
-      // Send notification to all bolt.new tabs about the reload (best effort)
-      try {
-        const tabs = await chrome.tabs.query({ url: 'https://bolt.new/*' });
-        for (const tab of tabs) {
-          if (tab.id) {
-            chrome.tabs
-              .sendMessage(tab.id, {
-                type: 'SHOW_EXTENSION_RELOAD_NOTIFICATION',
-                data: {
-                  message:
-                    'Extension needs to restart to fix authentication. Restarting in 3 seconds...',
-                  countdown: 3,
-                },
-              })
-              .catch(() => {
-                // Tab might not have content script injected - ignore
-              });
-          }
-        }
-      } catch (notificationError) {
+      void notifyBoltTabsAboutReload().catch((notificationError) => {
         logger.warn('Failed to send reload notification to tabs:', notificationError);
-        // Continue with reload even if notification fails
-      }
+      });
 
       // Schedule extension reload using chrome.alarms (reliable in Manifest V3 service workers)
       // setTimeout is unreliable as service workers can go inactive

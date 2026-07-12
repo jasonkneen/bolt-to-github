@@ -1,0 +1,308 @@
+schema: '2'
+goal: 'Prevent concurrent GitHub App token checks from stampeding get-github-token'
+type: fix
+created: '2026-07-12T04:30:00Z'
+description: |
+  Production deployment 21 recorded at least 99 authenticated GET requests to
+  get-github-token for one user within roughly 600ms. Every request returned
+  NO_GITHUB_APP, and Supabase booted many Edge Runtime isolates before retiring
+  them normally. The response did not create a sequential retry loop; callers
+  entered the function concurrently.
+
+  Collapse concurrent GitHub App token acquisition into one shared in-flight
+  operation at GitHubAppService, the lowest boundary used by direct token
+  retrieval, validation, and strategy refresh paths. Choose GitHub App
+  authentication only from durable GitHub App configuration, never from the
+  mere presence of a Supabase session token. Apply the same policy to explicit
+  AuthenticationConfig construction and storage auto-detection.
+  Explicit PAT selection remains authoritative. A stored github_app method is
+  accepted only with a finite positive installation ID.
+
+  This hotfix intentionally does not add persistent negative caching for 404.
+  Negative caching needs a complete invalidation contract across OAuth,
+  reconnect, account switching, and MV3 restart; single-flight behavior and
+  correct method selection remove the observed stampede without risking stale
+  "not connected" state after a successful connection.
+
+  Coalescing is scoped to the current Supabase bearer identity. Switching
+  accounts starts a separate flight and invalidates strategy token caches;
+  completion of an older account's request must never overwrite the newer
+  account's cached GitHub token.
+temptations:
+  - risk: 'Do not treat any Supabase access token as proof that GitHub App authentication is configured.'
+    instead: 'Resolve GitHub authentication from the stored method plus a finite positive githubAppInstallationId, preserving explicit PAT selection.'
+  - risk: 'Do not debounce callers after they have already started independent network requests.'
+    instead: 'Share one in-flight promise so concurrent callers observe the same success or failure and the coordinator resets only after settlement.'
+  - risk: 'Do not permanently cache NO_GITHUB_APP as a shortcut for this release.'
+    instead: 'Leave 404 uncached until OAuth, reconnect, logout, account-switch, and service-worker invalidation behavior has its own contract.'
+  - risk: 'Do not fix only the ProjectsList caller; other concurrent consumers must receive the same protection.'
+    instead: 'Coalesce at GitHubAppService.getAccessToken, the shared Edge Function acquisition boundary used by strategy token, validation, and refresh paths.'
+  - risk: 'Do not share an in-flight GitHub token request across Supabase account identities.'
+    instead: 'Key/reset the service flight by bearer identity and invalidate strategy caches on identity change so older completions cannot overwrite newer state.'
+files:
+  create:
+    - path: src/services/githubAppRequestPolicy.ts
+      artifacts:
+        - kind: function
+          name: resolveStoredGitHubAuthenticationMethod
+          args:
+            - name: storedAuthenticationMethod
+              type: unknown
+            - name: githubAppInstallationId
+              type: unknown
+          returns: "'pat' | 'github_app'"
+          description: |
+            Returns github_app only when storage explicitly selects it and the
+            installation ID is a finite positive safe integer; otherwise PAT.
+        - kind: class
+          name: SingleFlight
+          description: Shares one in-flight asynchronous operation among concurrent callers and resets after settlement.
+        - kind: method
+          name: run
+          of: SingleFlight
+          args:
+            - name: operation
+              type: '() => Promise<T>'
+          returns: 'Promise<T>'
+          description: Returns the current in-flight operation or starts exactly one new operation.
+    - path: src/services/__tests__/githubAppRequestPolicy.test.ts
+      artifacts:
+        - kind: test_function
+          name: selects GitHub App only for explicit stable installation configuration
+        - kind: test_function
+          name: preserves explicit PAT selection even when an installation ID exists
+        - kind: test_function
+          name: rejects missing or invalid GitHub App configuration
+        - kind: test_function
+          name: shares one operation across one hundred concurrent callers
+        - kind: test_function
+          name: resets after a shared rejection so a later request can retry
+    - path: src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts
+      artifacts:
+        - kind: test_function
+          name: invalidates a cached GitHub token when the Supabase identity changes
+        - kind: test_function
+          name: prevents an older in-flight identity from overwriting the newer token cache
+    - path: src/services/__tests__/GitHubAppService.stampede.test.ts
+      artifacts:
+        - kind: test_function
+          name: turns one hundred direct service token requests into one Edge Function request
+        - kind: test_function
+          name: coalesces token retrieval shared by direct and validation callers
+        - kind: test_function
+          name: keeps in-flight token requests isolated across Supabase identity changes
+    - path: src/services/__tests__/UnifiedGitHubService.auth-selection.test.ts
+      artifacts:
+        - kind: test_function
+          name: keeps PAT selected when a Supabase session exists without a GitHub App installation
+        - kind: test_function
+          name: keeps explicit PAT selected when a GitHub App installation also exists
+        - kind: test_function
+          name: selects GitHub App only when method and installation configuration agree
+        - kind: test_function
+          name: rejects explicit GitHub App initialization without a stable installation
+  read:
+    - src/services/GitHubAppAuthenticationStrategy.ts
+    - src/services/GitHubAppService.ts
+    - src/services/UnifiedGitHubService.ts
+    - src/services/types/authentication.ts
+    - src/services/__tests__/GitHubAppAuthenticationStrategy.test.ts
+    - src/services/__tests__/UnifiedGitHubService.comprehensive.test.ts
+    - src/services/__tests__/test-fixtures/unified/mocks/MockChromeStorage.ts
+    - src/content/services/githubAppIdentity.ts
+validate:
+  - pnpm exec vitest run src/services/__tests__/githubAppRequestPolicy.test.ts src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts src/services/__tests__/GitHubAppService.stampede.test.ts src/services/__tests__/UnifiedGitHubService.auth-selection.test.ts src/services/__tests__/GitHubAppAuthenticationStrategy.test.ts src/services/__tests__/GitHubAppService.critical-business-logic.test.ts src/services/__tests__/UnifiedGitHubService.comprehensive.test.ts
+  - pnpm lint
+  - pnpm check
+metadata:
+  tags:
+    - auth
+    - github-app
+    - edge-functions
+    - concurrency
+    - mv3
+  priority: critical
+  status: implementation
+  promotion_ready: true
+  notes: |
+    Red phase confirmed on 2026-07-12. Current GitHubAppAuthenticationStrategy
+    issued 100 upstream requests for 100 concurrent callers and 20 requests for
+    20 concurrent callers. The request-policy spec also failed because the
+    planned public policy module does not yet exist. Adversarial MAID plan
+    review approved the implementation-sized scope, exact public artifacts,
+    failure recovery coverage, real service-boundary stampede test, and public
+    authentication-selection behavior. Revision 2 is pending approval after
+    the first implementation review found explicit-config and direct-service
+    acquisition paths outside revision 1 coverage. Revision-2 red phase is
+    confirmed: 100 direct service callers produced 100 Edge Function requests,
+    mixed direct/validation callers produced 21, and explicit GitHub App
+    initialization without an installation ID still selected github_app.
+    Revision 3 aligns the shared successful-GitHub-App test fixture with the
+    durable configuration contract by including a stable installation ID and
+    locks the comprehensive compatibility suite that exposed the stale fixture.
+    Revision 4 scopes coalescing and cache writes to the Supabase bearer
+    identity after independent review identified a cross-account token-sharing
+    risk in the cached strategy singleton.
+outcome:
+  status: completed
+  summary: |
+    GitHub App token acquisition now collapses concurrent callers at the
+    GitHubAppService Edge Function boundary. One hundred concurrent direct
+    callers produce one get-github-token request, and validation callers share
+    that same flight. Authentication selection no longer treats a Supabase
+    session as GitHub App configuration: both explicit initialization and
+    auto-detection require the stored github_app method plus a finite positive
+    safe-integer installation ID, while explicit PAT remains authoritative.
+
+    Coalescing and token caching are scoped to the Supabase bearer identity.
+    Account changes start a separate service flight, invalidate the strategy
+    cache, and use an auth-generation guard so an older account's completion or
+    failure cannot overwrite the newer account's cached GitHub token.
+  rationale: |
+    Production deployment 21 showed at least 99 requests for one user starting
+    within roughly 600ms. This was concurrent fan-out rather than a sequential
+    404 retry loop. Moving single-flight protection to GitHubAppService covers
+    direct retrieval, validation, and refresh consumers without persistent 404
+    caching. Durable installation configuration prevents authenticated users
+    without a GitHub App record from entering the token endpoint, while
+    identity-scoped flights avoid cross-account token disclosure.
+  lessons:
+    - lesson_type: shared-acquisition-boundary
+      summary: |
+        Request coalescing belongs at the lowest shared network-acquisition
+        boundary. Strategy-only protection can leave direct validation and
+        refresh paths able to stampede the same Edge Function.
+      tags:
+        - concurrency
+        - edge-functions
+        - github-app
+      paths:
+        - src/services/GitHubAppService.ts
+        - src/services/githubAppRequestPolicy.ts
+    - lesson_type: identity-scoped-single-flight
+      summary: |
+        Authentication single-flight and token caches must be scoped to bearer
+        identity. Account changes must start a new flight, invalidate cached
+        tokens, and prevent older completions from overwriting newer state.
+      tags:
+        - auth
+        - privacy
+        - concurrency
+      paths:
+        - src/services/GitHubAppAuthenticationStrategy.ts
+        - src/services/GitHubAppService.ts
+    - lesson_type: durable-auth-selection
+      summary: |
+        A Supabase session proves application authentication, not GitHub App
+        installation. GitHub App strategy selection requires an explicit method
+        plus a stable server-provided installation identity.
+      tags:
+        - auth
+        - storage
+        - github-app
+      paths:
+        - src/services/UnifiedGitHubService.ts
+  review_notes:
+    - source: independent reviewer auth_stampede_review
+      severity: findings-fixed
+      summary: |
+        Revision 1 review found explicit GitHub App initialization bypassing
+        durable configuration, direct validation/refresh acquisition outside
+        strategy-level coalescing, and revision-1 plan-lock hash drift. Revisions
+        2 and 3 added service-boundary coverage, explicit-config coverage,
+        comprehensive compatibility coverage, and clean lock revisions.
+    - source: independent reviewer auth_stampede_review_round2
+      severity: finding-fixed
+      summary: |
+        Revision 3 review found a cross-account token-sharing risk in the cached
+        strategy singleton. Revision 4 scoped service flights and strategy cache
+        writes to bearer identity and added overlapping account-switch tests.
+    - source: independent reviewer auth_stampede_review_round3
+      severity: ready
+      summary: |
+        Final fresh review found no P0, P1, or P2 findings and returned Ready to
+        merge. It confirmed identity-isolated flights, generation-guarded cache
+        writes, durable auth selection, declared scope, clean revision-5 hashes,
+        and no remaining plan-revision stop signal.
+  validation:
+    - command:
+        - pnpm
+        - exec
+        - vitest
+        - run
+        - src/services/__tests__/GitHubAppService.stampede.test.ts
+        - src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts
+        - src/services/__tests__/UnifiedGitHubService.auth-selection.test.ts
+      status: failed-red-phase
+      summary: |
+        Before implementation and approved revisions, concurrent service calls
+        produced 100 and 21 Edge Function requests, invalid explicit GitHub App
+        configuration remained selected, and account-switch callers shared one
+        request/cache across identities.
+    - command:
+        - pnpm
+        - exec
+        - vitest
+        - run
+        - src/services/__tests__/githubAppRequestPolicy.test.ts
+        - src/services/__tests__/GitHubAppAuthenticationStrategy.stampede.test.ts
+        - src/services/__tests__/GitHubAppService.stampede.test.ts
+        - src/services/__tests__/UnifiedGitHubService.auth-selection.test.ts
+        - src/services/__tests__/GitHubAppAuthenticationStrategy.test.ts
+        - src/services/__tests__/GitHubAppService.critical-business-logic.test.ts
+        - src/services/__tests__/UnifiedGitHubService.comprehensive.test.ts
+      status: passed
+      summary: Focused contract and compatibility validation passed 139 tests across 7 files.
+    - command:
+        - pnpm
+        - test:ci
+      status: passed
+      summary: Full Vitest CI passed 192 test files and 4327 tests.
+    - command:
+        - pnpm
+        - lint
+      status: passed
+      summary: ESLint completed successfully.
+    - command:
+        - pnpm
+        - check
+      status: passed
+      summary: Svelte and TypeScript checks found 0 errors and 0 warnings.
+    - command:
+        - pnpm
+        - build
+      status: passed
+      summary: Production build completed with existing chunking warnings only.
+    - command:
+        - ./scripts/maid
+        - test
+        - --manifest-dir
+        - manifests
+      status: passed
+      summary: Full active MAID test execution passed all 5 batched commands.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - behavioral
+      status: passed
+      summary: Active behavioral validation passed 27 manifests with 1 superseded manifest skipped.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - implementation
+      status: passed
+      summary: Active implementation validation passed 27 manifests with 1 superseded manifest skipped.
+    - command:
+        - ./scripts/maid
+        - coherence
+        - --manifest-dir
+        - manifests
+      status: passed
+      summary: Coherence completed with 0 errors; advisory pre-existing and naming warnings remain.
+  completed_at: '2026-07-12T12:57:08+08:00'

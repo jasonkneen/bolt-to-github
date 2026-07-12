@@ -3,6 +3,8 @@
 import { SUPABASE_CONFIG } from '../../lib/constants/supabase';
 import { githubSettingsActions } from '../../lib/stores/githubSettings';
 import { createLogger } from '../../lib/utils/logger';
+import { notifyBoltTabsAboutReload } from '../../lib/utils/reloadNotification';
+import { stableGitHubAppInstallationId } from './githubAppIdentity';
 
 const logger = createLogger('SupabaseAuthService');
 
@@ -1939,77 +1941,99 @@ export class SupabaseAuthService {
   /**
    * Check and sync GitHub App installation from web app
    */
-  private async checkGitHubAppInstallation(token: string): Promise<void> {
-    try {
-      logger.info('🔍 Checking for GitHub App installation...');
+  private async checkGitHubAppInstallation(token: string): Promise<boolean> {
+    logger.info('🔍 Checking for GitHub App installation...');
 
-      // Call the get-github-token endpoint to see if user has GitHub App connected
-      const response = await fetch(`${this.supabaseUrl}/functions/v1/get-github-token`, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+    // Call the get-github-token endpoint to see if user has GitHub App connected
+    const response = await fetch(`${this.supabaseUrl}/functions/v1/get-github-token`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
 
-      if (response.ok) {
-        const data = await response.json();
+    const data = (await response.json()) as Record<string, unknown>;
 
-        if (data.type === 'github_app' && data.access_token) {
-          logger.info('✅ GitHub App installation found, syncing to extension...');
+    if (response.ok) {
+      if (data.type === 'github_app' && data.access_token) {
+        logger.info('✅ GitHub App installation found, syncing to extension...');
 
-          // Store GitHub App data in extension storage
-          await chrome.storage.local.set({
-            githubAppInstallationId: data.installation_id || Date.now(), // Fallback ID
-            githubAppUsername: data.github_username,
-            githubAppAccessToken: data.access_token,
-            githubAppExpiresAt: data.expires_at,
-            githubAppScopes: data.scopes,
-            authenticationMethod: 'github_app',
+        // Store only stable GitHub App identity data. A synthetic changing ID can
+        // turn storage-driven auth recovery into an Edge Function invocation loop.
+        const installationId = stableGitHubAppInstallationId(
+          typeof data.installation_id === 'number' ? data.installation_id : undefined
+        );
+        if (installationId === undefined) {
+          const contractError =
+            'get-github-token contract violation: missing or invalid installation_id; refusing to synthesize GitHub App identity';
+          logger.error(contractError);
+          throw new Error(contractError);
+        }
+
+        const githubAppData: Record<string, unknown> = {
+          githubAppInstallationId: installationId,
+          githubAppUsername: data.github_username,
+          githubAppAccessToken: data.access_token,
+          githubAppExpiresAt: data.expires_at,
+          githubAppScopes: data.scopes,
+          authenticationMethod: 'github_app',
+        };
+
+        await chrome.storage.local.set(githubAppData);
+
+        // Trigger settings store sync to auto-populate repoOwner
+        try {
+          await githubSettingsActions.syncGitHubAppFromStorage();
+          logger.info('✅ GitHub settings store synced with GitHub App data');
+        } catch (syncError) {
+          logger.warn('Could not sync GitHub settings store:', syncError);
+        }
+
+        // Also get user profile data for avatar
+        try {
+          const userResponse = await fetch('https://api.github.com/user', {
+            headers: {
+              Authorization: `Bearer ${data.access_token}`,
+              Accept: 'application/vnd.github.v3+json',
+            },
           });
 
-          // Trigger settings store sync to auto-populate repoOwner
-          try {
-            await githubSettingsActions.syncGitHubAppFromStorage();
-            logger.info('✅ GitHub settings store synced with GitHub App data');
-          } catch (syncError) {
-            logger.warn('Could not sync GitHub settings store:', syncError);
-          }
-
-          // Also get user profile data for avatar
-          try {
-            const userResponse = await fetch('https://api.github.com/user', {
-              headers: {
-                Authorization: `Bearer ${data.access_token}`,
-                Accept: 'application/vnd.github.v3+json',
-              },
+          if (userResponse.ok) {
+            const userData = await userResponse.json();
+            await chrome.storage.local.set({
+              githubAppAvatarUrl: userData.avatar_url,
+              githubAppUserId: userData.id,
             });
-
-            if (userResponse.ok) {
-              const userData = await userResponse.json();
-              await chrome.storage.local.set({
-                githubAppAvatarUrl: userData.avatar_url,
-                githubAppUserId: userData.id,
-              });
-            }
-          } catch (userError) {
-            logger.warn('Could not fetch GitHub user data:', userError);
           }
-
-          logger.info('🎉 GitHub App installation synced successfully!');
-
-          // Notify content scripts about the new authentication method
-          await this.notifyGitHubAppSync();
+        } catch (userError) {
+          logger.warn('Could not fetch GitHub user data:', userError);
         }
-      } else if (response.status === 404) {
-        // User doesn't have GitHub App connected yet
-        logger.info('ℹ️ No GitHub App installation found for user');
-      } else {
-        logger.warn('Failed to check GitHub App status:', response.status);
+
+        logger.info('🎉 GitHub App installation synced successfully!');
+
+        // Notify content scripts about the new authentication method
+        await this.notifyGitHubAppSync();
+        return true;
       }
-    } catch (error) {
-      logger.warn('Error checking GitHub App installation:', error);
+
+      throw new Error('GitHub App verification returned an invalid response');
     }
+
+    const errorCode = typeof data.code === 'string' ? data.code : undefined;
+    const isAuthoritativelyDisconnected =
+      response.status === 404 ||
+      errorCode === 'NO_GITHUB_APP' ||
+      errorCode === 'GITHUB_APP_INSTALLATION_MISSING';
+
+    if (isAuthoritativelyDisconnected) {
+      logger.info('ℹ️ No GitHub App installation found for current user');
+      await this.clearGitHubAppsCache();
+      return false;
+    }
+
+    const errorMessage = typeof data.error === 'string' ? data.error : undefined;
+    throw new Error(errorMessage || `Failed to check GitHub App status (${response.status})`);
   }
 
   /**
@@ -2040,21 +2064,15 @@ export class SupabaseAuthService {
    * Manually trigger GitHub App sync check (can be called from popup/settings)
    */
   public async syncGitHubApp(): Promise<boolean> {
-    try {
-      logger.info('🔄 Manually triggered GitHub App sync...');
+    logger.info('🔄 Manually triggered GitHub App sync...');
 
-      const token = await this.getAuthToken();
-      if (!token) {
-        logger.warn('❌ No authentication token available for GitHub App sync');
-        return false;
-      }
-
-      await this.checkGitHubAppInstallation(token);
-      return true;
-    } catch (error) {
-      logger.error('❌ Error during manual GitHub App sync:', error);
+    const token = await this.getAuthToken();
+    if (!token) {
+      logger.warn('❌ No authentication token available for GitHub App sync');
       return false;
     }
+
+    return this.checkGitHubAppInstallation(token);
   }
 
   /**
@@ -2190,6 +2208,10 @@ export class SupabaseAuthService {
 
       if (typeof chrome.alarms?.create === 'function') {
         try {
+          void notifyBoltTabsAboutReload().catch((notificationError) => {
+            logger.warn('Failed to send reload notification to tabs:', notificationError);
+          });
+
           const RELOAD_DELAY_MINUTES = 3 / 60; // 3 seconds = 0.05 minutes
           await chrome.alarms.create('self-heal-reload', {
             delayInMinutes: RELOAD_DELAY_MINUTES,

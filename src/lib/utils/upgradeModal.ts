@@ -1,4 +1,5 @@
 import { UPGRADE_MODAL_CONFIGS, type PremiumFeature } from '../constants/premiumFeatures';
+import { trackUpgradeFunnelEvent } from './analytics';
 import { createLogger } from './logger';
 
 const logger = createLogger('UpgradeModal');
@@ -33,11 +34,23 @@ export function getUpgradeModalConfig(type: UpgradeModalType): UpgradeModalData 
   return config;
 }
 
+function trackModalShown(type: UpgradeModalType): void {
+  try {
+    trackUpgradeFunnelEvent('modal_shown', {
+      context: type,
+      medium: 'popup',
+    });
+  } catch (error) {
+    logger.debug('Failed to track upgrade modal impression:', error);
+  }
+}
+
 /**
  * Trigger upgrade modal with custom event (for components that use CustomEvent)
  */
 export function triggerUpgradeModal(type: UpgradeModalType): void {
   const config = getUpgradeModalConfig(type);
+  trackModalShown(type);
 
   const event = new CustomEvent('showUpgrade', {
     detail: config,
@@ -56,5 +69,6 @@ export function setUpgradeModalState(
   logger.debug('setUpgradeModalState called with type:', type);
   const config = getUpgradeModalConfig(type);
   logger.debug('Retrieved config:', config);
+  trackModalShown(type);
   setState(config.feature, config.reason, config.features);
 }

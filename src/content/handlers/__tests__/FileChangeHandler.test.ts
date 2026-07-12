@@ -7,6 +7,12 @@ import type { INotificationManager, IUploadStatusManager } from '../../types/Man
 import type { MessageHandler } from '../../MessageHandler';
 import type { PremiumService } from '../../services/PremiumService';
 
+const mockCheckGitHubConnection = vi.hoisted(() => vi.fn());
+
+vi.mock('../../../lib/utils/githubConnection', () => ({
+  checkGitHubConnection: mockCheckGitHubConnection,
+}));
+
 const mockChromeStorage = {
   sync: {
     get: vi.fn(),
@@ -53,6 +59,10 @@ describe('FileChangeHandler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    mockCheckGitHubConnection.mockResolvedValue({
+      connected: true,
+      message: 'GitHub is connected.',
+    });
 
     Object.defineProperty(window, 'location', {
       value: {
@@ -191,6 +201,27 @@ describe('FileChangeHandler', () => {
           message: expect.stringContaining('changed files'),
         })
       );
+    });
+
+    it('disconnected file changes stops before premium usage and project loading', async () => {
+      mockCheckGitHubConnection.mockResolvedValue({
+        connected: false,
+        reason: 'not_connected',
+        message: 'Connect GitHub at bolt2github.com before using GitHub features.',
+      });
+
+      await fileChangeHandler.showChangedFiles();
+
+      expect(uploadStatusManager.updateStatus).toHaveBeenCalledWith({
+        status: 'error',
+        message: 'Connect GitHub at bolt2github.com before using GitHub features.',
+        progress: 0,
+      });
+      expect(premiumService.canUseFileChanges).not.toHaveBeenCalled();
+      expect(premiumService.useFileChanges).not.toHaveBeenCalled();
+      expect(mockFilePreviewService.loadProjectFiles).not.toHaveBeenCalled();
+      expect(mockFilePreviewService.compareWithGitHub).not.toHaveBeenCalled();
+      expect(messageHandler.sendMessage).not.toHaveBeenCalled();
     });
 
     it('should compare with GitHub when settings available', async () => {
@@ -451,6 +482,22 @@ describe('FileChangeHandler', () => {
 
       expect(result).toBeInstanceOf(Map);
       expect(mockFilePreviewService.loadProjectFiles).toHaveBeenCalledWith(true);
+    });
+
+    it('disconnected programmatic file changes stops before refresh and comparison', async () => {
+      fileChangeHandler = new FileChangeHandler(messageHandler, notificationManager);
+      mockCheckGitHubConnection.mockResolvedValue({
+        connected: false,
+        reason: 'not_connected',
+        message: 'Connect GitHub at bolt2github.com before using GitHub features.',
+      });
+
+      await expect(fileChangeHandler.getChangedFiles(true)).rejects.toThrow(
+        'Connect GitHub at bolt2github.com before using GitHub features.'
+      );
+      expect(mockFilePreviewService.loadProjectFiles).not.toHaveBeenCalled();
+      expect(mockFilePreviewService.compareWithGitHub).not.toHaveBeenCalled();
+      expect(mockFilePreviewService.getProcessedFiles).not.toHaveBeenCalled();
     });
   });
 

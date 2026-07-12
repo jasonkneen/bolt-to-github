@@ -1,0 +1,85 @@
+schema: '2'
+goal: Retire the stale duplicate E2E error suite without weakening product error coverage
+type: fix
+created: '2026-07-12T03:43:10Z'
+description: |
+  Remove e2e/errors.spec.ts because it exercises hidden or obsolete popup controls,
+  stale helper assumptions, placeholder Notification/console checks, and scenarios
+  already covered by the current product-visible error suite. Keep the active
+  e2e/error-flow-product.spec.ts contract as the release evidence for repository
+  validation, visible push failures, and retry behavior. This makes the full browser
+  gate test deployed behavior instead of failing before assertions on obsolete UI.
+temptations:
+- risk: Do not ignore or skip the stale suite in Playwright configuration.
+  instead: Delete the obsolete duplicate explicitly and keep the current product-visible suite in the full test discovery path.
+- risk: Do not remove the failing suite unless the replacement product error-flow spec passes independently.
+  instead: Run the five product-visible error scenarios first, then the complete Chromium suite.
+- risk: Do not claim that placeholder Notification or console checks protected GitHub failure behavior.
+  instead: Rely on deterministic UI assertions emitted by production repository-validation and push-dispatch code.
+files:
+  edit:
+    - path: src/test/e2e-helpers/popup-helpers.test.ts
+      artifacts:
+        - kind: test_function
+          name: keeps only the deterministic product-visible error-flow suite
+  delete:
+  - path: e2e/errors.spec.ts
+    reason: |
+      Obsolete duplicate coverage targets hidden controls and old helper contracts;
+      current product-visible error behavior is covered by e2e/error-flow-product.spec.ts.
+  scope:
+  - path: e2e/error-flow-product.spec.ts
+    reason: Preserve the deterministic Playwright replacement as manual release evidence outside the fast MAID gate.
+  read:
+  - e2e/helpers/popup.ts
+  - e2e/fixtures/extension.ts
+  - manifests/repair-e2e-error-flow-fast-gate.manifest.yaml
+validate:
+  - pnpm exec vitest run src/test/e2e-helpers/popup-helpers.test.ts
+  - pnpm lint
+  - pnpm check
+metadata:
+  tags:
+  - e2e
+  - errors
+  - release-ci
+  - test-cleanup
+  priority: high
+  promotion_ready: true
+outcome:
+  status: completed
+  summary: |
+    Removed the obsolete duplicate e2e/errors.spec.ts suite. Deterministic
+    repository validation, push-failure, and retry behavior remains covered by
+    e2e/error-flow-product.spec.ts, with a fast source-contract test ensuring
+    that replacement stays present in browser discovery.
+  rationale: |
+    The deleted cases mostly failed on hidden or obsolete popup selectors or
+    asserted placeholder browser primitives unrelated to the extension's
+    user-visible error contract. Retaining them added noise without trustworthy
+    regression protection.
+  lessons:
+    - lesson_type: e2e-signal-quality
+      summary: A smaller product-visible suite is stronger than duplicate scenarios that fail before assertions or test browser primitives.
+      tags: [e2e, release-ci, test-cleanup]
+      paths:
+        - e2e/error-flow-product.spec.ts
+        - src/test/e2e-helpers/popup-helpers.test.ts
+  review_notes:
+    - source: independent reviewer release_gate_review
+      severity: ready
+      summary: Deletion is justified; deterministic validation, push-failure, retry, and missing-auth coverage remains.
+  validation:
+    - command: [pnpm, exec, vitest, run, src/test/e2e-helpers/popup-helpers.test.ts]
+      status: passed
+      summary: Fast source contract confirms the legacy suite is absent and product error scenarios remain.
+    - command: [pnpm, exec, playwright, test, --project=chromium, --reporter=list]
+      status: passed
+      summary: Full browser release gate passed 59 tests with 3 intentional skips.
+    - command: [./scripts/maid, validate, manifests/retire-stale-e2e-errors-suite.manifest.yaml, --mode, implementation]
+      status: passed
+      summary: Focused MAID implementation validation passed.
+    - command: [./scripts/maid, plan, status, manifests/retire-stale-e2e-errors-suite.manifest.yaml]
+      status: passed
+      summary: Revision 4 plan lock is OK with genuine red evidence recorded.
+  completed_at: '2026-07-12T12:00:00+08:00'

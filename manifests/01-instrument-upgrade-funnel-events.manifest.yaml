@@ -1,0 +1,292 @@
+schema: '2'
+goal: Instrument the extension's upgrade funnel so every upgrade-modal impression and upgrade CTA click is measurable per trigger context, and upgrade URLs carry UTM attribution.
+description: |
+  The extension ships five Pro features with contextual upgrade modals
+  (UPGRADE_MODAL_CONFIGS: general, fileChanges, pushReminders, branchSelector,
+  issues, commits), but nothing measures which context shows modals or which
+  converts: upgradeModal.ts triggers are untracked, and UpgradeModal.svelte
+  opens https://bolt2github.com/upgrade with no UTM parameters, so upgrade
+  visits from the extension land as direct/none in GA. This is the
+  measurement-first prerequisite of retention-conversion-plan Workstream C1:
+  no conversion lever changes until a per-context baseline exists.
+
+  Rationale for design choices:
+  - Follow the reuse-analytics-boundary Outcome lesson from
+    track-popup-adc-fix-help-clicks: all events go through the existing
+    sendAnalyticsToBackground helper (ANALYTICS_EVENT extension_event
+    envelope, guarded fire-and-forget), zero background changes.
+  - Impressions are tracked at the shared seam (triggerUpgradeModal /
+    setUpgradeModalState in upgradeModal.ts) rather than per component, so
+    every current and future popup trigger is counted with its
+    UpgradeModalType as the context dimension.
+  - CTA clicks and UTM tagging live in UpgradeModal.svelte, mirroring the
+    SocialLinks pattern: utm_source=extension, utm_medium=popup,
+    utm_campaign=upgrade, utm_content=<feature>. The corresponding
+    checkout-side funnel events are a separate draft in the bolt2github
+    repo (01-instrument-checkout-funnel-events).
+  - Content-script upgrade prompt button rewires are intentionally out of this
+    child. This child measures content-triggered upgrade impressions after the
+    background opens the popup by routing popupContext=upgrade through the same
+    setUpgradeModalState seam; direct content notification CTA click tracking
+    and utm_medium=content URL tagging require a separate scoped manifest.
+type: feature
+files:
+  edit:
+    - path: src/lib/utils/analytics.ts
+      artifacts:
+        - kind: function
+          name: trackUpgradeFunnelEvent
+          args:
+            - name: stage
+              type: "'modal_shown' | 'cta_clicked'"
+            - name: metadata
+              type: "{ context: string; medium: 'popup' | 'content' }"
+          returns: void
+          description: |
+            Sends an upgrade_modal_shown or upgrade_cta_clicked
+            extension_event through sendAnalyticsToBackground with the
+            triggering context (UpgradeModalType or content feature) and
+            surface medium. Guarded fire-and-forget: a missing or failing
+            chrome.runtime must never affect the upgrade UX.
+    - path: src/lib/utils/upgradeModal.ts
+      artifacts:
+        - kind: function
+          name: triggerUpgradeModal
+          args:
+            - name: type
+              type: UpgradeModalType
+          returns: void
+          description: |
+            Existing behavior unchanged (dispatches the showUpgrade
+            CustomEvent with the resolved config); now also records a
+            modal_shown funnel event with the modal type as context before
+            dispatching.
+        - kind: function
+          name: setUpgradeModalState
+          args:
+            - name: type
+              type: UpgradeModalType
+            - name: setState
+              type: '(feature: string, reason: string, features: PremiumFeature[]) => void'
+          returns: void
+          description: |
+            Existing behavior unchanged (resolves config and applies it via
+            setState); now also records a modal_shown funnel event with the
+            modal type as context.
+    - path: src/popup/components/UpgradeModal.svelte
+      artifacts:
+        - kind: function
+          name: UpgradeModal
+          args:
+            - name: props
+              type: UpgradeModal component props
+          returns: Svelte component instance
+          description: |
+            Upgrade modal for the popup. Clicking the upgrade CTA records a
+            cta_clicked funnel event (with the modal's feature as context)
+            and opens the bolt2github upgrade URL tagged with
+            utm_source=extension&utm_medium=popup&utm_campaign=upgrade and
+            utm_content set to the feature. Close, refresh-subscription, and
+            sign-in behaviors are unchanged; analytics failures never block
+            the tab from opening.
+    - path: src/popup/App.svelte
+      artifacts:
+        - kind: function
+          name: openTrackedUpgradeModalFromPopupContext
+          args:
+            - name: upgradeFeature
+              type: string
+            - name: setUpgradeState
+              type: PopupContextUpgradeModalStateSetter
+            - name: applyState
+              type: PopupContextApplyUpgradeModalState
+          returns: void
+          description: |
+            Routes a popupContext=upgrade upgradeModalFeature value through
+            setUpgradeModalState, defaulting unknown feature keys to general, so
+            content-triggered popup upgrade impressions use the same modal_shown
+            tracking seam as direct popup upgrade triggers.
+    - path: src/lib/utils/__tests__/upgradeModal.test.ts
+      artifacts:
+        - kind: test_function
+          name: triggerUpgradeModal records a modal_shown event with the modal type context
+          description: Verifies the funnel event fires with context matching the requested UpgradeModalType and that the showUpgrade CustomEvent still dispatches with the resolved config.
+        - kind: test_function
+          name: setUpgradeModalState records a modal_shown event and still applies the config
+          description: Verifies tracking fires and setState receives the unchanged feature, reason, and features.
+        - kind: test_function
+          name: upgrade modal triggers still work when analytics messaging is unavailable
+          description: Verifies a missing chrome.runtime cannot prevent the modal from being triggered or the state from being set.
+    - path: src/popup/components/__tests__/UpgradeModal.component.test.ts
+      artifacts:
+        - kind: test_function
+          name: upgrade CTA records a cta_clicked event and opens the UTM-tagged upgrade URL
+          description: Verifies the click sends upgrade_cta_clicked with the feature context and chrome.tabs.create receives the upgrade URL carrying extension/popup/upgrade UTM parameters plus the feature as utm_content.
+        - kind: test_function
+          name: upgrade CTA still opens the upgrade page when analytics fails
+          description: Verifies a throwing analytics path cannot block the upgrade tab from opening.
+    - path: src/popup/__tests__/App.component.test.ts
+      artifacts:
+        - kind: test_function
+          name: openTrackedUpgradeModalFromPopupContext opens pending upgrade context through the tracked upgrade state seam
+          description: Verifies a popup opened from a content-script upgrade request delegates to setUpgradeModalState with the stored upgrade feature, preserving the shared modal_shown tracking seam.
+        - kind: test_function
+          name: openTrackedUpgradeModalFromPopupContext preserves commits context and defaults unknown values
+          description: Verifies the helper preserves the valid commits context and falls back to the general modal for unknown stored upgrade feature values.
+  read:
+    - src/lib/constants/premiumFeatures.ts
+    - src/content/UIManager.ts
+    - src/content/handlers/FileChangeHandler.ts
+    - src/content/managers/NotificationManager.ts
+    - src/background/BackgroundService.ts
+validate:
+  - pnpm exec vitest run src/lib/utils/__tests__/upgradeModal.test.ts src/popup/components/__tests__/UpgradeModal.component.test.ts src/lib/utils/__tests__/analytics.test.ts src/popup/__tests__/App.component.test.ts
+  - pnpm lint
+  - pnpm check
+created: '2026-07-07T05:51:22Z'
+metadata:
+  tags:
+    - analytics
+    - conversion
+    - upgrade-funnel
+    - retention-plan-c1
+  priority: high
+temptations:
+  - risk: Do not let tracking block or delay showing the modal or opening the upgrade tab.
+    instead: Send events fire-and-forget through sendAnalyticsToBackground before the UX action, wrapped so failures are swallowed (reuse-analytics-boundary Outcome lesson).
+  - risk: Do not add a new background message type or AnalyticsService method for these events.
+    instead: Reuse the existing ANALYTICS_EVENT extension_event envelope already handled by BackgroundService.handleAnalyticsEvent.
+  - risk: Do not double-count impressions by instrumenting both the upgradeModal.ts seam and every component that calls it.
+    instead: Impressions fire only in triggerUpgradeModal and setUpgradeModalState; components add only the cta_clicked event.
+  - risk: Do not hardcode a second upgrade URL variant per call site when adding UTM parameters.
+    instead: Build the UTM-tagged URL in the popup modal only for this child; handle direct content notification CTA URLs in a separate content-scoped manifest.
+  - risk: Do not rewrite existing upgradeModal or popup component tests to accommodate tracking.
+    instead: Keep all existing assertions green; add new tests for tracking, UTM tagging, and degraded-runtime behavior.
+outcome:
+  status: completed
+  summary: |
+    Upgrade funnel measurement is now wired through the existing extension
+    analytics boundary. Popup upgrade impressions send upgrade_modal_shown from
+    triggerUpgradeModal and setUpgradeModalState, content-opened popup upgrade
+    impressions route through the same setUpgradeModalState seam, and popup CTA
+    clicks send upgrade_cta_clicked before opening the UTM-tagged upgrade URL.
+    Analytics failures are guarded and do not block modal display, state
+    application, or tab opening.
+  rationale: |
+    The extension needed a measurable baseline for upgrade modal impressions and
+    CTA clicks before conversion changes. Reusing sendAnalyticsToBackground and
+    the existing ANALYTICS_EVENT extension_event envelope avoided background
+    service changes while preserving the popup UX and keeping tracking
+    best-effort.
+  lessons:
+    - lesson_type: shared-upgrade-seam
+      summary: |
+        Upgrade impressions should be recorded at setUpgradeModalState and
+        triggerUpgradeModal. Any popup path that opens an upgrade modal from
+        stored context should delegate through setUpgradeModalState rather than
+        resolving configs directly, or it will miss impression tracking.
+      tags:
+        - analytics
+        - popup
+        - upgrade-funnel
+      paths:
+        - src/lib/utils/upgradeModal.ts
+        - src/popup/App.svelte
+    - lesson_type: scope-content-cta-separately
+      summary: |
+        Popup-modal attribution and direct content notification CTA attribution
+        are separate surfaces. Keep content notification URL rewires and
+        utm_medium=content click tracking in a dedicated content-scoped
+        manifest so popup funnel work stays reviewable.
+      tags:
+        - analytics
+        - content-script
+        - scope
+      paths:
+        - src/content/UIManager.ts
+        - src/content/handlers/FileChangeHandler.ts
+  review_notes:
+    - source: maid-implementation-reviewer subagent Mill
+      severity: needs-changes
+      summary: |
+        Found that content-opened popup upgrade modals still bypassed the new
+        tracking seam through App.svelte direct getUpgradeModalConfig usage,
+        and that the draft's content CTA language was ambiguous. Both findings
+        were valid and fixed by routing popupContext=upgrade through
+        openTrackedUpgradeModalFromPopupContext/setUpgradeModalState and
+        narrowing direct content CTA rewires out of this child.
+    - source: maid-implementation-reviewer subagent Averroes
+      severity: needs-changes
+      summary: |
+        Confirmed the popupContext tracking fix and narrowed content CTA scope,
+        then found commits was a valid UpgradeModalType omitted from the new
+        popup-context allowlist. Fixed by preserving commits and adding unknown
+        fallback coverage.
+    - source: maid-implementation-reviewer subagent Dirac
+      severity: ready
+      summary: |
+        Ready to merge. Rechecked the commits fix, content CTA scope boundary,
+        changed-file scope, and validation evidence; found no blockers or
+        should-fix issues.
+  validation:
+    - command:
+        - ./scripts/maid
+        - plan
+        - status
+        - manifests/01-instrument-upgrade-funnel-events.manifest.yaml
+      status: passed
+      summary: Plan lock revision 4 matched manifest and behavioral test hashes; red evidence recorded.
+    - command:
+        - pnpm
+        - exec
+        - vitest
+        - run
+        - src/popup/__tests__/App.component.test.ts
+        - src/lib/utils/__tests__/upgradeModal.test.ts
+        - src/popup/components/__tests__/UpgradeModal.component.test.ts
+        - src/lib/utils/__tests__/analytics.test.ts
+      status: passed
+      summary: 128 focused tests passed, covering modal impressions, CTA clicks, UTM URL parameters, degraded analytics paths, content-opened popup routing, commits preservation, and unknown fallback.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/01-instrument-upgrade-funnel-events.manifest.yaml
+        - --mode
+        - behavioral
+      status: passed
+      summary: Behavioral validation passed for the promoted manifest.
+    - command:
+        - ./scripts/maid
+        - validate
+        - manifests/01-instrument-upgrade-funnel-events.manifest.yaml
+        - --mode
+        - implementation
+        - --worktree-scope
+        - --include-tests
+      status: passed
+      summary: Worktree-scoped implementation validation passed for the active manifest.
+    - command:
+        - pnpm
+        - lint
+      status: passed
+      summary: ESLint passed.
+    - command:
+        - pnpm
+        - check
+      status: passed
+      summary: svelte-check passed with 0 errors and 0 warnings.
+    - command:
+        - ./scripts/maid
+        - test
+        - --manifest-dir
+        - manifests
+      status: passed
+      summary: MAID test runner passed all five selected commands, including the batched Vitest suite, lint, check, build, and test:ci gates.
+    - command:
+        - ./scripts/maid
+        - verify
+        - --require-plan-lock
+        - --require-red-evidence
+        - --summary
+      status: failed-known-brownfield
+      summary: Schema, behavioral, implementation, and coherence stages passed; file_tracking still fails on the known brownfield undeclared-file backlog with 228 undeclared files.

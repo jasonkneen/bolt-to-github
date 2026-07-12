@@ -82,8 +82,8 @@ test.describe('Extension Lifecycle', () => {
 
       // Verify settings are saved
       const settingsBefore = await getGitHubSettings(context, extensionId);
-      expect(settingsBefore.authType).toBe('pat');
-      expect(settingsBefore.pat).toBe('ghp_test_token');
+      expect(settingsBefore.authenticationMethod).toBe('pat');
+      expect(settingsBefore.githubToken).toBe('ghp_test_token');
 
       // Open and close popup (simulates reload)
       const page = await openPopup(context, extensionId);
@@ -103,7 +103,7 @@ test.describe('Extension Lifecycle', () => {
 
       // Verify settings
       const settingsBefore = await getGitHubSettings(context, extensionId);
-      expect(settingsBefore.authType).toBe('github_app');
+      expect(settingsBefore.authenticationMethod).toBe('github_app');
 
       // Simulate extension reload by reopening popup
       const page = await openPopup(context, extensionId);
@@ -112,8 +112,8 @@ test.describe('Extension Lifecycle', () => {
 
       // Settings should persist
       const settingsAfter = await getGitHubSettings(context, extensionId);
-      expect(settingsAfter.authType).toBe('github_app');
-      expect(settingsAfter.installationId).toBe(12345);
+      expect(settingsAfter.authenticationMethod).toBe('github_app');
+      expect(settingsAfter.githubAppInstallationId).toBe(12345);
     });
 
     test('should preserve repository settings across sessions', async ({
@@ -124,7 +124,7 @@ test.describe('Extension Lifecycle', () => {
 
       // Set repository settings in storage
       const storageSetPage = await context.newPage();
-      await storageSetPage.goto(`chrome-extension://${extensionId}/popup.html`);
+      await storageSetPage.goto(`chrome-extension://${extensionId}/src/popup/index.html`);
 
       await storageSetPage.evaluate(() => {
         return chrome.storage.local.set({
@@ -144,7 +144,7 @@ test.describe('Extension Lifecycle', () => {
 
       // Verify settings can be retrieved
       const storageGetPage = await context.newPage();
-      await storageGetPage.goto(`chrome-extension://${extensionId}/popup.html`);
+      await storageGetPage.goto(`chrome-extension://${extensionId}/src/popup/index.html`);
 
       const repoSettings = await storageGetPage.evaluate(() => {
         return chrome.storage.local
@@ -229,7 +229,7 @@ test.describe('Extension Lifecycle', () => {
 
       // Settings should still be available
       const settings = await getGitHubSettings(context, extensionId);
-      expect(settings.authType).toBe('pat');
+      expect(settings.authenticationMethod).toBe('pat');
 
       await page2.close();
     });
@@ -354,7 +354,7 @@ test.describe('Extension Lifecycle', () => {
 
       // Settings should still be accessible
       const settings = await getGitHubSettings(context, extensionId);
-      expect(settings.authType).toBe('pat');
+      expect(settings.authenticationMethod).toBe('pat');
 
       await page1.close();
       await page2.close();
@@ -468,7 +468,7 @@ test.describe('Extension Lifecycle', () => {
 
       // Modify storage from background context
       const bgPage = await context.newPage();
-      await bgPage.goto(`chrome-extension://${extensionId}/popup.html`);
+      await bgPage.goto(`chrome-extension://${extensionId}/src/popup/index.html`);
 
       await bgPage.evaluate(() => {
         return chrome.storage.local.set({
@@ -483,7 +483,7 @@ test.describe('Extension Lifecycle', () => {
 
       // Verify change was propagated
       const storagePage = await context.newPage();
-      await storagePage.goto(`chrome-extension://${extensionId}/popup.html`);
+      await storagePage.goto(`chrome-extension://${extensionId}/src/popup/index.html`);
 
       const testValue = await storagePage.evaluate(() => {
         return chrome.storage.local.get('testValue').then((result) => result.testValue);

@@ -1,0 +1,128 @@
+{
+  "manifest_path": "manifests/01-instrument-upgrade-funnel-events.manifest.yaml",
+  "manifest_hash": "sha256:26e00cf467a4729a911369e60d37a3c6d7321d564de1fd3b4882f4b683d91f0f",
+  "test_hashes": {
+    "src/lib/utils/__tests__/upgradeModal.test.ts": "sha256:c6a93b05f596d79496b75a0a58c8595d2c58065bf7de8a97a1093c62d1eff0ed",
+    "src/popup/components/__tests__/UpgradeModal.component.test.ts": "sha256:f95b1516be05942e53064eb8623413d14e3ca976d87309f90b72eb377de2f527",
+    "src/popup/__tests__/App.component.test.ts": "sha256:3d2ee4be944f8f325fdf03bd96190f81e1b06a44f4cfa3cb6211a488f626f49d"
+  },
+  "created_at": "2026-07-07T05:54:23.513352+00:00",
+  "revision": 5,
+  "revisions": [
+    {
+      "prior_manifest_hash": "sha256:8e1a51338f237971792141bf5f30d4d13cc987e77c016b49ec224285b2e15480",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/upgradeModal.test.ts": "sha256:c6a93b05f596d79496b75a0a58c8595d2c58065bf7de8a97a1093c62d1eff0ed",
+        "src/popup/components/__tests__/UpgradeModal.component.test.ts": "sha256:f95b1516be05942e53064eb8623413d14e3ca976d87309f90b72eb377de2f527"
+      },
+      "revised_at": "2026-07-07T06:03:36.140075+00:00",
+      "reason": "Add popupContext upgrade path to tracked modal_shown seam after implementation review found content-opened popup impressions bypassed setUpgradeModalState"
+    },
+    {
+      "prior_manifest_hash": "sha256:e33eb7fc882fb9e2b96cdc4da5c3978afbce2001318b0fa80e419fa0b9f944f2",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/upgradeModal.test.ts": "sha256:c6a93b05f596d79496b75a0a58c8595d2c58065bf7de8a97a1093c62d1eff0ed",
+        "src/popup/components/__tests__/UpgradeModal.component.test.ts": "sha256:f95b1516be05942e53064eb8623413d14e3ca976d87309f90b72eb377de2f527",
+        "src/popup/__tests__/App.component.test.ts": "sha256:da2b761047e6db998b9dee7aa864d9f0b1cb44f2179cf45ff134d96f7ed28bd0"
+      },
+      "revised_at": "2026-07-07T06:10:45.013663+00:00",
+      "reason": "Align popupContext upgrade tracking with exported helper artifact after App render harness could not exercise onMount"
+    },
+    {
+      "prior_manifest_hash": "sha256:58b996e894171ae01be55573f2fb3629369e7f671f5d6460cc74a7d20b8d06f8",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/upgradeModal.test.ts": "sha256:c6a93b05f596d79496b75a0a58c8595d2c58065bf7de8a97a1093c62d1eff0ed",
+        "src/popup/components/__tests__/UpgradeModal.component.test.ts": "sha256:f95b1516be05942e53064eb8623413d14e3ca976d87309f90b72eb377de2f527",
+        "src/popup/__tests__/App.component.test.ts": "sha256:6089d19f992f44d9e964270d538d0e06209ff601733918a6396f5b3cab318350"
+      },
+      "revised_at": "2026-07-07T06:16:48.542138+00:00",
+      "reason": "Add commits popupContext coverage after implementation review found the context fell back to general"
+    },
+    {
+      "prior_manifest_hash": "sha256:6a347ba308011db0ce8e58d2668ed7bde12e2785d23ce23e8e533fd8e5ef4590",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/upgradeModal.test.ts": "sha256:c6a93b05f596d79496b75a0a58c8595d2c58065bf7de8a97a1093c62d1eff0ed",
+        "src/popup/components/__tests__/UpgradeModal.component.test.ts": "sha256:f95b1516be05942e53064eb8623413d14e3ca976d87309f90b72eb377de2f527",
+        "src/popup/__tests__/App.component.test.ts": "sha256:3d2ee4be944f8f325fdf03bd96190f81e1b06a44f4cfa3cb6211a488f626f49d"
+      },
+      "revised_at": "2026-07-07T09:53:49.982242+00:00",
+      "reason": "Align trackUpgradeFunnelEvent metadata contract with Prettier-normal TypeScript single-quoted literal types"
+    }
+  ],
+  "red_evidence": {
+    "red": true,
+    "captured_at": "2026-07-07T06:17:11.683052+00:00",
+    "commands": [
+      {
+        "command": "pnpm exec vitest run src/lib/utils/__tests__/upgradeModal.test.ts src/popup/components/__tests__/UpgradeModal.component.test.ts src/lib/utils/__tests__/analytics.test.ts src/popup/__tests__/App.component.test.ts",
+        "exit_code": 1,
+        "output_tail": "  Array [\n    Object {\n-     \"url\": \"https://bolt2github.com/upgrade?utm_source=extension&utm_medium=popup&utm_campaign=upgrade&utm_content=file-changes\",\n+     \"url\": \"https://bolt2github.com/upgrade\",\n    },\n  ]\n\n\nNumber of calls: 1\n\n \u276f src/popup/components/__tests__/UpgradeModal.component.test.ts:393:36\n    391|       await user.click(screen.getByRole('button', { name: /upgrade now\u2026\n    392| \n    393|       expect(mockChromeTabsCreate).toHaveBeenCalledWith({\n       |                                    ^\n    394|         url: EXPECTED_UPGRADE_URL,\n    395|       });\n\n\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af[8/8]\u23af\n",
+        "classification": "red"
+      },
+      {
+        "command": "pnpm lint",
+        "exit_code": 0,
+        "output_tail": "\n> bolt-to-github@1.3.20 lint /home/atomrem/projects/codefrost-dev/bolt-to-github\n> eslint \"src/**/*.{js,ts,svelte}\"\n",
+        "classification": "not_red"
+      },
+      {
+        "command": "pnpm check",
+        "exit_code": 1,
+        "output_tail": "Loading svelte-check in workspace: /home/atomrem/projects/codefrost-dev/bolt-to-github\nGetting Svelte diagnostics...\n\n/home/atomrem/projects/codefrost-dev/bolt-to-github/src/lib/utils/__tests__/upgradeModal.test.ts:9:10\nError: Module '\"../analytics\"' has no exported member 'trackUpgradeFunnelEvent'. \n} from '../upgradeModal';\nimport { trackUpgradeFunnelEvent } from '../analytics';\nimport { UPGRADE_MODAL_CONFIGS, PREMIUM_FEATURES } from '../../constants/premiumFeatures';\n\n\n/home/atomrem/projects/codefrost-dev/bolt-to-github/src/popup/__tests__/App.component.test.ts:8:15\nError: Module '\"../App.svelte\"' has no exported member 'openTrackedUpgradeModalFromPopupContext'. Did you mean to use 'import openTrackedUpgradeModalFromPopupContext from \"../App.svelte\"' instead? \nimport { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';\nimport App, { openTrackedUpgradeModalFromPopupContext } from '../App.svelte';\n\n\n\n====================================\nsvelte-check found 2 errors and 0 warnings in 2 files\n\u2009ELIFECYCLE\u2009 Command failed with exit code 1.",
+        "classification": "red"
+      }
+    ]
+  },
+  "_manifest_contract": {
+    "artifacts": [
+      "src/lib/utils/__tests__/upgradeModal.test.ts:setUpgradeModalState records a modal_shown event and still applies the config",
+      "src/lib/utils/__tests__/upgradeModal.test.ts:setUpgradeModalState records a modal_shown event and still applies the config:kind=test_function",
+      "src/lib/utils/__tests__/upgradeModal.test.ts:triggerUpgradeModal records a modal_shown event with the modal type context",
+      "src/lib/utils/__tests__/upgradeModal.test.ts:triggerUpgradeModal records a modal_shown event with the modal type context:kind=test_function",
+      "src/lib/utils/__tests__/upgradeModal.test.ts:upgrade modal triggers still work when analytics messaging is unavailable",
+      "src/lib/utils/__tests__/upgradeModal.test.ts:upgrade modal triggers still work when analytics messaging is unavailable:kind=test_function",
+      "src/lib/utils/analytics.ts:function:trackUpgradeFunnelEvent",
+      "src/lib/utils/analytics.ts:function:trackUpgradeFunnelEvent:arg=metadata:type={ context: string; medium: 'popup' | 'content' }:default=None",
+      "src/lib/utils/analytics.ts:function:trackUpgradeFunnelEvent:arg=stage:type='modal_shown' | 'cta_clicked':default=None",
+      "src/lib/utils/analytics.ts:function:trackUpgradeFunnelEvent:kind=function",
+      "src/lib/utils/analytics.ts:function:trackUpgradeFunnelEvent:returns=void",
+      "src/lib/utils/upgradeModal.ts:function:setUpgradeModalState",
+      "src/lib/utils/upgradeModal.ts:function:setUpgradeModalState:arg=setState:type=(feature: string, reason: string, features: PremiumFeature[]) => void:default=None",
+      "src/lib/utils/upgradeModal.ts:function:setUpgradeModalState:arg=type:type=UpgradeModalType:default=None",
+      "src/lib/utils/upgradeModal.ts:function:setUpgradeModalState:kind=function",
+      "src/lib/utils/upgradeModal.ts:function:setUpgradeModalState:returns=void",
+      "src/lib/utils/upgradeModal.ts:function:triggerUpgradeModal",
+      "src/lib/utils/upgradeModal.ts:function:triggerUpgradeModal:arg=type:type=UpgradeModalType:default=None",
+      "src/lib/utils/upgradeModal.ts:function:triggerUpgradeModal:kind=function",
+      "src/lib/utils/upgradeModal.ts:function:triggerUpgradeModal:returns=void",
+      "src/popup/App.svelte:function:openTrackedUpgradeModalFromPopupContext",
+      "src/popup/App.svelte:function:openTrackedUpgradeModalFromPopupContext:arg=applyState:type=PopupContextApplyUpgradeModalState:default=None",
+      "src/popup/App.svelte:function:openTrackedUpgradeModalFromPopupContext:arg=setUpgradeState:type=PopupContextUpgradeModalStateSetter:default=None",
+      "src/popup/App.svelte:function:openTrackedUpgradeModalFromPopupContext:arg=upgradeFeature:type=string:default=None",
+      "src/popup/App.svelte:function:openTrackedUpgradeModalFromPopupContext:kind=function",
+      "src/popup/App.svelte:function:openTrackedUpgradeModalFromPopupContext:returns=void",
+      "src/popup/__tests__/App.component.test.ts:openTrackedUpgradeModalFromPopupContext opens pending upgrade context through the tracked upgrade state seam",
+      "src/popup/__tests__/App.component.test.ts:openTrackedUpgradeModalFromPopupContext opens pending upgrade context through the tracked upgrade state seam:kind=test_function",
+      "src/popup/__tests__/App.component.test.ts:openTrackedUpgradeModalFromPopupContext preserves commits context and defaults unknown values",
+      "src/popup/__tests__/App.component.test.ts:openTrackedUpgradeModalFromPopupContext preserves commits context and defaults unknown values:kind=test_function",
+      "src/popup/components/UpgradeModal.svelte:function:UpgradeModal",
+      "src/popup/components/UpgradeModal.svelte:function:UpgradeModal:arg=props:type=UpgradeModal component props:default=None",
+      "src/popup/components/UpgradeModal.svelte:function:UpgradeModal:kind=function",
+      "src/popup/components/UpgradeModal.svelte:function:UpgradeModal:returns=Svelte component instance",
+      "src/popup/components/__tests__/UpgradeModal.component.test.ts:upgrade CTA records a cta_clicked event and opens the UTM-tagged upgrade URL",
+      "src/popup/components/__tests__/UpgradeModal.component.test.ts:upgrade CTA records a cta_clicked event and opens the UTM-tagged upgrade URL:kind=test_function",
+      "src/popup/components/__tests__/UpgradeModal.component.test.ts:upgrade CTA still opens the upgrade page when analytics fails",
+      "src/popup/components/__tests__/UpgradeModal.component.test.ts:upgrade CTA still opens the upgrade page when analytics fails:kind=test_function"
+    ],
+    "test_files": [
+      "src/lib/utils/__tests__/upgradeModal.test.ts",
+      "src/popup/__tests__/App.component.test.ts",
+      "src/popup/components/__tests__/UpgradeModal.component.test.ts"
+    ],
+    "validate_commands": [
+      "pnpm exec vitest run src/lib/utils/__tests__/upgradeModal.test.ts src/popup/components/__tests__/UpgradeModal.component.test.ts src/lib/utils/__tests__/analytics.test.ts src/popup/__tests__/App.component.test.ts",
+      "pnpm lint",
+      "pnpm check"
+    ]
+  }
+}

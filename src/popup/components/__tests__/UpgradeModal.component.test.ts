@@ -56,11 +56,15 @@ vi.mock('$lib/stores/premiumStore', () => ({
 vi.mock('$lib/utils/logger', () => ({
   createLogger: () => ({
     info: vi.fn(),
+    debug: vi.fn(),
     error: vi.fn(),
   }),
 }));
 
 describe('UpgradeModal', () => {
+  const EXPECTED_UPGRADE_URL =
+    'https://bolt2github.com/upgrade?utm_source=extension&utm_medium=popup&utm_campaign=upgrade&utm_content=file-changes';
+
   const mockFeatures: PremiumFeature[] = [
     {
       id: 'view-file-changes',
@@ -80,6 +84,8 @@ describe('UpgradeModal', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockChromeTabsCreate.mockReset();
+    mockChromeRuntimeSendMessage.mockReset();
     mockIsAuthenticated.mockReturnValue(false);
     mockPremiumStatus.mockReturnValue({
       isPremium: false,
@@ -330,7 +336,62 @@ describe('UpgradeModal', () => {
       await user.click(screen.getByRole('button', { name: /upgrade now/i }));
 
       expect(mockChromeTabsCreate).toHaveBeenCalledWith({
-        url: 'https://bolt2github.com/upgrade',
+        url: EXPECTED_UPGRADE_URL,
+      });
+    });
+
+    it('upgrade CTA records a cta_clicked event and opens the UTM-tagged upgrade URL', async () => {
+      const user = userEvent.setup();
+      render(UpgradeModal, {
+        props: {
+          show: true,
+          feature: 'file-changes',
+          features: mockFeatures,
+        },
+      });
+
+      await user.click(screen.getByRole('button', { name: /upgrade now/i }));
+
+      expect(mockChromeRuntimeSendMessage).toHaveBeenCalledWith({
+        type: 'ANALYTICS_EVENT',
+        eventType: 'extension_event',
+        eventData: {
+          eventType: 'upgrade_cta_clicked',
+          details: {
+            context: 'file-changes',
+            medium: 'popup',
+          },
+        },
+      });
+      expect(mockChromeTabsCreate).toHaveBeenCalledWith({
+        url: EXPECTED_UPGRADE_URL,
+      });
+
+      const openedUrl = new URL(mockChromeTabsCreate.mock.calls[0][0].url);
+      expect(openedUrl.origin + openedUrl.pathname).toBe('https://bolt2github.com/upgrade');
+      expect(openedUrl.searchParams.get('utm_source')).toBe('extension');
+      expect(openedUrl.searchParams.get('utm_medium')).toBe('popup');
+      expect(openedUrl.searchParams.get('utm_campaign')).toBe('upgrade');
+      expect(openedUrl.searchParams.get('utm_content')).toBe('file-changes');
+    });
+
+    it('upgrade CTA still opens the upgrade page when analytics fails', async () => {
+      const user = userEvent.setup();
+      mockChromeRuntimeSendMessage.mockImplementation(() => {
+        throw new Error('analytics unavailable');
+      });
+      render(UpgradeModal, {
+        props: {
+          show: true,
+          feature: 'file-changes',
+          features: mockFeatures,
+        },
+      });
+
+      await user.click(screen.getByRole('button', { name: /upgrade now/i }));
+
+      expect(mockChromeTabsCreate).toHaveBeenCalledWith({
+        url: EXPECTED_UPGRADE_URL,
       });
     });
   });

@@ -5,6 +5,7 @@ const mockForceCheck = vi.fn().mockResolvedValue(undefined);
 const mockForceSubscriptionRevalidation = vi.fn().mockResolvedValue(true);
 const mockForceSyncToPopup = vi.fn().mockResolvedValue(undefined);
 const mockGetAuthState = vi.fn().mockReturnValue({ isAuthenticated: true });
+const mockSyncGitHubApp = vi.fn().mockResolvedValue(true);
 
 vi.mock('../../services/UnifiedGitHubService');
 vi.mock('../../services/zipHandler');
@@ -26,7 +27,7 @@ vi.mock('../../content/services/SupabaseAuthService', () => ({
       addAuthStateListener: vi.fn(),
       removeAuthStateListener: vi.fn(),
       enterPostConnectionMode: vi.fn(),
-      syncGitHubApp: vi.fn().mockResolvedValue(true),
+      syncGitHubApp: mockSyncGitHubApp,
       validateSubscriptionStatus: vi.fn().mockResolvedValue(true),
       logout: vi.fn().mockResolvedValue(undefined),
     })),
@@ -132,6 +133,7 @@ describe('BackgroundService - Extension Reload Behavior', () => {
     mockForceSubscriptionRevalidation.mockResolvedValue(true);
     mockForceSyncToPopup.mockResolvedValue(undefined);
     mockGetAuthState.mockReturnValue({ isAuthenticated: true });
+    mockSyncGitHubApp.mockResolvedValue(true);
     mockAction.openPopup.mockResolvedValue(undefined);
     service = new BackgroundService();
     await new Promise((resolve) => setTimeout(resolve, 10));
@@ -194,6 +196,34 @@ describe('BackgroundService - Extension Reload Behavior', () => {
 
       await new Promise((resolve) => setTimeout(resolve, 50));
 
+      expect(sendResponse).toHaveBeenCalledWith({ success: true });
+    });
+
+    it('background reload requests notify bolt tabs while scheduling the self-heal alarm', async () => {
+      mockTabs.query.mockResolvedValueOnce([{ id: 7, url: 'https://bolt.new/~/test-project' }]);
+      const sendResponse = vi.fn();
+
+      const returnValue = runtimeMessageListener(
+        { type: 'RELOAD_EXTENSION', data: { reason: 'auth failure' } },
+        {},
+        sendResponse
+      );
+
+      expect(returnValue).toBe(true);
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(mockTabs.query).toHaveBeenCalledWith({ url: 'https://bolt.new/*' });
+      expect(mockTabs.sendMessage).toHaveBeenCalledWith(7, {
+        type: 'SHOW_EXTENSION_RELOAD_NOTIFICATION',
+        data: {
+          message: 'Extension needs to restart to fix authentication. Restarting in 3 seconds...',
+          countdown: 3,
+        },
+      });
+      expect(mockAlarms.create).toHaveBeenCalledWith('self-heal-reload', {
+        delayInMinutes: 3 / 60,
+      });
       expect(sendResponse).toHaveBeenCalledWith({ success: true });
     });
 
@@ -363,6 +393,35 @@ describe('BackgroundService - Extension Reload Behavior', () => {
   });
 
   describe('when Push to GitHub is requested', () => {
+    it('disconnected runtime push returns an error before dispatching to the Bolt tab', async () => {
+      mockSyncGitHubApp.mockResolvedValueOnce(false);
+      const postMessage = vi.fn();
+      runtimeConnectListener({
+        name: 'bolt-content',
+        sender: { tab: { id: 7 } },
+        postMessage,
+        onDisconnect: { addListener: vi.fn() },
+        onMessage: { addListener: vi.fn() },
+      });
+      const sendResponse = vi.fn();
+
+      const returnValue = runtimeMessageListener(
+        { action: 'PUSH_TO_GITHUB', type: '' },
+        {},
+        sendResponse
+      );
+
+      expect(returnValue).toBe(true);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: false,
+        error: 'Connect GitHub at bolt2github.com before using GitHub features.',
+      });
+      expect(mockTabs.query).not.toHaveBeenCalled();
+      expect(postMessage).not.toHaveBeenCalled();
+    });
+
     it('push message responds with failure when no active Bolt tab exists', async () => {
       mockTabs.query.mockResolvedValueOnce([{ id: 7, url: 'https://example.com/' }]);
       const sendResponse = vi.fn();

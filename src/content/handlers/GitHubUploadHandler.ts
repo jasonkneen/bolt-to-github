@@ -9,6 +9,7 @@ import { DownloadService } from '../../services/DownloadService';
 import { CommitTemplateService } from '../services/CommitTemplateService';
 import { createLogger } from '../../lib/utils/logger';
 import { getCurrentProjectId } from '../../lib/utils/projectId';
+import { checkGitHubConnection } from '../../lib/utils/githubConnection';
 
 const logger = createLogger('GitHubUploadHandler');
 
@@ -71,6 +72,16 @@ export class GitHubUploadHandler implements IGitHubUploadHandler {
     skipChangeDetection: boolean = false
   ): Promise<void> {
     logger.info('🔊 Handling GitHub push action');
+
+    const connection = await checkGitHubConnection();
+    if (!connection.connected) {
+      this.notificationManager.showNotification({
+        type: 'error',
+        message: connection.message,
+        duration: 10000,
+      });
+      return;
+    }
 
     // Get current project ID from the URL to ensure we're using the tab-specific project
     const currentProjectId = getCurrentProjectId();

@@ -21,6 +21,11 @@ import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Mock } from 'vitest';
 
 const BOLT_TAB_ID = 42;
+const mockNotifyBoltTabsAboutReload = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+
+vi.mock('../../../lib/utils/reloadNotification', () => ({
+  notifyBoltTabsAboutReload: mockNotifyBoltTabsAboutReload,
+}));
 
 const mockChromeRuntime = {
   id: 'test-extension-id',
@@ -95,6 +100,14 @@ function selfHealAlarmCalls(): unknown[][] {
   );
 }
 
+function firstSelfHealAlarmInvocationOrder(): number {
+  const selfHealAlarmCallIndex = (mockChromeAlarms.create as Mock).mock.calls.findIndex(
+    (call) => call[0] === 'self-heal-reload'
+  );
+
+  return (mockChromeAlarms.create as Mock).mock.invocationCallOrder[selfHealAlarmCallIndex];
+}
+
 function runtimeMessageCalls(type: string): unknown[][] {
   return (mockChromeRuntime.sendMessage as Mock).mock.calls.filter(
     (call: any[]) => call[0]?.type === type
@@ -119,6 +132,7 @@ describe('SupabaseAuthService - self-heal execution (fix-auth-self-heal-reload-e
   beforeEach(() => {
     vi.useFakeTimers({ now: new Date('2024-01-01T00:00:00.000Z') });
     vi.clearAllMocks();
+    mockNotifyBoltTabsAboutReload.mockResolvedValue(undefined);
     global.chrome.alarms = mockChromeAlarms as any;
     global.chrome.tabs = mockChromeTabs as any;
   });
@@ -139,6 +153,31 @@ describe('SupabaseAuthService - self-heal execution (fix-auth-self-heal-reload-e
     // be scheduled directly; a self-addressed runtime message would be lost.
     expect(selfHealAlarmCalls().length).toBe(1);
     expect(runtimeMessageCalls('RELOAD_EXTENSION').length).toBe(0);
+  });
+
+  test('notifies bolt tabs before scheduling the direct self-heal reload alarm', async () => {
+    authService = createService();
+    const maxFailures = (authService as any).MAX_AUTH_FAILURES_BEFORE_RELOAD;
+
+    await failAuthTimes(authService, maxFailures);
+
+    expect(mockNotifyBoltTabsAboutReload).toHaveBeenCalledTimes(1);
+    expect(selfHealAlarmCalls()).toHaveLength(1);
+    expect(mockNotifyBoltTabsAboutReload.mock.invocationCallOrder[0]).toBeLessThan(
+      firstSelfHealAlarmInvocationOrder()
+    );
+
+    authService.cleanup();
+    vi.clearAllMocks();
+    mockNotifyBoltTabsAboutReload.mockRejectedValueOnce(
+      new Error('Could not establish connection. Receiving end does not exist.')
+    );
+    authService = createService();
+
+    await failAuthTimes(authService, maxFailures);
+
+    expect(mockNotifyBoltTabsAboutReload).toHaveBeenCalledTimes(1);
+    expect(selfHealAlarmCalls()).toHaveLength(1);
   });
 
   test('falls back to RELOAD_EXTENSION runtime message when alarms API is unavailable', async () => {

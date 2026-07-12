@@ -31,7 +31,25 @@ A Chrome extension that automatically captures ZIP file downloads from bolt.new,
   <img src="https://img.shields.io/badge/Install%20from-Chrome%20Web%20Store-blue?style=for-the-badge&logo=google-chrome&logoColor=white" alt="Install from Chrome Web Store" height="40">
 </a>
 
-### Latest Version: v1.3.19
+### Latest Version: v1.3.20
+
+#### Version 1.3.20 - Auth Containment & Post-Push Guidance (July 2026)
+
+**What's new:**
+
+- Fixed a GitHub App retry loop that could repeatedly check incomplete connections in the background
+- Incomplete GitHub App installation details no longer cause repeated background token checks
+- Open Bolt tabs now receive refresh guidance before an authentication self-heal reload
+- Successful pushes can show a lightweight suggestion for a relevant Pro feature
+
+**Key Benefits:**
+
+- Far fewer unnecessary background authentication requests
+- Background authentication traffic remains bounded when installation details are incomplete
+- Extension reload recovery is clearer on tabs that need a refresh
+- Pro discovery happens after a successful push without interrupting the workflow
+
+### Previous Version: v1.3.19
 
 #### Version 1.3.19 - Auth Recovery & Reliability (July 2026)
 

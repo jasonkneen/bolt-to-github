@@ -4,6 +4,7 @@
   import { isAuthenticated } from '$lib/stores';
   import premiumStatusStore, { premiumStatusActions } from '$lib/stores/premiumStore';
   import { createLogger } from '$lib/utils/logger';
+  import { trackUpgradeFunnelEvent } from '$lib/utils/analytics';
 
   const logger = createLogger('UpgradeModal');
 
@@ -66,10 +67,30 @@
     }, 2000); // Hide after 2 seconds
   }
 
+  function buildUpgradeUrl(): string {
+    const url = new URL('https://bolt2github.com/upgrade');
+    url.searchParams.set('utm_source', 'extension');
+    url.searchParams.set('utm_medium', 'popup');
+    url.searchParams.set('utm_campaign', 'upgrade');
+    url.searchParams.set('utm_content', feature || 'premium');
+    return url.toString();
+  }
+
+  function trackUpgradeClick() {
+    try {
+      trackUpgradeFunnelEvent('cta_clicked', {
+        context: feature || 'premium',
+        medium: 'popup',
+      });
+    } catch (error) {
+      logger.debug('Failed to track upgrade CTA click:', error);
+    }
+  }
+
   function handleUpgrade() {
-    /* Open upgrade page */
+    trackUpgradeClick();
     chrome.tabs.create({
-      url: 'https://bolt2github.com/upgrade',
+      url: buildUpgradeUrl(),
     });
     show = false;
   }

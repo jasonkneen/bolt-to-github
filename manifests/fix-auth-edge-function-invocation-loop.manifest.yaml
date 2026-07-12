@@ -1,0 +1,179 @@
+schema: '2'
+goal: 'Stop auth storage recovery from recursively invoking get-github-token'
+type: fix
+created: '2026-07-12T00:00:00Z'
+description: |
+  v1.3.19 made githubAppInstallationId a storage-recovery trigger while the
+  auth check itself writes that value after every get-github-token response.
+  Responses without an installation_id used Date.now(), guaranteeing another
+  storage change and a one-second forceCheck loop. Preserve the original
+  storage-recovery contract, including recovery from a real installation-ID
+  change, while adding a stable-ID policy that never synthesizes identity from
+  the current time. This is an additive chain merge rather than a supersede.
+temptations:
+  - risk: 'Do not merely increase the debounce; a changing installation ID would still create an endless slower loop.'
+    instead: 'Keep the existing recovery contract and prevent the auth writer from manufacturing a changing installation ID.'
+  - risk: 'Do not replace Date.now() with another synthetic installation identity.'
+    instead: 'Persist githubAppInstallationId only when get-github-token returns a stable non-null installation_id.'
+  - risk: 'Do not disable token-restoration recovery to stop the loop.'
+    instead: 'Keep supabaseToken, supabaseTokenExpiry, and authenticationMethod recovery behavior covered by the existing behavioral suite.'
+files:
+  create:
+    - path: src/content/services/githubAppIdentity.ts
+      artifacts:
+        - kind: function
+          name: stableGitHubAppInstallationId
+          args:
+            - name: installationId
+              type: 'number | null | undefined'
+          returns: 'number | undefined'
+          description: Returns only a server-provided finite positive installation ID; never manufactures one.
+    - path: src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts
+      artifacts:
+        - kind: test_function
+          name: accepts only a stable positive server-provided installation ID
+        - kind: test_function
+          name: does not synthesize a changing installation ID when the edge response omits it
+        - kind: test_function
+          name: persists the exact positive installation ID supplied by the edge response
+  read:
+    - src/content/services/SupabaseAuthService.ts
+    - docs/supabase-github-functions.md
+validate:
+  - pnpm exec vitest run src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts src/background/__tests__/BackgroundService.storage-recovery.test.ts
+  - pnpm lint
+  - pnpm check
+metadata:
+  tags:
+    - auth
+    - supabase
+    - edge-functions
+    - mv3
+    - hotfix
+  priority: critical
+  status: implementation
+  promotion_ready: true
+outcome:
+  status: completed
+  summary: |
+    GitHub App token synchronization now persists only a finite positive
+    installation ID supplied by the edge response. Missing, null, zero, or
+    non-finite IDs no longer become Date.now() values, preventing the auth
+    storage listener from recursively forcing get-github-token checks. Invalid
+    responses clear stale fabricated identity and exit before switching auth
+    method or announcing a false GitHub App success.
+  rationale: |
+    The fix preserves the existing background storage-recovery contract,
+    including recovery from a genuine installation-ID change. A small pure
+    identity policy was added through MAID chain merging and the existing auth
+    service delegates its storage decision to that policy.
+    Missing or invalid backend IDs are recorded as explicit contract violations
+    and stale installation identity is cleared once instead of being silently
+    retained or replaced with fabricated identity data.
+  lessons:
+    - lesson_type: stable-storage-identity
+      summary: |
+        Values watched by storage-driven recovery must not use time-based or
+        otherwise changing fallbacks; output written by an auth check can feed
+        directly back into another auth check.
+      tags:
+        - auth
+        - edge-functions
+        - storage
+      paths:
+        - src/content/services/githubAppIdentity.ts
+        - src/content/services/SupabaseAuthService.ts
+  review_notes:
+    - source: independent reviewer auth_hotfix_review
+      severity: finding-fixed
+      summary: |
+        Initial review requested an end-to-end assertion that a real positive
+        installation ID remains persisted. The integration test was added and
+        focused validation was rerun.
+    - source: independent reviewer auth_hotfix_review follow-up
+      severity: ready
+      summary: |
+        Follow-up review found no findings and returned Ready to merge,
+        confirming chain-merge suitability, scope fidelity, stable missing-ID
+        behavior, and exact persistence of a real installation ID.
+    - source: independent cross-repository reviewer cross_repo_auth_review
+      severity: ready
+      summary: |
+        Initial review found and drove fixes for false success on null IDs,
+        missing extension plan-lock coverage, an accidental Deno lockfile, and
+        stale Outcome evidence. Final review found no blocking issues and
+        returned Ready to merge with backend-first deployment ordering.
+  validation:
+    - command:
+        - pnpm
+        - exec
+        - vitest
+        - run
+        - src/background/__tests__/BackgroundService.storage-recovery.test.ts
+        - src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts
+      status: failed-red-phase
+      summary: Both loop-prevention safeguards failed before implementation for the intended reasons.
+    - command:
+        - pnpm
+        - exec
+        - vitest
+        - run
+        - src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts
+        - src/background/__tests__/BackgroundService.storage-recovery.test.ts
+      status: passed
+      summary: Focused hotfix coverage passed 8 tests after reviewer-requested coverage was added.
+    - command:
+        - pnpm
+        - lint
+      status: passed
+      summary: ESLint completed successfully.
+    - command:
+        - pnpm
+        - check
+      status: passed
+      summary: Svelte and TypeScript checks found 0 errors and 0 warnings.
+    - command:
+        - pnpm
+        - test:ci
+      status: passed
+      summary: Full Vitest CI passed 188 test files and 4309 tests after final invalid-ID degraded-path coverage.
+    - command:
+        - pnpm
+        - build
+      status: passed
+      summary: Production extension build completed successfully with existing chunk warnings only.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - schema
+      status: passed
+      summary: Full active-manifest schema validation passed for 24 manifests.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - behavioral
+      status: passed
+      summary: Full behavioral validation passed with one unrelated superseded manifest skipped.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - implementation
+      status: passed
+      summary: Full implementation validation passed with one unrelated superseded manifest skipped.
+    - command:
+        - ./scripts/maid
+        - coherence
+        - --manifest-dir
+        - manifests
+      status: passed
+      summary: Coherence reported 0 errors; existing advisory warnings remain.
+  completed_at: '2026-07-12T05:54:00+08:00'

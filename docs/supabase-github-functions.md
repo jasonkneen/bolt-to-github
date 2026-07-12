@@ -95,6 +95,7 @@ Requires Supabase user authentication via `Authorization` header.
 {
   access_token: string;
   github_username: string;
+  installation_id: number | null;
   expires_at: string;
   scopes: string[];
   type: "github_app";
