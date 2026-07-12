@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 
-import { render, screen, waitFor } from '@testing-library/svelte';
+import { render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App, {
@@ -13,9 +13,11 @@ import App, {
 } from '../App.svelte';
 
 const mockCheckGitHubConnection = vi.hoisted(() => vi.fn());
+const mockCheckPopupGitHubConnection = vi.hoisted(() => vi.fn());
 
 vi.mock('$lib/utils/githubConnection', () => ({
   checkGitHubConnection: mockCheckGitHubConnection,
+  checkPopupGitHubConnection: mockCheckPopupGitHubConnection,
 }));
 
 vi.unmock('$lib/components/ui/modal/Modal.svelte');
@@ -268,6 +270,10 @@ describe('App.svelte - Component Tests', () => {
       connected: true,
       message: 'GitHub is connected.',
     });
+    mockCheckPopupGitHubConnection.mockResolvedValue({
+      connected: true,
+      message: 'GitHub is connected.',
+    });
 
     const storesModule = await import('$lib/stores');
     stores = storesModule;
@@ -424,13 +430,26 @@ describe('App.svelte - Component Tests', () => {
         githubAppInstallationId: 12345,
       });
       stores.isAuthenticationValid.set(true);
-      mockCheckGitHubConnection.mockImplementation(() => new Promise(() => undefined));
+      mockCheckPopupGitHubConnection.mockImplementation(() => new Promise(() => undefined));
 
       render(App);
 
-      await waitFor(() => expect(mockCheckGitHubConnection).toHaveBeenCalledOnce());
+      await waitFor(() => expect(mockCheckPopupGitHubConnection).toHaveBeenCalledOnce());
+      expect(mockCheckGitHubConnection).not.toHaveBeenCalled();
       expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
-      expect(screen.getByText('Checking GitHub connection...')).toBeInTheDocument();
+      expect(screen.getByText('Checking GitHub connection')).toBeInTheDocument();
+    });
+
+    it('popup checking state renders an accessible animated spinner', async () => {
+      mockCheckPopupGitHubConnection.mockImplementation(() => new Promise(() => undefined));
+
+      render(App);
+
+      const status = screen.getByRole('status');
+      expect(status).toHaveAttribute('aria-live', 'polite');
+      expect(within(status).getByText('Checking GitHub connection')).toBeInTheDocument();
+      expect(within(status).getByText('This should only take a moment')).toBeInTheDocument();
+      expect(status.querySelector('.animate-spin')).toBeInTheDocument();
     });
 
     it('popup opening reconciles a disconnected GitHub App and shows onboarding immediately', async () => {
@@ -444,7 +463,7 @@ describe('App.svelte - Component Tests', () => {
         githubAppInstallationId: 12345,
       });
       stores.isAuthenticationValid.set(true);
-      mockCheckGitHubConnection.mockResolvedValue({
+      mockCheckPopupGitHubConnection.mockResolvedValue({
         connected: false,
         reason: 'not_connected',
         message: 'Connect GitHub at bolt2github.com before using GitHub features.',
@@ -465,7 +484,8 @@ describe('App.svelte - Component Tests', () => {
       render(App);
 
       await waitFor(() => {
-        expect(mockCheckGitHubConnection).toHaveBeenCalledOnce();
+        expect(mockCheckPopupGitHubConnection).toHaveBeenCalledOnce();
+        expect(mockCheckGitHubConnection).not.toHaveBeenCalled();
         expect(stores.githubSettingsActions.initialize).toHaveBeenCalledOnce();
         expect(stores.uiStateActions.showStatus).toHaveBeenCalledWith(
           'Connect GitHub at bolt2github.com before using GitHub features.',
@@ -486,7 +506,7 @@ describe('App.svelte - Component Tests', () => {
         githubAppInstallationId: 12345,
       });
       stores.isAuthenticationValid.set(true);
-      mockCheckGitHubConnection.mockResolvedValue({
+      mockCheckPopupGitHubConnection.mockResolvedValue({
         connected: false,
         reason: 'unavailable',
         message: 'Unable to verify the GitHub connection: Temporary outage',
@@ -495,7 +515,7 @@ describe('App.svelte - Component Tests', () => {
       render(App);
 
       await waitFor(() => {
-        expect(screen.queryByText('Checking GitHub connection...')).not.toBeInTheDocument();
+        expect(screen.queryByText('Checking GitHub connection')).not.toBeInTheDocument();
         expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
         expect(screen.getByTestId('onboarding-view')).toBeInTheDocument();
         expect(stores.uiStateActions.showStatus).toHaveBeenCalledWith(
@@ -506,7 +526,7 @@ describe('App.svelte - Component Tests', () => {
     });
 
     it('unavailable popup verification does not display pending cached file changes', async () => {
-      mockCheckGitHubConnection.mockResolvedValue({
+      mockCheckPopupGitHubConnection.mockResolvedValue({
         connected: false,
         reason: 'unavailable',
         message: 'Unable to verify the GitHub connection: Temporary outage',
@@ -519,7 +539,7 @@ describe('App.svelte - Component Tests', () => {
       render(App);
 
       await waitFor(() => {
-        expect(screen.queryByText('Checking GitHub connection...')).not.toBeInTheDocument();
+        expect(screen.queryByText('Checking GitHub connection')).not.toBeInTheDocument();
       });
       expect(screen.queryByTestId('file-changes-modal')).not.toBeInTheDocument();
     });
@@ -911,7 +931,7 @@ describe('App.svelte - Component Tests', () => {
 
       expect(queryByRole('tablist')).not.toBeInTheDocument();
       await waitFor(
-        () => expect(queryByText('Checking GitHub connection...')).not.toBeInTheDocument(),
+        () => expect(queryByText('Checking GitHub connection')).not.toBeInTheDocument(),
         { container, timeout: 5000 }
       );
 

@@ -1,0 +1,204 @@
+schema: '2'
+goal: Reuse recent successful popup GitHub verification while keeping actions force-fresh
+type: feature
+created: '2026-07-12T22:55:45Z'
+description: |
+  Opening the popup currently performs a live GitHub App synchronization every
+  time, even when the same authenticated user and installation were verified a
+  few seconds earlier. Add a popup-only connection function that can reuse a
+  successful verification for 60 seconds. The cache is stored without tokens,
+  is bound to the current Supabase user and stable installation ID, and is valid
+  only while the stored GitHub App token remains valid beyond the cache window.
+
+  Keep checkGitHubConnection unchanged as the force-fresh action boundary used
+  by push, file changes, reminders, and other protected operations. Disconnected,
+  unavailable, malformed, identity-mismatched, installation-mismatched, expired,
+  and near-expiry states never produce a cache hit. A fresh successful action may
+  refresh the popup verification timestamp, but actions never consume the cache.
+
+  Replace the popup's plain checking text with an accessible status region using
+  the existing lucide-svelte LoaderCircle animation and a short explanatory
+  subtitle. No new tab, list item, permission, or authentication fallback is added.
+
+  Rationale: a fixed 60-second success-only window removes bursty repeated popup
+  calls while keeping remote disconnect exposure bounded. Using the full token
+  expiration would retain stale connected UI for too long; force-fresh action
+  checks remain the final authorization boundary.
+temptations:
+  - risk: Do not let push, file changes, reminders, or Issues actions consume the popup cache.
+    instead: Add a separate popup entry point and keep checkGitHubConnection force-fresh by default.
+  - risk: Do not cache disconnected, unavailable, malformed, expired, or near-expiry results.
+    instead: Persist only successful verification metadata and require every identity and expiry guard before reuse.
+  - risk: Do not key the cache only by time or installation ID.
+    instead: Match the current Supabase user ID, stable installation ID, and token expiry on every popup lookup.
+  - risk: Do not add another visible GitHub action or a decorative spinner without status semantics.
+    instead: Replace only the existing checking text with an aria-live status region and animated LoaderCircle.
+files:
+  edit:
+    - path: src/lib/utils/githubConnection.ts
+      artifacts:
+        - kind: function
+          name: checkPopupGitHubConnection
+          args:
+            - name: authClient
+              type: GitHubConnectionAuthClient
+          returns: Promise<GitHubConnectionResult>
+          description: |
+            Reuses a successful verification for at most 60 seconds only when
+            the current Supabase user, installation ID, and token expiry match.
+            Otherwise performs the same live reconciliation as the force-fresh
+            action check.
+    - path: src/lib/utils/__tests__/githubConnection.test.ts
+      artifacts:
+        - kind: test_function
+          name: popup checks reuse one recent successful verification for matching identity
+        - kind: test_function
+          name: fresh action checks ignore the popup verification cache
+        - kind: test_function
+          name: popup checks bypass cached verification when the GitHub token is near expiry
+        - kind: test_function
+          name: popup checks bypass cached verification after the authenticated user changes
+        - kind: test_function
+          name: popup checks refresh after the sixty-second cache window
+        - kind: test_function
+          name: popup checks bypass cached verification after the installation changes
+        - kind: test_function
+          name: popup checks do not cache disconnected results
+    - path: src/popup/__tests__/App.component.test.ts
+      artifacts:
+        - kind: test_function
+          name: popup checking state renders an accessible animated spinner
+    - path: src/popup/App.svelte
+      artifacts:
+        - kind: function
+          name: reconcilePopupGitHubConnection
+          args:
+            - name: checkConnection
+              type: '() => Promise<GitHubConnectionResult>'
+            - name: refreshSettings
+              type: '() => Promise<void>'
+            - name: showStatus
+              type: '(message: string, duration: number) => void'
+          returns: Promise<GitHubConnectionResult>
+  read:
+    - src/lib/services/BackgroundAuthClient.ts
+    - src/content/services/SupabaseAuthService.ts
+    - manifests/gate-github-actions-on-live-connection.manifest.yaml
+    - docs/plans/bolt-extension-performance-backlog.md
+validate:
+  - pnpm exec vitest run src/lib/utils/__tests__/githubConnection.test.ts src/popup/__tests__/App.component.test.ts
+  - pnpm lint
+  - pnpm check
+  - pnpm build
+metadata:
+  tags:
+    - performance
+    - auth
+    - popup
+    - github-app
+    - edge-functions
+  priority: high
+  depends_on:
+    - gate-github-actions-on-live-connection
+  promotion_ready: true
+  notes: |
+    Behavioral validation passes. The focused pre-implementation run has eight
+    intended failures: seven for the missing popup cache API and its TTL,
+    identity, installation, expiry, negative-result, and action-freshness
+    contracts, plus one for the missing accessible animated checking state.
+outcome:
+  status: completed
+  summary: |
+    Popup initialization now reuses a recent successful GitHub App verification
+    for up to 60 seconds when the authenticated user, installation, and token
+    expiry still match. Direct GitHub actions remain force-fresh. The popup's
+    pending state now presents an accessible animated spinner with explanatory
+    text instead of plain text alone.
+  rationale: |
+    A short success-only window removes redundant live synchronization during
+    bursty popup openings without turning cached UI state into authorization.
+    Binding the token-free cache record to user, installation, and exact expiry
+    prevents reuse across account or installation transitions, while fresh
+    action checks preserve fail-loudly protection at every operation boundary.
+  lessons:
+    - lesson_type: cache-advisory-ui-state-only
+      summary: |
+        Authentication caches are safest when they optimize advisory UI checks
+        only and protected operations continue to cross the live authority
+        boundary immediately before work starts.
+      tags:
+        - auth
+        - cache
+        - github-app
+      paths:
+        - src/lib/utils/githubConnection.ts
+        - src/popup/App.svelte
+    - lesson_type: bind-cache-to-stable-identity
+      summary: |
+        A short TTL alone is insufficient for account-sensitive state. Match
+        the current user, stable installation, and exact credential expiry,
+        and reject near-expiry credentials before reusing a success.
+      tags:
+        - auth
+        - identity
+        - expiry
+      paths:
+        - src/lib/utils/githubConnection.ts
+  review_notes:
+    - source: independent reviewer maid_implementation_reviewer
+      severity: finding-fixed
+      summary: |
+        Initial review found no blocker or medium-severity issue and suggested
+        separating popup and force-fresh test mocks so a future call-site swap
+        cannot evade component coverage. The mocks and initialization assertions
+        were separated without changing production behavior.
+    - source: independent reviewer maid_implementation_reviewer rereview
+      severity: ready
+      summary: |
+        Fresh rereview confirmed the test-boundary improvement, found no blocker
+        or should-fix issue, and returned Ready to merge.
+  validation:
+    - command:
+        - pnpm
+        - test:ci
+      status: passed
+      summary: Full Vitest CI suite passed 4,357 tests across 194 files.
+    - command:
+        - pnpm
+        - lint
+      status: passed
+      summary: ESLint completed successfully.
+    - command:
+        - pnpm
+        - check
+      status: passed
+      summary: Svelte and TypeScript checks completed with 0 errors and 0 warnings.
+    - command:
+        - pnpm
+        - build
+      status: passed
+      summary: Production extension build completed with existing chunk warnings only.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - implementation
+      status: passed
+      summary: Implementation validation passed 27 active manifests with 3 superseded.
+    - command:
+        - ./scripts/maid
+        - test
+        - --manifest
+        - manifests/cache-recent-popup-github-verification.manifest.yaml
+      status: passed
+      summary: All four manifest-declared validation commands completed successfully.
+    - command:
+        - ./scripts/maid
+        - plan
+        - status
+        - manifests/cache-recent-popup-github-verification.manifest.yaml
+      status: passed
+      summary: Revision 5 matched all behavioral-test hashes with red evidence preserved before outcome capture.
+  completed_at: '2026-07-12T23:10:25Z'

@@ -1,0 +1,255 @@
+{
+  "manifest_path": "manifests/cache-recent-popup-github-verification.manifest.yaml",
+  "manifest_hash": "sha256:e0a38a392dc5fbd3927e53de22d02653d2128516f76b2ed893dcc4936a05941a",
+  "test_hashes": {
+    "src/lib/utils/__tests__/githubConnection.test.ts": "sha256:b695778f66920b5640d262dafb6df837e97fc3335ade5bdc52b238206f780749",
+    "src/popup/__tests__/App.component.test.ts": "sha256:70243ebd93193dc04c8603a27e5454850a8274ebcb68b57fadf768fa5487ef51"
+  },
+  "created_at": "2026-07-12T22:56:02.863237+00:00",
+  "revision": 7,
+  "revisions": [
+    {
+      "prior_manifest_hash": "sha256:982a54f26db7fc98d044987a772a492a67b989c7ac870dccfcf75ef3154f303d",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/githubConnection.test.ts": "sha256:b695778f66920b5640d262dafb6df837e97fc3335ade5bdc52b238206f780749",
+        "src/popup/__tests__/App.component.test.ts": "sha256:e52a0778c93e93a4afef029b0f2ac27e3bc25abaf6f1e75e152914f5899f1423"
+      },
+      "revised_at": "2026-07-12T22:58:17.947809+00:00",
+      "reason": "Classify the already-approved App.svelte spinner and popup call-site change as explicit writable scope while retaining its existing reconciliation artifact; behavior and tests are unchanged.",
+      "agent": {
+        "model": "gpt-5",
+        "provider": "openai",
+        "client": "codex",
+        "skills": ["maid-implement-draft", "bolt-extension-performance-optimization"],
+        "source": "flags"
+      },
+      "contract_delta": {
+        "artifacts_added": [
+          "src/popup/App.svelte:function:reconcilePopupGitHubConnection",
+          "src/popup/App.svelte:function:reconcilePopupGitHubConnection:arg=checkConnection:type=() => Promise<GitHubConnectionResult>:default=None",
+          "src/popup/App.svelte:function:reconcilePopupGitHubConnection:arg=refreshSettings:type=() => Promise<void>:default=None",
+          "src/popup/App.svelte:function:reconcilePopupGitHubConnection:arg=showStatus:type=(message: string, duration: number) => void:default=None",
+          "src/popup/App.svelte:function:reconcilePopupGitHubConnection:kind=function",
+          "src/popup/App.svelte:function:reconcilePopupGitHubConnection:returns=Promise<GitHubConnectionResult>"
+        ],
+        "artifacts_removed": [],
+        "files_added": ["edit:src/popup/App.svelte"],
+        "files_removed": ["read:src/popup/App.svelte"],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:b8a092e95d267f8f068b525361b555fa9fc0fd89549e4f44a54717f96cac721f",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/githubConnection.test.ts": "sha256:b695778f66920b5640d262dafb6df837e97fc3335ade5bdc52b238206f780749",
+        "src/popup/__tests__/App.component.test.ts": "sha256:e52a0778c93e93a4afef029b0f2ac27e3bc25abaf6f1e75e152914f5899f1423"
+      },
+      "revised_at": "2026-07-12T22:59:24.452684+00:00",
+      "reason": "Align existing popup pending-state assertions with the approved visible checking title so completion tests cannot pass against stale ellipsis text.",
+      "agent": {
+        "model": "gpt-5",
+        "provider": "openai",
+        "client": "codex",
+        "skills": ["maid-implement-draft", "bolt-extension-performance-optimization"],
+        "source": "flags"
+      },
+      "contract_delta": {
+        "artifacts_added": [],
+        "artifacts_removed": [],
+        "files_added": [],
+        "files_removed": [],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:b8a092e95d267f8f068b525361b555fa9fc0fd89549e4f44a54717f96cac721f",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/githubConnection.test.ts": "sha256:b695778f66920b5640d262dafb6df837e97fc3335ade5bdc52b238206f780749",
+        "src/popup/__tests__/App.component.test.ts": "sha256:7fde8401a96a8de98f9c0b20d632259b9549a7b8e22bd23a02d83721f7c41437"
+      },
+      "revised_at": "2026-07-12T23:03:13.346246+00:00",
+      "reason": "Expose the approved popup-specific connection checker through the App component test mock after the production import was implemented; assertions and behavioral coverage are unchanged.",
+      "agent": {
+        "model": "gpt-5",
+        "provider": "openai",
+        "client": "codex",
+        "skills": ["maid-implement-draft", "bolt-extension-performance-optimization"],
+        "source": "flags"
+      },
+      "contract_delta": {
+        "artifacts_added": [],
+        "artifacts_removed": [],
+        "files_added": [],
+        "files_removed": [],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:b8a092e95d267f8f068b525361b555fa9fc0fd89549e4f44a54717f96cac721f",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/githubConnection.test.ts": "sha256:b695778f66920b5640d262dafb6df837e97fc3335ade5bdc52b238206f780749",
+        "src/popup/__tests__/App.component.test.ts": "sha256:54b93b001270516db7f0fd44d8fdca6d850a71ef5398bf6b373c22acc7208038"
+      },
+      "revised_at": "2026-07-12T23:08:33.453366+00:00",
+      "reason": "Separate the popup and force-fresh connection mocks after independent review so initialization assertions detect an accidental call-site swap; behavioral expectations are unchanged.",
+      "agent": {
+        "model": "gpt-5",
+        "provider": "openai",
+        "client": "codex",
+        "skills": ["maid-implement-draft", "maid-implementation-review"],
+        "source": "flags"
+      },
+      "contract_delta": {
+        "artifacts_added": [],
+        "artifacts_removed": [],
+        "files_added": [],
+        "files_removed": [],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:b8a092e95d267f8f068b525361b555fa9fc0fd89549e4f44a54717f96cac721f",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/githubConnection.test.ts": "sha256:b695778f66920b5640d262dafb6df837e97fc3335ade5bdc52b238206f780749",
+        "src/popup/__tests__/App.component.test.ts": "sha256:70243ebd93193dc04c8603a27e5454850a8274ebcb68b57fadf768fa5487ef51"
+      },
+      "revised_at": "2026-07-12T23:10:53.960154+00:00",
+      "reason": "Record the required post-review Outcome with completed validation and independent Ready to merge evidence; behavioral contract and tests are unchanged.",
+      "agent": {
+        "model": "gpt-5",
+        "provider": "openai",
+        "client": "codex",
+        "skills": ["maid-implement-draft", "maid-implementation-review"],
+        "source": "flags"
+      },
+      "contract_delta": {
+        "artifacts_added": [],
+        "artifacts_removed": [],
+        "files_added": [],
+        "files_removed": [],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:e0a38a392dc5fbd3927e53de22d02653d2128516f76b2ed893dcc4936a05941a",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/githubConnection.test.ts": "sha256:b695778f66920b5640d262dafb6df837e97fc3335ade5bdc52b238206f780749",
+        "src/popup/__tests__/App.component.test.ts": "sha256:70243ebd93193dc04c8603a27e5454850a8274ebcb68b57fadf768fa5487ef51"
+      },
+      "revised_at": "2026-07-12T23:11:20.109141+00:00",
+      "reason": "Restore red-phase evidence after the outcome-only metadata revision cleared the marker; the completed contract, implementation, tests, and Outcome are unchanged.",
+      "agent": {
+        "model": "gpt-5",
+        "provider": "openai",
+        "client": "codex",
+        "skills": ["maid-implement-draft", "maid-implementation-review"],
+        "source": "flags"
+      },
+      "contract_delta": {
+        "artifacts_added": [],
+        "artifacts_removed": [],
+        "files_added": [],
+        "files_removed": [],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    }
+  ],
+  "red_evidence": {
+    "red": true,
+    "captured_at": "2026-07-12T23:11:56.396964+00:00",
+    "commands": [
+      {
+        "command": "pnpm exec vitest run src/lib/utils/__tests__/githubConnection.test.ts src/popup/__tests__/App.component.test.ts",
+        "exit_code": 1,
+        "output_tail": " 1: 0x7cdab2e3aaa9 node::OnFatalError(char const*, char const*) [/home/linuxbrew/.linuxbrew/Cellar/node/26.0.0/bin/../lib/libnode.so.147]\n 2: 0x7cdab380c46d  [/home/linuxbrew/.linuxbrew/Cellar/node/26.0.0/bin/../lib/libnode.so.147]\n 3: 0x7cdab380cf17 v8::api_internal::ToLocalEmpty() [/home/linuxbrew/.linuxbrew/Cellar/node/26.0.0/bin/../lib/libnode.so.147]\n 4: 0x7cdab2fa87b5 node::cjs_lexer::Parse(v8::FunctionCallbackInfo<v8::Value> const&) [/home/linuxbrew/.linuxbrew/Cellar/node/26.0.0/bin/../lib/libnode.so.147]\n 5: 0x7cd847dcfae9 \n\n----- JavaScript stack trace -----\n\n1: cjsPreparseModuleExports (node:internal/modules/esm/translators:394:44)\n2: createCJSModuleWrap (node:internal/modules/esm/translators:213:35)\n3: commonjsStrategy (node:internal/modules/esm/translators:350:10)\n4: #translate (node:internal/modules/esm/loader:454:20)\n5: afterLoad (node:internal/modules/esm/loader:510:29)\n6: loadAndTranslate (node:internal/modules/esm/loader:515:12)\n7: #getOrCreateModuleJobAfterResolve (node:internal/modules/esm/loader:558:36)\n8: afterResolve (node:internal/modules/esm/loader:606:52)\n9: getOrCreateModuleJob (node:internal/modules/esm/loader:612:12)\n10: syncLink (node:internal/modules/esm/module_job:162:33)\n\n",
+        "classification": "red"
+      },
+      {
+        "command": "pnpm lint",
+        "exit_code": 0,
+        "output_tail": "\n> bolt-to-github@1.3.20 lint /home/atomrem/projects/codefrost-dev/bolt-to-github\n> eslint \"src/**/*.{js,ts,svelte}\"\n",
+        "classification": "not_red"
+      },
+      {
+        "command": "pnpm check",
+        "exit_code": 1,
+        "output_tail": "\n> bolt-to-github@1.3.20 check /home/atomrem/projects/codefrost-dev/bolt-to-github\n> svelte-check --tsconfig ./tsconfig.json\n\n\n====================================\nLoading svelte-check in workspace: /home/atomrem/projects/codefrost-dev/bolt-to-github\nGetting Svelte diagnostics...\n\n/home/atomrem/projects/codefrost-dev/bolt-to-github/src/lib/utils/__tests__/githubConnection.test.ts:4:3\nError: '\"../githubConnection\"' has no exported member named 'checkPopupGitHubConnection'. Did you mean 'checkGitHubConnection'? \n  checkGitHubConnection,\n  checkPopupGitHubConnection,\n  type GitHubConnectionAuthClient,\n\n\n====================================\nsvelte-check found 1 error and 0 warnings in 1 file\n\u2009ELIFECYCLE\u2009 Command failed with exit code 1.",
+        "classification": "red"
+      },
+      {
+        "command": "pnpm build",
+        "exit_code": 0,
+        "output_tail": "dist/pages/logs.js                                           15.32 kB \u2502 gzip:   5.72 kB\ndist/assets/debounce-2yWaC3VV.js                             22.12 kB \u2502 gzip:   6.78 kB\ndist/assets/input-hfojewKS.js                                72.30 kB \u2502 gzip:  25.10 kB\ndist/assets/GitHubComparisonService-1LyQvrhK.js              89.15 kB \u2502 gzip:  24.96 kB\ndist/background/background.js                               110.89 kB \u2502 gzip:  29.56 kB\ndist/content/content.js                                     244.50 kB \u2502 gzip:  71.92 kB\ndist/assets/index.html-BnoFoUD-.js                          511.13 kB \u2502 gzip: 131.61 kB\n\u2713 built in 8.72s\n\n[plugin:vite:reporter] [plugin vite:reporter] \n(!) /home/atomrem/projects/codefrost-dev/bolt-to-github/src/lib/constants/supabase.ts is dynamically imported by /home/atomrem/projects/codefrost-dev/bolt-to-github/src/services/UnifiedGitHubService.ts but also statically imported by /home/atomrem/projects/codefrost-dev/bolt-to-github/src/content/services/SupabaseAuthService.ts, /home/atomrem/projects/codefrost-dev/bolt-to-github/src/services/BoltProjectSyncService.ts, /home/atomrem/projects/codefrost-dev/bolt-to-github/src/services/GitHubAppService.ts, /home/atomrem/projects/codefrost-dev/bolt-to-github/src/services/SubscriptionService.ts, dynamic import will not move module into another chunk.\n\n[plugin:vite:reporter] [plugin vite:reporter] \n(!) /home/atomrem/projects/codefrost-dev/bolt-to-github/src/content/handlers/FileChangeHandler.ts is dynamically imported by /home/atomrem/projects/codefrost-dev/bolt-to-github/src/content/handlers/GitHubUploadHandler.ts, /home/atomrem/projects/codefrost-dev/bolt-to-github/src/content/services/PushReminderService.ts, /home/atomrem/projects/codefrost-dev/bolt-to-github/src/content/services/PushReminderService.ts but also statically imported by /home/atomrem/projects/codefrost-dev/bolt-to-github/src/content/UIManager.ts, dynamic import will not move module into another chunk.\n\n\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.",
+        "classification": "not_red"
+      }
+    ]
+  },
+  "agent": {
+    "model": "gpt-5",
+    "provider": "openai",
+    "client": "codex",
+    "skills": ["maid-implement-draft", "bolt-extension-performance-optimization"],
+    "source": "flags"
+  },
+  "_manifest_contract": {
+    "artifacts": [
+      "src/lib/utils/__tests__/githubConnection.test.ts:fresh action checks ignore the popup verification cache",
+      "src/lib/utils/__tests__/githubConnection.test.ts:fresh action checks ignore the popup verification cache:kind=test_function",
+      "src/lib/utils/__tests__/githubConnection.test.ts:popup checks bypass cached verification after the authenticated user changes",
+      "src/lib/utils/__tests__/githubConnection.test.ts:popup checks bypass cached verification after the authenticated user changes:kind=test_function",
+      "src/lib/utils/__tests__/githubConnection.test.ts:popup checks bypass cached verification after the installation changes",
+      "src/lib/utils/__tests__/githubConnection.test.ts:popup checks bypass cached verification after the installation changes:kind=test_function",
+      "src/lib/utils/__tests__/githubConnection.test.ts:popup checks bypass cached verification when the GitHub token is near expiry",
+      "src/lib/utils/__tests__/githubConnection.test.ts:popup checks bypass cached verification when the GitHub token is near expiry:kind=test_function",
+      "src/lib/utils/__tests__/githubConnection.test.ts:popup checks do not cache disconnected results",
+      "src/lib/utils/__tests__/githubConnection.test.ts:popup checks do not cache disconnected results:kind=test_function",
+      "src/lib/utils/__tests__/githubConnection.test.ts:popup checks refresh after the sixty-second cache window",
+      "src/lib/utils/__tests__/githubConnection.test.ts:popup checks refresh after the sixty-second cache window:kind=test_function",
+      "src/lib/utils/__tests__/githubConnection.test.ts:popup checks reuse one recent successful verification for matching identity",
+      "src/lib/utils/__tests__/githubConnection.test.ts:popup checks reuse one recent successful verification for matching identity:kind=test_function",
+      "src/lib/utils/githubConnection.ts:function:checkPopupGitHubConnection",
+      "src/lib/utils/githubConnection.ts:function:checkPopupGitHubConnection:arg=authClient:type=GitHubConnectionAuthClient:default=None",
+      "src/lib/utils/githubConnection.ts:function:checkPopupGitHubConnection:kind=function",
+      "src/lib/utils/githubConnection.ts:function:checkPopupGitHubConnection:returns=Promise<GitHubConnectionResult>",
+      "src/popup/App.svelte:function:reconcilePopupGitHubConnection",
+      "src/popup/App.svelte:function:reconcilePopupGitHubConnection:arg=checkConnection:type=() => Promise<GitHubConnectionResult>:default=None",
+      "src/popup/App.svelte:function:reconcilePopupGitHubConnection:arg=refreshSettings:type=() => Promise<void>:default=None",
+      "src/popup/App.svelte:function:reconcilePopupGitHubConnection:arg=showStatus:type=(message: string, duration: number) => void:default=None",
+      "src/popup/App.svelte:function:reconcilePopupGitHubConnection:kind=function",
+      "src/popup/App.svelte:function:reconcilePopupGitHubConnection:returns=Promise<GitHubConnectionResult>",
+      "src/popup/__tests__/App.component.test.ts:popup checking state renders an accessible animated spinner",
+      "src/popup/__tests__/App.component.test.ts:popup checking state renders an accessible animated spinner:kind=test_function"
+    ],
+    "files": {
+      "create": [],
+      "edit": [
+        "src/lib/utils/__tests__/githubConnection.test.ts",
+        "src/lib/utils/githubConnection.ts",
+        "src/popup/App.svelte",
+        "src/popup/__tests__/App.component.test.ts"
+      ],
+      "read": [
+        "docs/plans/bolt-extension-performance-backlog.md",
+        "manifests/gate-github-actions-on-live-connection.manifest.yaml",
+        "src/content/services/SupabaseAuthService.ts",
+        "src/lib/services/BackgroundAuthClient.ts"
+      ]
+    },
+    "test_files": [
+      "src/lib/utils/__tests__/githubConnection.test.ts",
+      "src/popup/__tests__/App.component.test.ts"
+    ],
+    "validate_commands": [
+      "pnpm exec vitest run src/lib/utils/__tests__/githubConnection.test.ts src/popup/__tests__/App.component.test.ts",
+      "pnpm lint",
+      "pnpm check",
+      "pnpm build"
+    ]
+  }
+}

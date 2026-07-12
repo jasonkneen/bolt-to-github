@@ -94,8 +94,8 @@
   import { createLogger } from '$lib/utils/logger';
   import { setUpgradeModalState, type UpgradeModalType } from '$lib/utils/upgradeModal';
   import { closePopupWindow, isWindowMode, openPopupWindow } from '$lib/utils/windowMode';
-  import { checkGitHubConnection } from '$lib/utils/githubConnection';
-  import { ExternalLink, Minimize2 } from 'lucide-svelte';
+  import { checkGitHubConnection, checkPopupGitHubConnection } from '$lib/utils/githubConnection';
+  import { ExternalLink, LoaderCircle, Minimize2 } from 'lucide-svelte';
   import { onDestroy, onMount } from 'svelte';
   import { STORAGE_KEY } from '../background/TempRepoManager';
   import { SubscriptionService } from '../services/SubscriptionService';
@@ -180,7 +180,7 @@
   let githubConnectionChecking = true;
   let githubConnectionReady = false;
   const githubConnectionInitialization = reconcilePopupGitHubConnection(
-    () => checkGitHubConnection(),
+    () => checkPopupGitHubConnection(),
     () => githubSettingsActions.initialize(),
     (message, duration) => uiStateActions.showStatus(message, duration)
   ).then((connection) => {
@@ -867,8 +867,16 @@
     </CardHeader>
     <CardContent>
       {#if githubConnectionChecking}
-        <div class="flex items-center justify-center py-8 text-sm text-slate-400">
-          Checking GitHub connection...
+        <div
+          role="status"
+          aria-live="polite"
+          class="flex flex-col items-center justify-center gap-3 py-8 text-center"
+        >
+          <LoaderCircle class="h-7 w-7 animate-spin text-blue-400" aria-hidden="true" />
+          <div class="space-y-1">
+            <p class="text-sm font-medium text-slate-200">Checking GitHub connection</p>
+            <p class="text-xs text-slate-500">This should only take a moment</p>
+          </div>
         </div>
       {:else if displayMode === DISPLAY_MODES.TABS}
         <TabsView
