@@ -108,7 +108,8 @@ describe('SupabaseAuthService - stable GitHub App metadata', () => {
     expect(mockLoggerError).toHaveBeenCalledWith(
       expect.stringContaining('get-github-token contract violation')
     );
-    expect(chrome.storage.local.remove).toHaveBeenCalledWith('githubAppInstallationId');
+    expect(localData.githubAppInstallationId).toBe(1783806518231);
+    expect(chrome.storage.local.remove).not.toHaveBeenCalledWith('githubAppInstallationId');
     expect(chrome.runtime.sendMessage).not.toHaveBeenCalledWith(
       expect.objectContaining({ type: 'NOTIFY_GITHUB_APP_SYNC' })
     );

@@ -1,0 +1,836 @@
+{
+  "manifest_path": "manifests/gate-github-actions-on-live-connection.manifest.yaml",
+  "manifest_hash": "sha256:9455892d4eb577edca7593daa6a50307b86e611378eb0371739046d3cd70849c",
+  "test_hashes": {
+    "src/lib/utils/__tests__/githubAppSync.test.ts": "sha256:68eca049de568a6ea85d1a46050fa621e29efbb42dc00b41f634064c7a222065",
+    "src/lib/utils/__tests__/githubConnection.test.ts": "sha256:410fec359ff8ce9b9647c735c733b2a6255f14f1802249ab51f916f43e4c2b24",
+    "src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts": "sha256:a81cd5e738e225fce122e25f51aa6c5eff8e9767899a987768c5202c6f671fec",
+    "src/content/handlers/__tests__/GitHubUploadHandler.test.ts": "sha256:aff5d45b689d94c87b41dcdff865cdb998fa3bd4d8146f287c449f2de488938e",
+    "src/content/handlers/__tests__/FileChangeHandler.test.ts": "sha256:b39d54b91fab3fa5e6d0a07a7ed8ddd4bb7a2ac287ef7cb842a31122ac62280c",
+    "src/background/__tests__/BackgroundService.reload.test.ts": "sha256:11040f7884984cae5e235701f3b87eac949d278b020ae3d13f12fdbe37cb7275",
+    "src/background/__tests__/BackgroundService.storage-recovery.test.ts": "sha256:65ba17dde5a512ec2a662f7155de75658a522c317bf1579a4a7187477063ee80",
+    "src/popup/__tests__/App.component.test.ts": "sha256:f2a883fa0f5a2f151ee973c0684ad8d5e4f609a4635883c116829f2e91f58730",
+    "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts": "sha256:8433144040598979ebb7c80b6b108842a0d93657d9f67eeb4b32fb29f7b3fb20",
+    "src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts": "sha256:35d3a2b2a6117dc024c55d5e48e8c6589a424eaa090dfaadf3c1e16bba5535fb",
+    "src/content/services/__tests__/SupabaseAuthService.independent-session.test.ts": "sha256:219019b95f7ef315322b4bc704c597c74aed069b89656529aeaedff99c1ee773"
+  },
+  "created_at": "2026-07-12T15:19:34.938696+00:00",
+  "revision": 16,
+  "revisions": [
+    {
+      "prior_manifest_hash": "sha256:238c49bda7e8668702b7204436cac1d76c61b014a12ad7a7f8ca9c194fc72c68",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/githubAppSync.test.ts": "sha256:68eca049de568a6ea85d1a46050fa621e29efbb42dc00b41f634064c7a222065",
+        "src/lib/utils/__tests__/githubConnection.test.ts": "sha256:410fec359ff8ce9b9647c735c733b2a6255f14f1802249ab51f916f43e4c2b24",
+        "src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts": "sha256:5365ff288f89000600520b049fc20e6d8e83f4246d07b639fafc05c29768d17a",
+        "src/content/handlers/__tests__/GitHubUploadHandler.test.ts": "sha256:07d503abe53610ba98ec9998f0076f4f85c4728cd42a8ca41534563e72198b4b",
+        "src/content/handlers/__tests__/FileChangeHandler.test.ts": "sha256:7afa9277a9e0f9172b3129e04282db90d48b9ed0758d2eb30a17316d4af44ccd",
+        "src/background/__tests__/BackgroundService.reload.test.ts": "sha256:7aeb50074bdba2a89c7c206b530c084258c09c6c9158c3c945c1ee1a04d9181b",
+        "src/background/__tests__/BackgroundService.storage-recovery.test.ts": "sha256:65ba17dde5a512ec2a662f7155de75658a522c317bf1579a4a7187477063ee80",
+        "src/popup/__tests__/App.component.test.ts": "sha256:fad264d1552d65a0cb6d1589d5d5f49c055bf2d08226638b0960f3cbaa448997"
+      },
+      "revised_at": "2026-07-12T15:20:48.293348+00:00",
+      "reason": "Replace the visible test-mock button with a non-rendered event seam after user clarification; production UI scope is unchanged.",
+      "agent": {
+        "model": "gpt-5",
+        "provider": "openai",
+        "client": "codex",
+        "skills": ["maid-implement-draft", "maid-planner"],
+        "source": "flags"
+      },
+      "contract_delta": {
+        "artifacts_added": [],
+        "artifacts_removed": [],
+        "files_added": [],
+        "files_removed": [],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:238c49bda7e8668702b7204436cac1d76c61b014a12ad7a7f8ca9c194fc72c68",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/githubAppSync.test.ts": "sha256:68eca049de568a6ea85d1a46050fa621e29efbb42dc00b41f634064c7a222065",
+        "src/lib/utils/__tests__/githubConnection.test.ts": "sha256:410fec359ff8ce9b9647c735c733b2a6255f14f1802249ab51f916f43e4c2b24",
+        "src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts": "sha256:5365ff288f89000600520b049fc20e6d8e83f4246d07b639fafc05c29768d17a",
+        "src/content/handlers/__tests__/GitHubUploadHandler.test.ts": "sha256:07d503abe53610ba98ec9998f0076f4f85c4728cd42a8ca41534563e72198b4b",
+        "src/content/handlers/__tests__/FileChangeHandler.test.ts": "sha256:7afa9277a9e0f9172b3129e04282db90d48b9ed0758d2eb30a17316d4af44ccd",
+        "src/background/__tests__/BackgroundService.reload.test.ts": "sha256:7aeb50074bdba2a89c7c206b530c084258c09c6c9158c3c945c1ee1a04d9181b",
+        "src/background/__tests__/BackgroundService.storage-recovery.test.ts": "sha256:65ba17dde5a512ec2a662f7155de75658a522c317bf1579a4a7187477063ee80",
+        "src/popup/__tests__/App.component.test.ts": "sha256:9294069716a3f8da009e173465929665169b4baa7039f3c8b86f23f4e49f2f3a"
+      },
+      "revised_at": "2026-07-12T15:23:19.447163+00:00",
+      "reason": "Declare App.svelte as explicit writable scope with a testable popup reconciliation seam; approved behavior and UI remain unchanged.",
+      "agent": {
+        "model": "gpt-5",
+        "provider": "openai",
+        "client": "codex",
+        "skills": ["maid-implement-draft", "maid-planner"],
+        "source": "flags"
+      },
+      "contract_delta": {
+        "artifacts_added": [
+          "src/popup/App.svelte:function:reconcilePopupGitHubConnection",
+          "src/popup/App.svelte:function:reconcilePopupGitHubConnection:arg=checkConnection:type=() => Promise<GitHubConnectionResult>:default=None",
+          "src/popup/App.svelte:function:reconcilePopupGitHubConnection:arg=refreshSettings:type=() => Promise<void>:default=None",
+          "src/popup/App.svelte:function:reconcilePopupGitHubConnection:arg=showStatus:type=(message: string, duration: number) => void:default=None",
+          "src/popup/App.svelte:function:reconcilePopupGitHubConnection:kind=function",
+          "src/popup/App.svelte:function:reconcilePopupGitHubConnection:returns=Promise<GitHubConnectionResult>",
+          "src/popup/__tests__/App.component.test.ts:reconcilePopupGitHubConnection refreshes stale settings and surfaces disconnection",
+          "src/popup/__tests__/App.component.test.ts:reconcilePopupGitHubConnection refreshes stale settings and surfaces disconnection:kind=test_function"
+        ],
+        "artifacts_removed": [],
+        "files_added": ["edit:src/popup/App.svelte"],
+        "files_removed": ["read:src/popup/App.svelte"],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:9f035b40152a371599b0175a4558826f7b44d0cffb1f180fb29fcf78644c7d2b",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/githubAppSync.test.ts": "sha256:68eca049de568a6ea85d1a46050fa621e29efbb42dc00b41f634064c7a222065",
+        "src/lib/utils/__tests__/githubConnection.test.ts": "sha256:410fec359ff8ce9b9647c735c733b2a6255f14f1802249ab51f916f43e4c2b24",
+        "src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts": "sha256:5365ff288f89000600520b049fc20e6d8e83f4246d07b639fafc05c29768d17a",
+        "src/content/handlers/__tests__/GitHubUploadHandler.test.ts": "sha256:07d503abe53610ba98ec9998f0076f4f85c4728cd42a8ca41534563e72198b4b",
+        "src/content/handlers/__tests__/FileChangeHandler.test.ts": "sha256:7afa9277a9e0f9172b3129e04282db90d48b9ed0758d2eb30a17316d4af44ccd",
+        "src/background/__tests__/BackgroundService.reload.test.ts": "sha256:7aeb50074bdba2a89c7c206b530c084258c09c6c9158c3c945c1ee1a04d9181b",
+        "src/background/__tests__/BackgroundService.storage-recovery.test.ts": "sha256:65ba17dde5a512ec2a662f7155de75658a522c317bf1579a4a7187477063ee80",
+        "src/popup/__tests__/App.component.test.ts": "sha256:42ef294ac7d4d3bc5a888d383ddfd168ccc996c296ceedb2a4b95ec305165631"
+      },
+      "revised_at": "2026-07-12T15:24:01.854865+00:00",
+      "reason": "Declare App.svelte as explicit writable scope with a testable popup reconciliation seam; approved behavior and UI remain unchanged.",
+      "agent": {
+        "model": "gpt-5",
+        "provider": "openai",
+        "client": "codex",
+        "skills": ["maid-implement-draft", "maid-planner"],
+        "source": "flags"
+      },
+      "contract_delta": {
+        "artifacts_added": [],
+        "artifacts_removed": [],
+        "files_added": [],
+        "files_removed": [],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:9f035b40152a371599b0175a4558826f7b44d0cffb1f180fb29fcf78644c7d2b",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/githubAppSync.test.ts": "sha256:68eca049de568a6ea85d1a46050fa621e29efbb42dc00b41f634064c7a222065",
+        "src/lib/utils/__tests__/githubConnection.test.ts": "sha256:410fec359ff8ce9b9647c735c733b2a6255f14f1802249ab51f916f43e4c2b24",
+        "src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts": "sha256:5365ff288f89000600520b049fc20e6d8e83f4246d07b639fafc05c29768d17a",
+        "src/content/handlers/__tests__/GitHubUploadHandler.test.ts": "sha256:07d503abe53610ba98ec9998f0076f4f85c4728cd42a8ca41534563e72198b4b",
+        "src/content/handlers/__tests__/FileChangeHandler.test.ts": "sha256:7afa9277a9e0f9172b3129e04282db90d48b9ed0758d2eb30a17316d4af44ccd",
+        "src/background/__tests__/BackgroundService.reload.test.ts": "sha256:7aeb50074bdba2a89c7c206b530c084258c09c6c9158c3c945c1ee1a04d9181b",
+        "src/background/__tests__/BackgroundService.storage-recovery.test.ts": "sha256:65ba17dde5a512ec2a662f7155de75658a522c317bf1579a4a7187477063ee80",
+        "src/popup/__tests__/App.component.test.ts": "sha256:42ef294ac7d4d3bc5a888d383ddfd168ccc996c296ceedb2a4b95ec305165631"
+      },
+      "revised_at": "2026-07-12T15:25:14.606777+00:00",
+      "reason": "Tighten the push red test to assert no ZIP export call rather than no harmless DownloadService construction.",
+      "agent": {
+        "model": "gpt-5",
+        "provider": "openai",
+        "client": "codex",
+        "skills": ["maid-implement-draft", "maid-planner"],
+        "source": "flags"
+      },
+      "contract_delta": {
+        "artifacts_added": [],
+        "artifacts_removed": [],
+        "files_added": [],
+        "files_removed": [],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:9f035b40152a371599b0175a4558826f7b44d0cffb1f180fb29fcf78644c7d2b",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/githubAppSync.test.ts": "sha256:68eca049de568a6ea85d1a46050fa621e29efbb42dc00b41f634064c7a222065",
+        "src/lib/utils/__tests__/githubConnection.test.ts": "sha256:410fec359ff8ce9b9647c735c733b2a6255f14f1802249ab51f916f43e4c2b24",
+        "src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts": "sha256:5365ff288f89000600520b049fc20e6d8e83f4246d07b639fafc05c29768d17a",
+        "src/content/handlers/__tests__/GitHubUploadHandler.test.ts": "sha256:aff5d45b689d94c87b41dcdff865cdb998fa3bd4d8146f287c449f2de488938e",
+        "src/content/handlers/__tests__/FileChangeHandler.test.ts": "sha256:7afa9277a9e0f9172b3129e04282db90d48b9ed0758d2eb30a17316d4af44ccd",
+        "src/background/__tests__/BackgroundService.reload.test.ts": "sha256:7aeb50074bdba2a89c7c206b530c084258c09c6c9158c3c945c1ee1a04d9181b",
+        "src/background/__tests__/BackgroundService.storage-recovery.test.ts": "sha256:65ba17dde5a512ec2a662f7155de75658a522c317bf1579a4a7187477063ee80",
+        "src/popup/__tests__/App.component.test.ts": "sha256:42ef294ac7d4d3bc5a888d383ddfd168ccc996c296ceedb2a4b95ec305165631"
+      },
+      "revised_at": "2026-07-12T15:34:26.437427+00:00",
+      "reason": "Remove the TabsView test event entirely and cover popup file-change gating through a non-rendered injected action guard; no product tab item or test-only UI control is added.",
+      "agent": {
+        "model": "gpt-5",
+        "provider": "openai",
+        "client": "codex",
+        "skills": ["maid-implement-draft", "maid-planner"],
+        "source": "flags"
+      },
+      "contract_delta": {
+        "artifacts_added": [
+          "src/popup/App.svelte:function:runPopupGitHubAction",
+          "src/popup/App.svelte:function:runPopupGitHubAction:arg=action:type=() => Promise<void>:default=None",
+          "src/popup/App.svelte:function:runPopupGitHubAction:arg=checkConnection:type=() => Promise<GitHubConnectionResult>:default=None",
+          "src/popup/App.svelte:function:runPopupGitHubAction:arg=refreshSettings:type=() => Promise<void>:default=None",
+          "src/popup/App.svelte:function:runPopupGitHubAction:arg=showStatus:type=(message: string, duration: number) => void:default=None",
+          "src/popup/App.svelte:function:runPopupGitHubAction:kind=function",
+          "src/popup/App.svelte:function:runPopupGitHubAction:returns=Promise<boolean>"
+        ],
+        "artifacts_removed": [],
+        "files_added": [],
+        "files_removed": ["read:src/popup/__tests__/__mocks__/TabsView.svelte"],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:3f92fa9deb62c088486279e1a1c4359fc6873602e2887670f3b5f0fe8f770f68",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/githubAppSync.test.ts": "sha256:68eca049de568a6ea85d1a46050fa621e29efbb42dc00b41f634064c7a222065",
+        "src/lib/utils/__tests__/githubConnection.test.ts": "sha256:410fec359ff8ce9b9647c735c733b2a6255f14f1802249ab51f916f43e4c2b24",
+        "src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts": "sha256:5365ff288f89000600520b049fc20e6d8e83f4246d07b639fafc05c29768d17a",
+        "src/content/handlers/__tests__/GitHubUploadHandler.test.ts": "sha256:aff5d45b689d94c87b41dcdff865cdb998fa3bd4d8146f287c449f2de488938e",
+        "src/content/handlers/__tests__/FileChangeHandler.test.ts": "sha256:7afa9277a9e0f9172b3129e04282db90d48b9ed0758d2eb30a17316d4af44ccd",
+        "src/background/__tests__/BackgroundService.reload.test.ts": "sha256:11040f7884984cae5e235701f3b87eac949d278b020ae3d13f12fdbe37cb7275",
+        "src/background/__tests__/BackgroundService.storage-recovery.test.ts": "sha256:65ba17dde5a512ec2a662f7155de75658a522c317bf1579a4a7187477063ee80",
+        "src/popup/__tests__/App.component.test.ts": "sha256:3cc53ab91897361e333c75521c47fbeaa58910493888722771da37d8e2d26e41"
+      },
+      "revised_at": "2026-07-12T15:36:04.564847+00:00",
+      "reason": "Record formatting-only changes after removing the test UI seam; approved behavior and artifacts are unchanged.",
+      "agent": {
+        "model": "gpt-5",
+        "provider": "openai",
+        "client": "codex",
+        "skills": ["maid-implement-draft", "maid-planner"],
+        "source": "flags"
+      },
+      "contract_delta": {
+        "artifacts_added": [],
+        "artifacts_removed": [],
+        "files_added": [],
+        "files_removed": [],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:5d5ecc75b82033ef1e3e8043343f7a51a0cacad8c385854a49a215ab4f2f651a",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/githubAppSync.test.ts": "sha256:68eca049de568a6ea85d1a46050fa621e29efbb42dc00b41f634064c7a222065",
+        "src/lib/utils/__tests__/githubConnection.test.ts": "sha256:410fec359ff8ce9b9647c735c733b2a6255f14f1802249ab51f916f43e4c2b24",
+        "src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts": "sha256:d27eccab2b77cfb7778f9afb3bececfb5c1c67ba10e7b9c6fb5f72bed0755dca",
+        "src/content/handlers/__tests__/GitHubUploadHandler.test.ts": "sha256:aff5d45b689d94c87b41dcdff865cdb998fa3bd4d8146f287c449f2de488938e",
+        "src/content/handlers/__tests__/FileChangeHandler.test.ts": "sha256:7afa9277a9e0f9172b3129e04282db90d48b9ed0758d2eb30a17316d4af44ccd",
+        "src/background/__tests__/BackgroundService.reload.test.ts": "sha256:11040f7884984cae5e235701f3b87eac949d278b020ae3d13f12fdbe37cb7275",
+        "src/background/__tests__/BackgroundService.storage-recovery.test.ts": "sha256:65ba17dde5a512ec2a662f7155de75658a522c317bf1579a4a7187477063ee80",
+        "src/popup/__tests__/App.component.test.ts": "sha256:0e4115d72ff68eb97551d9cf026e618617e2d100bfc8b1b5dbf3e5c22d4993fe"
+      },
+      "revised_at": "2026-07-12T15:40:24.899683+00:00",
+      "reason": "Supersede the prior session-cleanup contract so server-confirmed GitHub App linkage remains preserved across transient session expiry while authoritative 404 still clears stale linkage; update the legacy fixture from contradictory 404 to a live installation.",
+      "agent": {
+        "model": "gpt-5",
+        "provider": "openai",
+        "client": "codex",
+        "skills": ["maid-implement-draft", "maid-evolver"],
+        "source": "flags"
+      },
+      "contract_delta": {
+        "artifacts_added": [
+          "src/content/services/SupabaseAuthService.ts:method:SupabaseAuthService.clearExpiredSession",
+          "src/content/services/SupabaseAuthService.ts:method:SupabaseAuthService.clearExpiredSession:kind=method",
+          "src/content/services/SupabaseAuthService.ts:method:SupabaseAuthService.clearExpiredSession:of=SupabaseAuthService",
+          "src/content/services/SupabaseAuthService.ts:method:SupabaseAuthService.clearExpiredSession:returns=Promise<void>",
+          "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts:clearExpiredSession preserves authenticationMethod and githubApp keys",
+          "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts:clearExpiredSession preserves authenticationMethod and githubApp keys:kind=test_function",
+          "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts:clearExpiredSession removes supabase session keys and minted flags",
+          "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts:clearExpiredSession removes supabase session keys and minted flags:kind=test_function",
+          "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts:explicit logout still clears GitHub App cache and authenticationMethod",
+          "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts:explicit logout still clears GitHub App cache and authenticationMethod:kind=test_function",
+          "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts:re-authentication flow after session expiry keeps GitHub App linkage usable",
+          "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts:re-authentication flow after session expiry keeps GitHub App linkage usable:kind=test_function"
+        ],
+        "artifacts_removed": [],
+        "files_added": [
+          "edit:src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts"
+        ],
+        "files_removed": [],
+        "validate_commands_added": [
+          "pnpm exec vitest run src/lib/utils/__tests__/githubConnection.test.ts src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts src/content/services/__tests__/SupabaseAuthService.independent-session.test.ts src/content/handlers/__tests__/GitHubUploadHandler.test.ts src/content/handlers/__tests__/FileChangeHandler.test.ts src/background/__tests__/BackgroundService.reload.test.ts src/background/__tests__/BackgroundService.storage-recovery.test.ts src/popup/__tests__/App.component.test.ts src/lib/utils/__tests__/githubAppSync.test.ts"
+        ],
+        "validate_commands_removed": [
+          "pnpm exec vitest run src/lib/utils/__tests__/githubConnection.test.ts src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts src/content/handlers/__tests__/GitHubUploadHandler.test.ts src/content/handlers/__tests__/FileChangeHandler.test.ts src/background/__tests__/BackgroundService.reload.test.ts src/background/__tests__/BackgroundService.storage-recovery.test.ts src/popup/__tests__/App.component.test.ts src/lib/utils/__tests__/githubAppSync.test.ts"
+        ]
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:887e67bc913aa7f40ddd74a6f4cbc8664cef8ea298ea8e51e105f4f773d3dc8a",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/githubAppSync.test.ts": "sha256:68eca049de568a6ea85d1a46050fa621e29efbb42dc00b41f634064c7a222065",
+        "src/lib/utils/__tests__/githubConnection.test.ts": "sha256:410fec359ff8ce9b9647c735c733b2a6255f14f1802249ab51f916f43e4c2b24",
+        "src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts": "sha256:d27eccab2b77cfb7778f9afb3bececfb5c1c67ba10e7b9c6fb5f72bed0755dca",
+        "src/content/handlers/__tests__/GitHubUploadHandler.test.ts": "sha256:aff5d45b689d94c87b41dcdff865cdb998fa3bd4d8146f287c449f2de488938e",
+        "src/content/handlers/__tests__/FileChangeHandler.test.ts": "sha256:7afa9277a9e0f9172b3129e04282db90d48b9ed0758d2eb30a17316d4af44ccd",
+        "src/background/__tests__/BackgroundService.reload.test.ts": "sha256:11040f7884984cae5e235701f3b87eac949d278b020ae3d13f12fdbe37cb7275",
+        "src/background/__tests__/BackgroundService.storage-recovery.test.ts": "sha256:65ba17dde5a512ec2a662f7155de75658a522c317bf1579a4a7187477063ee80",
+        "src/popup/__tests__/App.component.test.ts": "sha256:0e4115d72ff68eb97551d9cf026e618617e2d100bfc8b1b5dbf3e5c22d4993fe",
+        "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts": "sha256:8433144040598979ebb7c80b6b108842a0d93657d9f67eeb4b32fb29f7b3fb20",
+        "src/content/services/__tests__/SupabaseAuthService.independent-session.test.ts": "sha256:219019b95f7ef315322b4bc704c597c74aed069b89656529aeaedff99c1ee773"
+      },
+      "revised_at": "2026-07-12T15:47:37.650988+00:00",
+      "reason": "Make the popup component suite deterministic by mocking delayed window.close and binding async assertions to the rendered container; production behavior is unchanged.",
+      "agent": {
+        "model": "gpt-5",
+        "provider": "openai",
+        "client": "codex",
+        "skills": ["maid-implement-draft", "maid-evolver"],
+        "source": "flags"
+      },
+      "contract_delta": {
+        "artifacts_added": [],
+        "artifacts_removed": [],
+        "files_added": [],
+        "files_removed": [],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:887e67bc913aa7f40ddd74a6f4cbc8664cef8ea298ea8e51e105f4f773d3dc8a",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/githubAppSync.test.ts": "sha256:68eca049de568a6ea85d1a46050fa621e29efbb42dc00b41f634064c7a222065",
+        "src/lib/utils/__tests__/githubConnection.test.ts": "sha256:410fec359ff8ce9b9647c735c733b2a6255f14f1802249ab51f916f43e4c2b24",
+        "src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts": "sha256:d27eccab2b77cfb7778f9afb3bececfb5c1c67ba10e7b9c6fb5f72bed0755dca",
+        "src/content/handlers/__tests__/GitHubUploadHandler.test.ts": "sha256:aff5d45b689d94c87b41dcdff865cdb998fa3bd4d8146f287c449f2de488938e",
+        "src/content/handlers/__tests__/FileChangeHandler.test.ts": "sha256:7afa9277a9e0f9172b3129e04282db90d48b9ed0758d2eb30a17316d4af44ccd",
+        "src/background/__tests__/BackgroundService.reload.test.ts": "sha256:11040f7884984cae5e235701f3b87eac949d278b020ae3d13f12fdbe37cb7275",
+        "src/background/__tests__/BackgroundService.storage-recovery.test.ts": "sha256:65ba17dde5a512ec2a662f7155de75658a522c317bf1579a4a7187477063ee80",
+        "src/popup/__tests__/App.component.test.ts": "sha256:412d0cbe3cb7f592895b2f6bc4dd10574ed6da4f5079cdf8a13dfd5b54e3531f",
+        "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts": "sha256:8433144040598979ebb7c80b6b108842a0d93657d9f67eeb4b32fb29f7b3fb20",
+        "src/content/services/__tests__/SupabaseAuthService.independent-session.test.ts": "sha256:219019b95f7ef315322b4bc704c597c74aed069b89656529aeaedff99c1ee773"
+      },
+      "revised_at": "2026-07-12T15:50:22.421049+00:00",
+      "reason": "Align declared TypeScript signatures with MAID implementation parsing: function-property interface members, optional parameter normalization, direct popup result type, and the existing optional boolean method representation.",
+      "agent": {
+        "model": "gpt-5",
+        "provider": "openai",
+        "client": "codex",
+        "skills": ["maid-implement-draft", "maid-evolver"],
+        "source": "flags"
+      },
+      "contract_delta": {
+        "artifacts_added": [
+          "src/content/handlers/FileChangeHandler.ts:method:FileChangeHandler.loadProjectFiles:arg=forceRefresh:type=boolean:default=None",
+          "src/lib/utils/githubConnection.ts:function:checkGitHubConnection:arg=authClient:type=GitHubConnectionAuthClient:default=None"
+        ],
+        "artifacts_removed": [
+          "src/content/handlers/FileChangeHandler.ts:method:FileChangeHandler.loadProjectFiles:arg=forceRefresh:type=boolean | undefined:default=None",
+          "src/lib/utils/githubConnection.ts:function:checkGitHubConnection:arg=authClient:type=GitHubConnectionAuthClient | undefined:default=None"
+        ],
+        "files_added": [],
+        "files_removed": [],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:2643c604f2efa374a8ad667148d08f94844dfab94839af568f508c71bf76415d",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/githubAppSync.test.ts": "sha256:68eca049de568a6ea85d1a46050fa621e29efbb42dc00b41f634064c7a222065",
+        "src/lib/utils/__tests__/githubConnection.test.ts": "sha256:410fec359ff8ce9b9647c735c733b2a6255f14f1802249ab51f916f43e4c2b24",
+        "src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts": "sha256:d27eccab2b77cfb7778f9afb3bececfb5c1c67ba10e7b9c6fb5f72bed0755dca",
+        "src/content/handlers/__tests__/GitHubUploadHandler.test.ts": "sha256:aff5d45b689d94c87b41dcdff865cdb998fa3bd4d8146f287c449f2de488938e",
+        "src/content/handlers/__tests__/FileChangeHandler.test.ts": "sha256:7afa9277a9e0f9172b3129e04282db90d48b9ed0758d2eb30a17316d4af44ccd",
+        "src/background/__tests__/BackgroundService.reload.test.ts": "sha256:11040f7884984cae5e235701f3b87eac949d278b020ae3d13f12fdbe37cb7275",
+        "src/background/__tests__/BackgroundService.storage-recovery.test.ts": "sha256:65ba17dde5a512ec2a662f7155de75658a522c317bf1579a4a7187477063ee80",
+        "src/popup/__tests__/App.component.test.ts": "sha256:412d0cbe3cb7f592895b2f6bc4dd10574ed6da4f5079cdf8a13dfd5b54e3531f",
+        "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts": "sha256:8433144040598979ebb7c80b6b108842a0d93657d9f67eeb4b32fb29f7b3fb20",
+        "src/content/services/__tests__/SupabaseAuthService.independent-session.test.ts": "sha256:219019b95f7ef315322b4bc704c597c74aed069b89656529aeaedff99c1ee773"
+      },
+      "revised_at": "2026-07-12T15:55:55.289326+00:00",
+      "reason": "Address independent review findings with red tests for malformed successful GitHub App responses, direct programmatic file comparisons, and resolved-unavailable popup state; retain the popup test after confirming existing readiness-derived rendering already blocks stale tabs.",
+      "agent": {
+        "model": "gpt-5",
+        "provider": "openai",
+        "client": "codex",
+        "skills": ["maid-implement-draft", "maid-implementation-review"],
+        "source": "flags"
+      },
+      "contract_delta": {
+        "artifacts_added": [
+          "src/content/handlers/__tests__/FileChangeHandler.test.ts:disconnected programmatic file changes stops before refresh and comparison",
+          "src/content/handlers/__tests__/FileChangeHandler.test.ts:disconnected programmatic file changes stops before refresh and comparison:kind=test_function",
+          "src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts:malformed successful response rejects without clearing stored connection state",
+          "src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts:malformed successful response rejects without clearing stored connection state:kind=test_function",
+          "src/popup/__tests__/App.component.test.ts:unavailable popup verification keeps stale GitHub-backed surfaces unmounted",
+          "src/popup/__tests__/App.component.test.ts:unavailable popup verification keeps stale GitHub-backed surfaces unmounted:kind=test_function"
+        ],
+        "artifacts_removed": [],
+        "files_added": [],
+        "files_removed": [],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:7a80b8163352be1aeb3f36cc5db721059b2f5d2da5c9f7c39d946bb1416b4fd9",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/githubAppSync.test.ts": "sha256:68eca049de568a6ea85d1a46050fa621e29efbb42dc00b41f634064c7a222065",
+        "src/lib/utils/__tests__/githubConnection.test.ts": "sha256:410fec359ff8ce9b9647c735c733b2a6255f14f1802249ab51f916f43e4c2b24",
+        "src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts": "sha256:a81cd5e738e225fce122e25f51aa6c5eff8e9767899a987768c5202c6f671fec",
+        "src/content/handlers/__tests__/GitHubUploadHandler.test.ts": "sha256:aff5d45b689d94c87b41dcdff865cdb998fa3bd4d8146f287c449f2de488938e",
+        "src/content/handlers/__tests__/FileChangeHandler.test.ts": "sha256:b39d54b91fab3fa5e6d0a07a7ed8ddd4bb7a2ac287ef7cb842a31122ac62280c",
+        "src/background/__tests__/BackgroundService.reload.test.ts": "sha256:11040f7884984cae5e235701f3b87eac949d278b020ae3d13f12fdbe37cb7275",
+        "src/background/__tests__/BackgroundService.storage-recovery.test.ts": "sha256:65ba17dde5a512ec2a662f7155de75658a522c317bf1579a4a7187477063ee80",
+        "src/popup/__tests__/App.component.test.ts": "sha256:95c209a7c6ad4850a5e9a96b3ed3b1827fb5b5efa9ce51e81afc5053aeff50f2",
+        "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts": "sha256:8433144040598979ebb7c80b6b108842a0d93657d9f67eeb4b32fb29f7b3fb20",
+        "src/content/services/__tests__/SupabaseAuthService.independent-session.test.ts": "sha256:219019b95f7ef315322b4bc704c597c74aed069b89656529aeaedff99c1ee773"
+      },
+      "revised_at": "2026-07-12T15:59:01.113379+00:00",
+      "reason": "Supersede the earlier edge-function-loop contract so malformed 2xx metadata still rejects without synthesizing identity but now preserves durable installation state; carry forward its stable-identity artifacts and validation.",
+      "agent": {
+        "model": "gpt-5",
+        "provider": "openai",
+        "client": "codex",
+        "skills": ["maid-evolver", "maid-implementation-review"],
+        "source": "flags"
+      },
+      "contract_delta": {
+        "artifacts_added": [
+          "src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts:accepts only a stable positive server-provided installation ID",
+          "src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts:accepts only a stable positive server-provided installation ID:kind=test_function",
+          "src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts:does not synthesize a changing installation ID when the edge response omits it",
+          "src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts:does not synthesize a changing installation ID when the edge response omits it:kind=test_function",
+          "src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts:persists the exact positive installation ID supplied by the edge response",
+          "src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts:persists the exact positive installation ID supplied by the edge response:kind=test_function",
+          "src/content/services/githubAppIdentity.ts:function:stableGitHubAppInstallationId",
+          "src/content/services/githubAppIdentity.ts:function:stableGitHubAppInstallationId:arg=installationId:type=number | null | undefined:default=None",
+          "src/content/services/githubAppIdentity.ts:function:stableGitHubAppInstallationId:kind=function",
+          "src/content/services/githubAppIdentity.ts:function:stableGitHubAppInstallationId:returns=number | undefined"
+        ],
+        "artifacts_removed": [],
+        "files_added": [
+          "edit:src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts",
+          "edit:src/content/services/githubAppIdentity.ts"
+        ],
+        "files_removed": [],
+        "validate_commands_added": [
+          "pnpm exec vitest run src/lib/utils/__tests__/githubConnection.test.ts src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts src/content/services/__tests__/SupabaseAuthService.independent-session.test.ts src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts src/content/handlers/__tests__/GitHubUploadHandler.test.ts src/content/handlers/__tests__/FileChangeHandler.test.ts src/background/__tests__/BackgroundService.reload.test.ts src/background/__tests__/BackgroundService.storage-recovery.test.ts src/popup/__tests__/App.component.test.ts src/lib/utils/__tests__/githubAppSync.test.ts"
+        ],
+        "validate_commands_removed": [
+          "pnpm exec vitest run src/lib/utils/__tests__/githubConnection.test.ts src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts src/content/services/__tests__/SupabaseAuthService.independent-session.test.ts src/content/handlers/__tests__/GitHubUploadHandler.test.ts src/content/handlers/__tests__/FileChangeHandler.test.ts src/background/__tests__/BackgroundService.reload.test.ts src/background/__tests__/BackgroundService.storage-recovery.test.ts src/popup/__tests__/App.component.test.ts src/lib/utils/__tests__/githubAppSync.test.ts"
+        ]
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:6e7621edc9039f69a88df2f4502f23e67beb2fede1eca7f88f55fe0f0ab4a14a",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/githubAppSync.test.ts": "sha256:68eca049de568a6ea85d1a46050fa621e29efbb42dc00b41f634064c7a222065",
+        "src/lib/utils/__tests__/githubConnection.test.ts": "sha256:410fec359ff8ce9b9647c735c733b2a6255f14f1802249ab51f916f43e4c2b24",
+        "src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts": "sha256:a81cd5e738e225fce122e25f51aa6c5eff8e9767899a987768c5202c6f671fec",
+        "src/content/handlers/__tests__/GitHubUploadHandler.test.ts": "sha256:aff5d45b689d94c87b41dcdff865cdb998fa3bd4d8146f287c449f2de488938e",
+        "src/content/handlers/__tests__/FileChangeHandler.test.ts": "sha256:b39d54b91fab3fa5e6d0a07a7ed8ddd4bb7a2ac287ef7cb842a31122ac62280c",
+        "src/background/__tests__/BackgroundService.reload.test.ts": "sha256:11040f7884984cae5e235701f3b87eac949d278b020ae3d13f12fdbe37cb7275",
+        "src/background/__tests__/BackgroundService.storage-recovery.test.ts": "sha256:65ba17dde5a512ec2a662f7155de75658a522c317bf1579a4a7187477063ee80",
+        "src/popup/__tests__/App.component.test.ts": "sha256:95c209a7c6ad4850a5e9a96b3ed3b1827fb5b5efa9ce51e81afc5053aeff50f2",
+        "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts": "sha256:8433144040598979ebb7c80b6b108842a0d93657d9f67eeb4b32fb29f7b3fb20",
+        "src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts": "sha256:35d3a2b2a6117dc024c55d5e48e8c6589a424eaa090dfaadf3c1e16bba5535fb",
+        "src/content/services/__tests__/SupabaseAuthService.independent-session.test.ts": "sha256:219019b95f7ef315322b4bc704c597c74aed069b89656529aeaedff99c1ee773"
+      },
+      "revised_at": "2026-07-12T16:07:48.003186+00:00",
+      "reason": "Close remaining popup bypasses by skipping pending file-change startup state when verification fails and gating FileChangesModal, pending Issues context, and IssueManager behind a shared live-readiness policy with focused coverage.",
+      "agent": {
+        "model": "gpt-5",
+        "provider": "openai",
+        "client": "codex",
+        "skills": ["maid-implement-draft", "maid-implementation-review"],
+        "source": "flags"
+      },
+      "contract_delta": {
+        "artifacts_added": [
+          "src/popup/App.svelte:function:canOpenPopupGitHubSurface",
+          "src/popup/App.svelte:function:canOpenPopupGitHubSurface:arg=connectionReady:type=boolean:default=None",
+          "src/popup/App.svelte:function:canOpenPopupGitHubSurface:arg=requirementsMet:type=boolean:default=None",
+          "src/popup/App.svelte:function:canOpenPopupGitHubSurface:kind=function",
+          "src/popup/App.svelte:function:canOpenPopupGitHubSurface:returns=boolean",
+          "src/popup/__tests__/App.component.test.ts:unavailable popup verification blocks pending issues context from mounting IssueManager",
+          "src/popup/__tests__/App.component.test.ts:unavailable popup verification blocks pending issues context from mounting IssueManager:kind=test_function",
+          "src/popup/__tests__/App.component.test.ts:unavailable popup verification does not display pending cached file changes",
+          "src/popup/__tests__/App.component.test.ts:unavailable popup verification does not display pending cached file changes:kind=test_function"
+        ],
+        "artifacts_removed": [],
+        "files_added": [],
+        "files_removed": [],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:21f8b9b44fb04df192dd28cd8aad7394587c783b296b46647864d4896b4a4d39",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/githubAppSync.test.ts": "sha256:68eca049de568a6ea85d1a46050fa621e29efbb42dc00b41f634064c7a222065",
+        "src/lib/utils/__tests__/githubConnection.test.ts": "sha256:410fec359ff8ce9b9647c735c733b2a6255f14f1802249ab51f916f43e4c2b24",
+        "src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts": "sha256:a81cd5e738e225fce122e25f51aa6c5eff8e9767899a987768c5202c6f671fec",
+        "src/content/handlers/__tests__/GitHubUploadHandler.test.ts": "sha256:aff5d45b689d94c87b41dcdff865cdb998fa3bd4d8146f287c449f2de488938e",
+        "src/content/handlers/__tests__/FileChangeHandler.test.ts": "sha256:b39d54b91fab3fa5e6d0a07a7ed8ddd4bb7a2ac287ef7cb842a31122ac62280c",
+        "src/background/__tests__/BackgroundService.reload.test.ts": "sha256:11040f7884984cae5e235701f3b87eac949d278b020ae3d13f12fdbe37cb7275",
+        "src/background/__tests__/BackgroundService.storage-recovery.test.ts": "sha256:65ba17dde5a512ec2a662f7155de75658a522c317bf1579a4a7187477063ee80",
+        "src/popup/__tests__/App.component.test.ts": "sha256:f2a883fa0f5a2f151ee973c0684ad8d5e4f609a4635883c116829f2e91f58730",
+        "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts": "sha256:8433144040598979ebb7c80b6b108842a0d93657d9f67eeb4b32fb29f7b3fb20",
+        "src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts": "sha256:35d3a2b2a6117dc024c55d5e48e8c6589a424eaa090dfaadf3c1e16bba5535fb",
+        "src/content/services/__tests__/SupabaseAuthService.independent-session.test.ts": "sha256:219019b95f7ef315322b4bc704c597c74aed069b89656529aeaedff99c1ee773"
+      },
+      "revised_at": "2026-07-12T16:14:13.101801+00:00",
+      "reason": "Record the completed Outcome and evidence-backed final review/validation notes after implementation review; behavioral contract and tests are unchanged.",
+      "agent": {
+        "model": "gpt-5",
+        "provider": "openai",
+        "client": "codex",
+        "skills": ["maid-implement-draft", "maid-implementation-review"],
+        "source": "flags"
+      },
+      "contract_delta": {
+        "artifacts_added": [],
+        "artifacts_removed": [],
+        "files_added": [],
+        "files_removed": [],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:1f5189ba102d11d5feb19fa26811562842f4bdc0593731bbea77a22068dbdc07",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/githubAppSync.test.ts": "sha256:68eca049de568a6ea85d1a46050fa621e29efbb42dc00b41f634064c7a222065",
+        "src/lib/utils/__tests__/githubConnection.test.ts": "sha256:410fec359ff8ce9b9647c735c733b2a6255f14f1802249ab51f916f43e4c2b24",
+        "src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts": "sha256:a81cd5e738e225fce122e25f51aa6c5eff8e9767899a987768c5202c6f671fec",
+        "src/content/handlers/__tests__/GitHubUploadHandler.test.ts": "sha256:aff5d45b689d94c87b41dcdff865cdb998fa3bd4d8146f287c449f2de488938e",
+        "src/content/handlers/__tests__/FileChangeHandler.test.ts": "sha256:b39d54b91fab3fa5e6d0a07a7ed8ddd4bb7a2ac287ef7cb842a31122ac62280c",
+        "src/background/__tests__/BackgroundService.reload.test.ts": "sha256:11040f7884984cae5e235701f3b87eac949d278b020ae3d13f12fdbe37cb7275",
+        "src/background/__tests__/BackgroundService.storage-recovery.test.ts": "sha256:65ba17dde5a512ec2a662f7155de75658a522c317bf1579a4a7187477063ee80",
+        "src/popup/__tests__/App.component.test.ts": "sha256:f2a883fa0f5a2f151ee973c0684ad8d5e4f609a4635883c116829f2e91f58730",
+        "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts": "sha256:8433144040598979ebb7c80b6b108842a0d93657d9f67eeb4b32fb29f7b3fb20",
+        "src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts": "sha256:35d3a2b2a6117dc024c55d5e48e8c6589a424eaa090dfaadf3c1e16bba5535fb",
+        "src/content/services/__tests__/SupabaseAuthService.independent-session.test.ts": "sha256:219019b95f7ef315322b4bc704c597c74aed069b89656529aeaedff99c1ee773"
+      },
+      "revised_at": "2026-07-12T16:15:37.920863+00:00",
+      "reason": "Remove the unrelated pre-existing isUploadInProgress TODO getter from this auth hardening contract after final verify identified it as an undeveloped artifact; production code and behavioral tests are unchanged.",
+      "agent": {
+        "model": "gpt-5",
+        "provider": "openai",
+        "client": "codex",
+        "skills": ["maid-implement-draft", "maid-implementation-review"],
+        "source": "flags"
+      },
+      "contract_delta": {
+        "artifacts_added": [],
+        "artifacts_removed": [
+          "src/content/handlers/GitHubUploadHandler.ts:method:GitHubUploadHandler.isUploadInProgress",
+          "src/content/handlers/GitHubUploadHandler.ts:method:GitHubUploadHandler.isUploadInProgress:kind=method",
+          "src/content/handlers/GitHubUploadHandler.ts:method:GitHubUploadHandler.isUploadInProgress:of=GitHubUploadHandler",
+          "src/content/handlers/GitHubUploadHandler.ts:method:GitHubUploadHandler.isUploadInProgress:returns=boolean"
+        ],
+        "files_added": [],
+        "files_removed": [],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:f0513318eab5d00a29e7556a5e8ce23cceca1b2581d7104e7c5ed2c38ee51d10",
+      "prior_test_hashes": {
+        "src/lib/utils/__tests__/githubAppSync.test.ts": "sha256:68eca049de568a6ea85d1a46050fa621e29efbb42dc00b41f634064c7a222065",
+        "src/lib/utils/__tests__/githubConnection.test.ts": "sha256:410fec359ff8ce9b9647c735c733b2a6255f14f1802249ab51f916f43e4c2b24",
+        "src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts": "sha256:a81cd5e738e225fce122e25f51aa6c5eff8e9767899a987768c5202c6f671fec",
+        "src/content/handlers/__tests__/GitHubUploadHandler.test.ts": "sha256:aff5d45b689d94c87b41dcdff865cdb998fa3bd4d8146f287c449f2de488938e",
+        "src/content/handlers/__tests__/FileChangeHandler.test.ts": "sha256:b39d54b91fab3fa5e6d0a07a7ed8ddd4bb7a2ac287ef7cb842a31122ac62280c",
+        "src/background/__tests__/BackgroundService.reload.test.ts": "sha256:11040f7884984cae5e235701f3b87eac949d278b020ae3d13f12fdbe37cb7275",
+        "src/background/__tests__/BackgroundService.storage-recovery.test.ts": "sha256:65ba17dde5a512ec2a662f7155de75658a522c317bf1579a4a7187477063ee80",
+        "src/popup/__tests__/App.component.test.ts": "sha256:f2a883fa0f5a2f151ee973c0684ad8d5e4f609a4635883c116829f2e91f58730",
+        "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts": "sha256:8433144040598979ebb7c80b6b108842a0d93657d9f67eeb4b32fb29f7b3fb20",
+        "src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts": "sha256:35d3a2b2a6117dc024c55d5e48e8c6589a424eaa090dfaadf3c1e16bba5535fb",
+        "src/content/services/__tests__/SupabaseAuthService.independent-session.test.ts": "sha256:219019b95f7ef315322b4bc704c597c74aed069b89656529aeaedff99c1ee773"
+      },
+      "revised_at": "2026-07-12T16:15:58.158741+00:00",
+      "reason": "Refresh Outcome wording after final scope cleanup; no contract or test change.",
+      "agent": {
+        "model": "gpt-5",
+        "provider": "openai",
+        "client": "codex",
+        "skills": ["maid-implement-draft", "maid-implementation-review"],
+        "source": "flags"
+      },
+      "contract_delta": {
+        "artifacts_added": [],
+        "artifacts_removed": [],
+        "files_added": [],
+        "files_removed": [],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    }
+  ],
+  "red_evidence": {
+    "red": true,
+    "captured_at": "2026-07-12T16:08:23.637498+00:00",
+    "commands": [
+      {
+        "command": "pnpm exec vitest run src/lib/utils/__tests__/githubConnection.test.ts src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts src/content/services/__tests__/SupabaseAuthService.independent-session.test.ts src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts src/content/handlers/__tests__/GitHubUploadHandler.test.ts src/content/handlers/__tests__/FileChangeHandler.test.ts src/background/__tests__/BackgroundService.reload.test.ts src/background/__tests__/BackgroundService.storage-recovery.test.ts src/popup/__tests__/App.component.test.ts src/lib/utils/__tests__/githubAppSync.test.ts",
+        "exit_code": 1,
+        "output_tail": "\n FAIL  src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts > SupabaseAuthService live GitHub connection reconciliation > malformed successful response rejects without clearing stored connection state\nAssertionError: promise resolved \"true\" instead of rejecting\n\n- Expected: \n[Error: rejected promise]\n\n+ Received: \ntrue\n\n \u276f src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts:156:43\n    154|     ) as any;\n    155| \n    156|     await expect(service().syncGitHubApp()).rejects.toThrow('missing o\u2026\n       |                                           ^\n    157|     expect(localData.authenticationMethod).toBe('github_app');\n    158|     expect(localData.githubAppInstallationId).toBe(12345);\n\n\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af[18/18]\u23af\n",
+        "classification": "red"
+      },
+      {
+        "command": "pnpm lint",
+        "exit_code": 0,
+        "output_tail": "\n> bolt-to-github@1.3.20 lint /home/atomrem/projects/codefrost-dev/bolt-to-github\n> eslint \"src/**/*.{js,ts,svelte}\"\n",
+        "classification": "not_red"
+      },
+      {
+        "command": "pnpm check",
+        "exit_code": 1,
+        "output_tail": "  openTrackedUpgradeModalFromPopupContext,\n\n\n/home/atomrem/projects/codefrost-dev/bolt-to-github/src/popup/__tests__/App.component.test.ts:11:3\nError: Module '\"../App.svelte\"' has no exported member 'reconcilePopupGitHubConnection'. Did you mean to use 'import reconcilePopupGitHubConnection from \"../App.svelte\"' instead? \n  openTrackedUpgradeModalFromPopupContext,\n  reconcilePopupGitHubConnection,\n  runPopupGitHubAction,\n\n\n/home/atomrem/projects/codefrost-dev/bolt-to-github/src/popup/__tests__/App.component.test.ts:12:3\nError: Module '\"../App.svelte\"' has no exported member 'runPopupGitHubAction'. Did you mean to use 'import runPopupGitHubAction from \"../App.svelte\"' instead? \n  reconcilePopupGitHubConnection,\n  runPopupGitHubAction,\n} from '../App.svelte';\n\n\n====================================\nsvelte-check found 4 errors and 0 warnings in 2 files\n\u2009ELIFECYCLE\u2009 Command failed with exit code 1.",
+        "classification": "red"
+      },
+      {
+        "command": "pnpm build",
+        "exit_code": 0,
+        "output_tail": "dist/pages/logs.js                                           15.32 kB \u2502 gzip:   5.72 kB\ndist/assets/debounce-FnAdT7cu.js                             23.42 kB \u2502 gzip:   7.25 kB\ndist/assets/input-hfojewKS.js                                72.30 kB \u2502 gzip:  25.10 kB\ndist/assets/GitHubComparisonService-DV2CpiLc.js              87.05 kB \u2502 gzip:  24.34 kB\ndist/background/background.js                               110.33 kB \u2502 gzip:  29.36 kB\ndist/content/content.js                                     244.06 kB \u2502 gzip:  71.85 kB\ndist/assets/index.html-bwHXF8zs.js                          510.09 kB \u2502 gzip: 131.22 kB\n\u2713 built in 8.50s\n\n[plugin:vite:reporter] [plugin vite:reporter] \n(!) /home/atomrem/projects/codefrost-dev/bolt-to-github/src/lib/constants/supabase.ts is dynamically imported by /home/atomrem/projects/codefrost-dev/bolt-to-github/src/services/UnifiedGitHubService.ts but also statically imported by /home/atomrem/projects/codefrost-dev/bolt-to-github/src/content/services/SupabaseAuthService.ts, /home/atomrem/projects/codefrost-dev/bolt-to-github/src/services/BoltProjectSyncService.ts, /home/atomrem/projects/codefrost-dev/bolt-to-github/src/services/GitHubAppService.ts, /home/atomrem/projects/codefrost-dev/bolt-to-github/src/services/SubscriptionService.ts, dynamic import will not move module into another chunk.\n\n[plugin:vite:reporter] [plugin vite:reporter] \n(!) /home/atomrem/projects/codefrost-dev/bolt-to-github/src/content/handlers/FileChangeHandler.ts is dynamically imported by /home/atomrem/projects/codefrost-dev/bolt-to-github/src/content/handlers/GitHubUploadHandler.ts, /home/atomrem/projects/codefrost-dev/bolt-to-github/src/content/services/PushReminderService.ts, /home/atomrem/projects/codefrost-dev/bolt-to-github/src/content/services/PushReminderService.ts but also statically imported by /home/atomrem/projects/codefrost-dev/bolt-to-github/src/content/UIManager.ts, dynamic import will not move module into another chunk.\n\n\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.",
+        "classification": "not_red"
+      }
+    ]
+  },
+  "agent": {
+    "model": "gpt-5",
+    "provider": "openai",
+    "client": "codex",
+    "skills": ["maid-implement-draft", "maid-planner"],
+    "source": "flags"
+  },
+  "_manifest_contract": {
+    "artifacts": [
+      "src/background/BackgroundService.ts:class:BackgroundService",
+      "src/background/BackgroundService.ts:class:BackgroundService:kind=class",
+      "src/background/__tests__/BackgroundService.reload.test.ts:disconnected runtime push returns an error before dispatching to the Bolt tab",
+      "src/background/__tests__/BackgroundService.reload.test.ts:disconnected runtime push returns an error before dispatching to the Bolt tab:kind=test_function",
+      "src/background/__tests__/BackgroundService.storage-recovery.test.ts:late GitHub authentication failure remains actionable instead of becoming a ZIP error",
+      "src/background/__tests__/BackgroundService.storage-recovery.test.ts:late GitHub authentication failure remains actionable instead of becoming a ZIP error:kind=test_function",
+      "src/content/handlers/FileChangeHandler.ts:class:FileChangeHandler",
+      "src/content/handlers/FileChangeHandler.ts:class:FileChangeHandler:kind=class",
+      "src/content/handlers/FileChangeHandler.ts:method:FileChangeHandler.getChangedFiles",
+      "src/content/handlers/FileChangeHandler.ts:method:FileChangeHandler.getChangedFiles:arg=forceRefresh:type=boolean:default=None",
+      "src/content/handlers/FileChangeHandler.ts:method:FileChangeHandler.getChangedFiles:kind=method",
+      "src/content/handlers/FileChangeHandler.ts:method:FileChangeHandler.getChangedFiles:of=FileChangeHandler",
+      "src/content/handlers/FileChangeHandler.ts:method:FileChangeHandler.getChangedFiles:returns=Promise<Map<string, FileChange>>",
+      "src/content/handlers/FileChangeHandler.ts:method:FileChangeHandler.getCurrentProjectId",
+      "src/content/handlers/FileChangeHandler.ts:method:FileChangeHandler.getCurrentProjectId:kind=method",
+      "src/content/handlers/FileChangeHandler.ts:method:FileChangeHandler.getCurrentProjectId:of=FileChangeHandler",
+      "src/content/handlers/FileChangeHandler.ts:method:FileChangeHandler.getCurrentProjectId:returns=string",
+      "src/content/handlers/FileChangeHandler.ts:method:FileChangeHandler.loadProjectFiles",
+      "src/content/handlers/FileChangeHandler.ts:method:FileChangeHandler.loadProjectFiles:arg=forceRefresh:type=boolean:default=None",
+      "src/content/handlers/FileChangeHandler.ts:method:FileChangeHandler.loadProjectFiles:kind=method",
+      "src/content/handlers/FileChangeHandler.ts:method:FileChangeHandler.loadProjectFiles:of=FileChangeHandler",
+      "src/content/handlers/FileChangeHandler.ts:method:FileChangeHandler.loadProjectFiles:returns=Promise<void>",
+      "src/content/handlers/FileChangeHandler.ts:method:FileChangeHandler.setPremiumService",
+      "src/content/handlers/FileChangeHandler.ts:method:FileChangeHandler.setPremiumService:arg=premiumService:type=PremiumService:default=None",
+      "src/content/handlers/FileChangeHandler.ts:method:FileChangeHandler.setPremiumService:kind=method",
+      "src/content/handlers/FileChangeHandler.ts:method:FileChangeHandler.setPremiumService:of=FileChangeHandler",
+      "src/content/handlers/FileChangeHandler.ts:method:FileChangeHandler.setPremiumService:returns=void",
+      "src/content/handlers/FileChangeHandler.ts:method:FileChangeHandler.setUploadStatusManager",
+      "src/content/handlers/FileChangeHandler.ts:method:FileChangeHandler.setUploadStatusManager:arg=uploadStatusManager:type=IUploadStatusManager:default=None",
+      "src/content/handlers/FileChangeHandler.ts:method:FileChangeHandler.setUploadStatusManager:kind=method",
+      "src/content/handlers/FileChangeHandler.ts:method:FileChangeHandler.setUploadStatusManager:of=FileChangeHandler",
+      "src/content/handlers/FileChangeHandler.ts:method:FileChangeHandler.setUploadStatusManager:returns=void",
+      "src/content/handlers/FileChangeHandler.ts:method:FileChangeHandler.showChangedFiles",
+      "src/content/handlers/FileChangeHandler.ts:method:FileChangeHandler.showChangedFiles:kind=method",
+      "src/content/handlers/FileChangeHandler.ts:method:FileChangeHandler.showChangedFiles:of=FileChangeHandler",
+      "src/content/handlers/FileChangeHandler.ts:method:FileChangeHandler.showChangedFiles:returns=Promise<void>",
+      "src/content/handlers/GitHubUploadHandler.ts:class:GitHubUploadHandler",
+      "src/content/handlers/GitHubUploadHandler.ts:class:GitHubUploadHandler:kind=class",
+      "src/content/handlers/GitHubUploadHandler.ts:method:GitHubUploadHandler.getProjectInfo",
+      "src/content/handlers/GitHubUploadHandler.ts:method:GitHubUploadHandler.getProjectInfo:kind=method",
+      "src/content/handlers/GitHubUploadHandler.ts:method:GitHubUploadHandler.getProjectInfo:of=GitHubUploadHandler",
+      "src/content/handlers/GitHubUploadHandler.ts:method:GitHubUploadHandler.getProjectInfo:returns=Promise<{ repoName?: string; branch?: string } | null>",
+      "src/content/handlers/GitHubUploadHandler.ts:method:GitHubUploadHandler.handleGitHubPush",
+      "src/content/handlers/GitHubUploadHandler.ts:method:GitHubUploadHandler.handleGitHubPush:arg=skipChangeDetection:type=boolean:default=None",
+      "src/content/handlers/GitHubUploadHandler.ts:method:GitHubUploadHandler.handleGitHubPush:arg=useStoredChanges:type=boolean:default=None",
+      "src/content/handlers/GitHubUploadHandler.ts:method:GitHubUploadHandler.handleGitHubPush:kind=method",
+      "src/content/handlers/GitHubUploadHandler.ts:method:GitHubUploadHandler.handleGitHubPush:of=GitHubUploadHandler",
+      "src/content/handlers/GitHubUploadHandler.ts:method:GitHubUploadHandler.handleGitHubPush:returns=Promise<void>",
+      "src/content/handlers/GitHubUploadHandler.ts:method:GitHubUploadHandler.handleGitHubPushWithFreshComparison",
+      "src/content/handlers/GitHubUploadHandler.ts:method:GitHubUploadHandler.handleGitHubPushWithFreshComparison:kind=method",
+      "src/content/handlers/GitHubUploadHandler.ts:method:GitHubUploadHandler.handleGitHubPushWithFreshComparison:of=GitHubUploadHandler",
+      "src/content/handlers/GitHubUploadHandler.ts:method:GitHubUploadHandler.handleGitHubPushWithFreshComparison:returns=Promise<void>",
+      "src/content/handlers/GitHubUploadHandler.ts:method:GitHubUploadHandler.validateSettings",
+      "src/content/handlers/GitHubUploadHandler.ts:method:GitHubUploadHandler.validateSettings:kind=method",
+      "src/content/handlers/GitHubUploadHandler.ts:method:GitHubUploadHandler.validateSettings:of=GitHubUploadHandler",
+      "src/content/handlers/GitHubUploadHandler.ts:method:GitHubUploadHandler.validateSettings:returns=Promise<boolean>",
+      "src/content/handlers/__tests__/FileChangeHandler.test.ts:disconnected file changes stops before premium usage and project loading",
+      "src/content/handlers/__tests__/FileChangeHandler.test.ts:disconnected file changes stops before premium usage and project loading:kind=test_function",
+      "src/content/handlers/__tests__/FileChangeHandler.test.ts:disconnected programmatic file changes stops before refresh and comparison",
+      "src/content/handlers/__tests__/FileChangeHandler.test.ts:disconnected programmatic file changes stops before refresh and comparison:kind=test_function",
+      "src/content/handlers/__tests__/GitHubUploadHandler.test.ts:disconnected push stops before commit confirmation and ZIP export",
+      "src/content/handlers/__tests__/GitHubUploadHandler.test.ts:disconnected push stops before commit confirmation and ZIP export:kind=test_function",
+      "src/content/services/SupabaseAuthService.ts:method:SupabaseAuthService.clearExpiredSession",
+      "src/content/services/SupabaseAuthService.ts:method:SupabaseAuthService.clearExpiredSession:kind=method",
+      "src/content/services/SupabaseAuthService.ts:method:SupabaseAuthService.clearExpiredSession:of=SupabaseAuthService",
+      "src/content/services/SupabaseAuthService.ts:method:SupabaseAuthService.clearExpiredSession:returns=Promise<void>",
+      "src/content/services/SupabaseAuthService.ts:method:SupabaseAuthService.syncGitHubApp",
+      "src/content/services/SupabaseAuthService.ts:method:SupabaseAuthService.syncGitHubApp:kind=method",
+      "src/content/services/SupabaseAuthService.ts:method:SupabaseAuthService.syncGitHubApp:of=SupabaseAuthService",
+      "src/content/services/SupabaseAuthService.ts:method:SupabaseAuthService.syncGitHubApp:returns=Promise<boolean>",
+      "src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts:accepts only a stable positive server-provided installation ID",
+      "src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts:accepts only a stable positive server-provided installation ID:kind=test_function",
+      "src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts:does not synthesize a changing installation ID when the edge response omits it",
+      "src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts:does not synthesize a changing installation ID when the edge response omits it:kind=test_function",
+      "src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts:persists the exact positive installation ID supplied by the edge response",
+      "src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts:persists the exact positive installation ID supplied by the edge response:kind=test_function",
+      "src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts:authoritative NO_GITHUB_APP clears stale GitHub App configuration and returns false",
+      "src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts:authoritative NO_GITHUB_APP clears stale GitHub App configuration and returns false:kind=test_function",
+      "src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts:authoritative missing-installation response clears stale GitHub App configuration and returns false",
+      "src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts:authoritative missing-installation response clears stale GitHub App configuration and returns false:kind=test_function",
+      "src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts:live GitHub App response persists stable identity and returns true",
+      "src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts:live GitHub App response persists stable identity and returns true:kind=test_function",
+      "src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts:malformed successful response rejects without clearing stored connection state",
+      "src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts:malformed successful response rejects without clearing stored connection state:kind=test_function",
+      "src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts:transient GitHub verification failure rejects without clearing stored connection state",
+      "src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts:transient GitHub verification failure rejects without clearing stored connection state:kind=test_function",
+      "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts:clearExpiredSession preserves authenticationMethod and githubApp keys",
+      "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts:clearExpiredSession preserves authenticationMethod and githubApp keys:kind=test_function",
+      "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts:clearExpiredSession removes supabase session keys and minted flags",
+      "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts:clearExpiredSession removes supabase session keys and minted flags:kind=test_function",
+      "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts:explicit logout still clears GitHub App cache and authenticationMethod",
+      "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts:explicit logout still clears GitHub App cache and authenticationMethod:kind=test_function",
+      "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts:re-authentication flow after session expiry keeps GitHub App linkage usable",
+      "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts:re-authentication flow after session expiry keeps GitHub App linkage usable:kind=test_function",
+      "src/content/services/githubAppIdentity.ts:function:stableGitHubAppInstallationId",
+      "src/content/services/githubAppIdentity.ts:function:stableGitHubAppInstallationId:arg=installationId:type=number | null | undefined:default=None",
+      "src/content/services/githubAppIdentity.ts:function:stableGitHubAppInstallationId:kind=function",
+      "src/content/services/githubAppIdentity.ts:function:stableGitHubAppInstallationId:returns=number | undefined",
+      "src/lib/utils/__tests__/githubConnection.test.ts:authenticated users with a live GitHub App are connected",
+      "src/lib/utils/__tests__/githubConnection.test.ts:authenticated users with a live GitHub App are connected:kind=test_function",
+      "src/lib/utils/__tests__/githubConnection.test.ts:authenticated users without a GitHub App receive the connect message",
+      "src/lib/utils/__tests__/githubConnection.test.ts:authenticated users without a GitHub App receive the connect message:kind=test_function",
+      "src/lib/utils/__tests__/githubConnection.test.ts:configured legacy PAT remains connected without a GitHub App check",
+      "src/lib/utils/__tests__/githubConnection.test.ts:configured legacy PAT remains connected without a GitHub App check:kind=test_function",
+      "src/lib/utils/__tests__/githubConnection.test.ts:unauthenticated users are blocked before GitHub App synchronization",
+      "src/lib/utils/__tests__/githubConnection.test.ts:unauthenticated users are blocked before GitHub App synchronization:kind=test_function",
+      "src/lib/utils/__tests__/githubConnection.test.ts:verification failures are visible and do not masquerade as disconnection",
+      "src/lib/utils/__tests__/githubConnection.test.ts:verification failures are visible and do not masquerade as disconnection:kind=test_function",
+      "src/lib/utils/githubConnection.ts:attribute:GitHubConnectionAuthClient.getAuthState",
+      "src/lib/utils/githubConnection.ts:attribute:GitHubConnectionAuthClient.getAuthState:kind=attribute",
+      "src/lib/utils/githubConnection.ts:attribute:GitHubConnectionAuthClient.getAuthState:of=GitHubConnectionAuthClient",
+      "src/lib/utils/githubConnection.ts:attribute:GitHubConnectionAuthClient.getAuthState:type=() => Promise<AuthState>",
+      "src/lib/utils/githubConnection.ts:attribute:GitHubConnectionAuthClient.syncGitHubApp",
+      "src/lib/utils/githubConnection.ts:attribute:GitHubConnectionAuthClient.syncGitHubApp:kind=attribute",
+      "src/lib/utils/githubConnection.ts:attribute:GitHubConnectionAuthClient.syncGitHubApp:of=GitHubConnectionAuthClient",
+      "src/lib/utils/githubConnection.ts:attribute:GitHubConnectionAuthClient.syncGitHubApp:type=() => Promise<boolean>",
+      "src/lib/utils/githubConnection.ts:attribute:GitHubConnectionResult.connected",
+      "src/lib/utils/githubConnection.ts:attribute:GitHubConnectionResult.connected:kind=attribute",
+      "src/lib/utils/githubConnection.ts:attribute:GitHubConnectionResult.connected:of=GitHubConnectionResult",
+      "src/lib/utils/githubConnection.ts:attribute:GitHubConnectionResult.connected:type=boolean",
+      "src/lib/utils/githubConnection.ts:attribute:GitHubConnectionResult.message",
+      "src/lib/utils/githubConnection.ts:attribute:GitHubConnectionResult.message:kind=attribute",
+      "src/lib/utils/githubConnection.ts:attribute:GitHubConnectionResult.message:of=GitHubConnectionResult",
+      "src/lib/utils/githubConnection.ts:attribute:GitHubConnectionResult.message:type=string",
+      "src/lib/utils/githubConnection.ts:attribute:GitHubConnectionResult.reason",
+      "src/lib/utils/githubConnection.ts:attribute:GitHubConnectionResult.reason:kind=attribute",
+      "src/lib/utils/githubConnection.ts:attribute:GitHubConnectionResult.reason:of=GitHubConnectionResult",
+      "src/lib/utils/githubConnection.ts:attribute:GitHubConnectionResult.reason:type=GitHubConnectionFailureReason | undefined",
+      "src/lib/utils/githubConnection.ts:function:checkGitHubConnection",
+      "src/lib/utils/githubConnection.ts:function:checkGitHubConnection:arg=authClient:type=GitHubConnectionAuthClient:default=None",
+      "src/lib/utils/githubConnection.ts:function:checkGitHubConnection:kind=function",
+      "src/lib/utils/githubConnection.ts:function:checkGitHubConnection:returns=Promise<GitHubConnectionResult>",
+      "src/lib/utils/githubConnection.ts:interface:GitHubConnectionAuthClient",
+      "src/lib/utils/githubConnection.ts:interface:GitHubConnectionAuthClient:kind=interface",
+      "src/lib/utils/githubConnection.ts:interface:GitHubConnectionResult",
+      "src/lib/utils/githubConnection.ts:interface:GitHubConnectionResult:kind=interface",
+      "src/lib/utils/githubConnection.ts:type:GitHubConnectionFailureReason",
+      "src/lib/utils/githubConnection.ts:type:GitHubConnectionFailureReason:kind=type",
+      "src/lib/utils/githubConnection.ts:type:GitHubConnectionFailureReason:type='not_authenticated' | 'not_connected' | 'unavailable'",
+      "src/popup/App.svelte:function:canOpenPopupGitHubSurface",
+      "src/popup/App.svelte:function:canOpenPopupGitHubSurface:arg=connectionReady:type=boolean:default=None",
+      "src/popup/App.svelte:function:canOpenPopupGitHubSurface:arg=requirementsMet:type=boolean:default=None",
+      "src/popup/App.svelte:function:canOpenPopupGitHubSurface:kind=function",
+      "src/popup/App.svelte:function:canOpenPopupGitHubSurface:returns=boolean",
+      "src/popup/App.svelte:function:reconcilePopupGitHubConnection",
+      "src/popup/App.svelte:function:reconcilePopupGitHubConnection:arg=checkConnection:type=() => Promise<GitHubConnectionResult>:default=None",
+      "src/popup/App.svelte:function:reconcilePopupGitHubConnection:arg=refreshSettings:type=() => Promise<void>:default=None",
+      "src/popup/App.svelte:function:reconcilePopupGitHubConnection:arg=showStatus:type=(message: string, duration: number) => void:default=None",
+      "src/popup/App.svelte:function:reconcilePopupGitHubConnection:kind=function",
+      "src/popup/App.svelte:function:reconcilePopupGitHubConnection:returns=Promise<GitHubConnectionResult>",
+      "src/popup/App.svelte:function:runPopupGitHubAction",
+      "src/popup/App.svelte:function:runPopupGitHubAction:arg=action:type=() => Promise<void>:default=None",
+      "src/popup/App.svelte:function:runPopupGitHubAction:arg=checkConnection:type=() => Promise<GitHubConnectionResult>:default=None",
+      "src/popup/App.svelte:function:runPopupGitHubAction:arg=refreshSettings:type=() => Promise<void>:default=None",
+      "src/popup/App.svelte:function:runPopupGitHubAction:arg=showStatus:type=(message: string, duration: number) => void:default=None",
+      "src/popup/App.svelte:function:runPopupGitHubAction:kind=function",
+      "src/popup/App.svelte:function:runPopupGitHubAction:returns=Promise<boolean>",
+      "src/popup/__tests__/App.component.test.ts:disconnected popup file changes stops before cached changes are displayed",
+      "src/popup/__tests__/App.component.test.ts:disconnected popup file changes stops before cached changes are displayed:kind=test_function",
+      "src/popup/__tests__/App.component.test.ts:popup keeps GitHub-backed surfaces hidden while live connection verification is pending",
+      "src/popup/__tests__/App.component.test.ts:popup keeps GitHub-backed surfaces hidden while live connection verification is pending:kind=test_function",
+      "src/popup/__tests__/App.component.test.ts:popup opening reconciles a disconnected GitHub App and shows onboarding immediately",
+      "src/popup/__tests__/App.component.test.ts:popup opening reconciles a disconnected GitHub App and shows onboarding immediately:kind=test_function",
+      "src/popup/__tests__/App.component.test.ts:reconcilePopupGitHubConnection refreshes stale settings and surfaces disconnection",
+      "src/popup/__tests__/App.component.test.ts:reconcilePopupGitHubConnection refreshes stale settings and surfaces disconnection:kind=test_function",
+      "src/popup/__tests__/App.component.test.ts:unavailable popup verification blocks pending issues context from mounting IssueManager",
+      "src/popup/__tests__/App.component.test.ts:unavailable popup verification blocks pending issues context from mounting IssueManager:kind=test_function",
+      "src/popup/__tests__/App.component.test.ts:unavailable popup verification does not display pending cached file changes",
+      "src/popup/__tests__/App.component.test.ts:unavailable popup verification does not display pending cached file changes:kind=test_function",
+      "src/popup/__tests__/App.component.test.ts:unavailable popup verification keeps stale GitHub-backed surfaces unmounted",
+      "src/popup/__tests__/App.component.test.ts:unavailable popup verification keeps stale GitHub-backed surfaces unmounted:kind=test_function"
+    ],
+    "files": {
+      "create": [
+        "src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts",
+        "src/lib/utils/__tests__/githubConnection.test.ts",
+        "src/lib/utils/githubConnection.ts"
+      ],
+      "edit": [
+        "src/background/BackgroundService.ts",
+        "src/background/__tests__/BackgroundService.reload.test.ts",
+        "src/background/__tests__/BackgroundService.storage-recovery.test.ts",
+        "src/content/handlers/FileChangeHandler.ts",
+        "src/content/handlers/GitHubUploadHandler.ts",
+        "src/content/handlers/__tests__/FileChangeHandler.test.ts",
+        "src/content/handlers/__tests__/GitHubUploadHandler.test.ts",
+        "src/content/services/SupabaseAuthService.ts",
+        "src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts",
+        "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts",
+        "src/content/services/githubAppIdentity.ts",
+        "src/popup/App.svelte",
+        "src/popup/__tests__/App.component.test.ts"
+      ],
+      "read": [
+        "manifests/background-auth-message-endpoints.manifest.yaml",
+        "manifests/popup-auth-client-migration.manifest.yaml",
+        "manifests/preserve-github-app-config-on-reauth.manifest.yaml",
+        "manifests/prevent-github-token-request-stampede.manifest.yaml",
+        "src/lib/services/BackgroundAuthClient.ts",
+        "src/lib/stores/githubSettings.ts",
+        "src/lib/utils/__tests__/githubAppSync.test.ts",
+        "src/lib/utils/githubAppSync.ts"
+      ]
+    },
+    "test_files": [
+      "src/background/__tests__/BackgroundService.reload.test.ts",
+      "src/background/__tests__/BackgroundService.storage-recovery.test.ts",
+      "src/content/handlers/__tests__/FileChangeHandler.test.ts",
+      "src/content/handlers/__tests__/GitHubUploadHandler.test.ts",
+      "src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts",
+      "src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts",
+      "src/content/services/__tests__/SupabaseAuthService.independent-session.test.ts",
+      "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts",
+      "src/lib/utils/__tests__/githubAppSync.test.ts",
+      "src/lib/utils/__tests__/githubConnection.test.ts",
+      "src/popup/__tests__/App.component.test.ts"
+    ],
+    "validate_commands": [
+      "pnpm exec vitest run src/lib/utils/__tests__/githubConnection.test.ts src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts src/content/services/__tests__/SupabaseAuthService.independent-session.test.ts src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts src/content/handlers/__tests__/GitHubUploadHandler.test.ts src/content/handlers/__tests__/FileChangeHandler.test.ts src/background/__tests__/BackgroundService.reload.test.ts src/background/__tests__/BackgroundService.storage-recovery.test.ts src/popup/__tests__/App.component.test.ts src/lib/utils/__tests__/githubAppSync.test.ts",
+      "pnpm lint",
+      "pnpm check",
+      "pnpm build"
+    ]
+  }
+}

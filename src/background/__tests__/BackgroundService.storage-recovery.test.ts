@@ -324,6 +324,38 @@ describe('BackgroundService - Auth Storage Recovery', () => {
     );
   });
 
+  it('late GitHub authentication failure remains actionable instead of becoming a ZIP error', async () => {
+    triggerLocalChange(chromeMock, 'supabaseToken', undefined, 'restored-token');
+    chromeMock._localData.authenticationMethod = 'github_app';
+    await vi.advanceTimersByTimeAsync(1100);
+
+    mocks.processZipFile.mockRejectedValueOnce(
+      new Error('GitHub App authentication expired. Please re-authenticate via bolt2github.com')
+    );
+    const boltPort = chromeMock._connectBoltPort();
+
+    await boltPort.send({
+      type: 'ZIP_DATA',
+      data: { data: 'UEs=', projectId: 'bolt-project' },
+    });
+    await vi.advanceTimersByTimeAsync(100);
+
+    expect(boltPort.port.postMessage).toHaveBeenLastCalledWith({
+      type: 'UPLOAD_STATUS',
+      status: {
+        status: 'error',
+        message: 'GitHub App authentication expired. Please re-authenticate via bolt2github.com',
+      },
+    });
+    expect(boltPort.port.postMessage).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: expect.objectContaining({
+          message: expect.stringContaining('Failed to process ZIP data'),
+        }),
+      })
+    );
+  });
+
   it('forces auth check when authenticationMethod is restored to github_app', async () => {
     triggerLocalChange(chromeMock, 'authenticationMethod', undefined, 'github_app');
 

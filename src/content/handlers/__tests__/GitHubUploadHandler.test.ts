@@ -5,6 +5,13 @@ import { GitHubUploadHandler } from '../GitHubUploadHandler';
 import { SettingsService } from '../../../services/settings';
 import { DownloadService } from '../../../services/DownloadService';
 
+const mockCheckGitHubConnection = vi.hoisted(() => vi.fn());
+const mockDownloadProjectZip = vi.hoisted(() => vi.fn());
+
+vi.mock('../../../lib/utils/githubConnection', () => ({
+  checkGitHubConnection: mockCheckGitHubConnection,
+}));
+
 vi.mock('../../../services/settings');
 vi.mock('../../../services/DownloadService');
 vi.mock('../../services/CommitTemplateService', () => ({
@@ -43,6 +50,10 @@ describe('GitHubUploadHandler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    mockCheckGitHubConnection.mockResolvedValue({
+      connected: true,
+      message: 'GitHub is connected.',
+    });
 
     mockMessageHandler = {
       sendMessage: vi.fn(),
@@ -62,9 +73,9 @@ describe('GitHubUploadHandler', () => {
     vi.mocked(DownloadService).mockImplementation(
       () =>
         ({
-          downloadProjectZip: vi
-            .fn()
-            .mockResolvedValue(new Blob(['test'], { type: 'application/zip' })),
+          downloadProjectZip: mockDownloadProjectZip.mockResolvedValue(
+            new Blob(['test'], { type: 'application/zip' })
+          ),
           blobToBase64: vi.fn().mockResolvedValue('base64data'),
           getProjectFiles: vi.fn().mockResolvedValue(new Map([['file.txt', 'content']])),
         }) as unknown as DownloadService
@@ -283,6 +294,27 @@ describe('GitHubUploadHandler', () => {
       await handler.handleGitHubPush(true, true);
 
       expect(mockMessageHandler.sendZipData).toHaveBeenCalledWith('base64data', 'test-project');
+    });
+
+    it('disconnected push stops before commit confirmation and ZIP export', async () => {
+      mockCheckGitHubConnection.mockResolvedValue({
+        connected: false,
+        reason: 'not_connected',
+        message: 'Connect GitHub at bolt2github.com before using GitHub features.',
+      });
+
+      await handler.handleGitHubPush(true, true);
+
+      expect(mockNotificationManager.showNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'error',
+          message: 'Connect GitHub at bolt2github.com before using GitHub features.',
+        })
+      );
+      expect(mockNotificationManager.showConfirmationDialog).not.toHaveBeenCalled();
+      expect(mockDownloadProjectZip).not.toHaveBeenCalled();
+      expect(mockMessageHandler.sendCommitMessage).not.toHaveBeenCalled();
+      expect(mockMessageHandler.sendZipData).not.toHaveBeenCalled();
     });
   });
 

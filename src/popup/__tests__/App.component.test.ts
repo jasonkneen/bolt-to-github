@@ -5,7 +5,18 @@
 import { render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import App, { openTrackedUpgradeModalFromPopupContext } from '../App.svelte';
+import App, {
+  canOpenPopupGitHubSurface,
+  openTrackedUpgradeModalFromPopupContext,
+  reconcilePopupGitHubConnection,
+  runPopupGitHubAction,
+} from '../App.svelte';
+
+const mockCheckGitHubConnection = vi.hoisted(() => vi.fn());
+
+vi.mock('$lib/utils/githubConnection', () => ({
+  checkGitHubConnection: mockCheckGitHubConnection,
+}));
 
 vi.unmock('$lib/components/ui/modal/Modal.svelte');
 vi.unmock('$lib/components/ui/button');
@@ -253,9 +264,14 @@ describe('App.svelte - Component Tests', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    mockCheckGitHubConnection.mockResolvedValue({
+      connected: true,
+      message: 'GitHub is connected.',
+    });
 
     const storesModule = await import('$lib/stores');
     stores = storesModule;
+    stores.githubSettingsActions.initialize.mockReset().mockResolvedValue(undefined);
 
     stores.githubSettingsStore.set({
       hasInitialSettings: false,
@@ -318,6 +334,11 @@ describe('App.svelte - Component Tests', () => {
       writable: true,
       configurable: true,
     });
+    Object.defineProperty(window, 'close', {
+      value: vi.fn(),
+      writable: true,
+      configurable: true,
+    });
 
     vi.spyOn(document.documentElement.classList, 'add').mockImplementation(() => undefined);
     vi.spyOn(document.documentElement.classList, 'remove').mockImplementation(() => undefined);
@@ -327,6 +348,29 @@ describe('App.svelte - Component Tests', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('reconcilePopupGitHubConnection refreshes stale settings and surfaces disconnection', async () => {
+    const checkConnection = vi.fn().mockResolvedValue({
+      connected: false,
+      reason: 'not_connected',
+      message: 'Connect GitHub at bolt2github.com before using GitHub features.',
+    });
+    const refreshSettings = vi.fn().mockResolvedValue(undefined);
+    const showStatus = vi.fn();
+
+    await expect(
+      reconcilePopupGitHubConnection(checkConnection, refreshSettings, showStatus)
+    ).resolves.toEqual({
+      connected: false,
+      reason: 'not_connected',
+      message: 'Connect GitHub at bolt2github.com before using GitHub features.',
+    });
+    expect(refreshSettings).toHaveBeenCalledOnce();
+    expect(showStatus).toHaveBeenCalledWith(
+      'Connect GitHub at bolt2github.com before using GitHub features.',
+      10000
+    );
   });
 
   describe('Initial Rendering', () => {
@@ -369,6 +413,122 @@ describe('App.svelte - Component Tests', () => {
   });
 
   describe('Onboarding View', () => {
+    it('popup keeps GitHub-backed surfaces hidden while live connection verification is pending', async () => {
+      stores.githubSettingsStore.set({
+        hasInitialSettings: true,
+        repoOwner: 'stale-owner',
+        githubToken: '',
+        repoName: 'stale-repo',
+        branch: 'main',
+        authenticationMethod: 'github_app' as const,
+        githubAppInstallationId: 12345,
+      });
+      stores.isAuthenticationValid.set(true);
+      mockCheckGitHubConnection.mockImplementation(() => new Promise(() => undefined));
+
+      render(App);
+
+      await waitFor(() => expect(mockCheckGitHubConnection).toHaveBeenCalledOnce());
+      expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+      expect(screen.getByText('Checking GitHub connection...')).toBeInTheDocument();
+    });
+
+    it('popup opening reconciles a disconnected GitHub App and shows onboarding immediately', async () => {
+      stores.githubSettingsStore.set({
+        hasInitialSettings: true,
+        repoOwner: 'stale-owner',
+        githubToken: '',
+        repoName: 'stale-repo',
+        branch: 'main',
+        authenticationMethod: 'github_app' as const,
+        githubAppInstallationId: 12345,
+      });
+      stores.isAuthenticationValid.set(true);
+      mockCheckGitHubConnection.mockResolvedValue({
+        connected: false,
+        reason: 'not_connected',
+        message: 'Connect GitHub at bolt2github.com before using GitHub features.',
+      });
+      stores.githubSettingsActions.initialize.mockImplementation(async () => {
+        stores.githubSettingsStore.set({
+          hasInitialSettings: false,
+          repoOwner: 'stale-owner',
+          githubToken: '',
+          repoName: 'stale-repo',
+          branch: 'main',
+          authenticationMethod: 'pat' as const,
+          githubAppInstallationId: null,
+        });
+        stores.isAuthenticationValid.set(false);
+      });
+
+      render(App);
+
+      await waitFor(() => {
+        expect(mockCheckGitHubConnection).toHaveBeenCalledOnce();
+        expect(stores.githubSettingsActions.initialize).toHaveBeenCalledOnce();
+        expect(stores.uiStateActions.showStatus).toHaveBeenCalledWith(
+          'Connect GitHub at bolt2github.com before using GitHub features.',
+          10000
+        );
+        expect(screen.getByTestId('onboarding-view')).toBeInTheDocument();
+      });
+    });
+
+    it('unavailable popup verification keeps stale GitHub-backed surfaces unmounted', async () => {
+      stores.githubSettingsStore.set({
+        hasInitialSettings: true,
+        repoOwner: 'stale-owner',
+        githubToken: '',
+        repoName: 'stale-repo',
+        branch: 'main',
+        authenticationMethod: 'github_app' as const,
+        githubAppInstallationId: 12345,
+      });
+      stores.isAuthenticationValid.set(true);
+      mockCheckGitHubConnection.mockResolvedValue({
+        connected: false,
+        reason: 'unavailable',
+        message: 'Unable to verify the GitHub connection: Temporary outage',
+      });
+
+      render(App);
+
+      await waitFor(() => {
+        expect(screen.queryByText('Checking GitHub connection...')).not.toBeInTheDocument();
+        expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+        expect(screen.getByTestId('onboarding-view')).toBeInTheDocument();
+        expect(stores.uiStateActions.showStatus).toHaveBeenCalledWith(
+          'Unable to verify the GitHub connection: Temporary outage',
+          10000
+        );
+      });
+    });
+
+    it('unavailable popup verification does not display pending cached file changes', async () => {
+      mockCheckGitHubConnection.mockResolvedValue({
+        connected: false,
+        reason: 'unavailable',
+        message: 'Unable to verify the GitHub connection: Temporary outage',
+      });
+      stores.fileChangesStore.set({
+        showModal: true,
+        fileChanges: new Map([['src/App.svelte', { path: 'src/App.svelte', status: 'modified' }]]),
+      });
+
+      render(App);
+
+      await waitFor(() => {
+        expect(screen.queryByText('Checking GitHub connection...')).not.toBeInTheDocument();
+      });
+      expect(screen.queryByTestId('file-changes-modal')).not.toBeInTheDocument();
+    });
+
+    it('unavailable popup verification blocks pending issues context from mounting IssueManager', async () => {
+      expect(canOpenPopupGitHubSurface(false, true)).toBe(false);
+      expect(canOpenPopupGitHubSurface(true, true)).toBe(true);
+    });
+
     it('should display onboarding view when no valid authentication', () => {
       stores.githubSettingsStore.set({
         hasInitialSettings: false,
@@ -416,13 +576,34 @@ describe('App.svelte - Component Tests', () => {
       stores.isAuthenticationValid.set(true);
     });
 
-    it('should display tabs view when authentication is valid', () => {
+    it('should display tabs view when authentication is valid', async () => {
       render(App);
 
-      expect(screen.getByRole('tablist')).toBeInTheDocument();
+      await waitFor(() => expect(screen.getByRole('tablist')).toBeInTheDocument());
     });
 
-    it('should display tabs when authenticated with GitHub App', () => {
+    it('disconnected popup file changes stops before cached changes are displayed', async () => {
+      const checkConnection = vi.fn().mockResolvedValue({
+        connected: false,
+        reason: 'not_connected',
+        message: 'Connect GitHub at bolt2github.com before using GitHub features.',
+      });
+      const refreshSettings = vi.fn().mockResolvedValue(undefined);
+      const showStatus = vi.fn();
+      const displayCachedChanges = vi.fn().mockResolvedValue(undefined);
+
+      await expect(
+        runPopupGitHubAction(checkConnection, refreshSettings, showStatus, displayCachedChanges)
+      ).resolves.toBe(false);
+      expect(displayCachedChanges).not.toHaveBeenCalled();
+      expect(refreshSettings).toHaveBeenCalledOnce();
+      expect(showStatus).toHaveBeenCalledWith(
+        'Connect GitHub at bolt2github.com before using GitHub features.',
+        10000
+      );
+    });
+
+    it('should display tabs when authenticated with GitHub App', async () => {
       stores.githubSettingsStore.set({
         hasInitialSettings: true,
         repoOwner: 'test-owner',
@@ -435,7 +616,7 @@ describe('App.svelte - Component Tests', () => {
 
       render(App);
 
-      expect(screen.getByRole('tablist')).toBeInTheDocument();
+      await waitFor(() => expect(screen.getByRole('tablist')).toBeInTheDocument());
     });
   });
 
@@ -726,9 +907,13 @@ describe('App.svelte - Component Tests', () => {
     });
 
     it('should reactively update when authentication changes', async () => {
-      const { rerender } = render(App);
+      const { container, getByRole, queryByRole, queryByText, rerender } = render(App);
 
-      expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+      expect(queryByRole('tablist')).not.toBeInTheDocument();
+      await waitFor(
+        () => expect(queryByText('Checking GitHub connection...')).not.toBeInTheDocument(),
+        { container, timeout: 5000 }
+      );
 
       stores.githubSettingsStore.set({
         hasInitialSettings: true,
@@ -742,7 +927,7 @@ describe('App.svelte - Component Tests', () => {
       stores.isAuthenticationValid.set(true);
       await rerender({});
 
-      expect(screen.getByRole('tablist')).toBeInTheDocument();
+      expect(getByRole('tablist')).toBeInTheDocument();
     });
   });
 });

@@ -1,0 +1,487 @@
+schema: '2'
+goal: Block GitHub-backed actions until the current account has a live GitHub connection
+type: fix
+supersedes:
+  - preserve-github-app-config-on-reauth
+  - fix-auth-edge-function-invocation-loop
+created: '2026-07-12T15:19:24Z'
+description: |
+  Local GitHub App metadata currently acts as proof of connection. After an
+  account/session transition, stale authenticationMethod and installation ID
+  values can therefore keep the popup and action buttons enabled even when
+  get-github-token reports that the current Supabase user has no GitHub App.
+  Push then opens the commit dialog, exports the Bolt ZIP, and only fails during
+  repository access; the outer background catch overwrites the useful auth
+  error with a false ZIP-processing error. File changes and other popup GitHub
+  surfaces have the same stale-local-state exposure.
+
+  Add one shared GitHub connection check used by popup/content consumers. It
+  preserves a configured legacy PAT path, otherwise asks the single background
+  auth authority to reconcile the GitHub App with the current Supabase user.
+  An authoritative NO_GITHUB_APP / missing-installation response clears only
+  stale GitHub App configuration and returns disconnected. Network and server
+  failures throw and remain visible as verification failures without erasing
+  durable auth state.
+
+  Run the check when the popup opens and immediately before every direct GitHub
+  action in scope. Push is gated in BackgroundService for popup/reminder callers
+  and again in GitHubUploadHandler for the in-page toolbar path, before commit
+  templates or confirmation are loaded. FileChangeHandler gates comparison
+  before premium usage is consumed or Bolt project files are loaded. Popup file
+  changes also gate before cached results are displayed. The popup refreshes its
+  settings store after authoritative disconnection so onboarding/connect UI is
+  shown immediately. While popup verification is pending, GitHub-backed tabs
+  and their auto-loading project/issues/commits components remain unmounted and
+  the popup shows an explicit connection-checking state.
+
+  The preflight gates are not the only defense: a token can expire or an account
+  can disconnect between preflight and repository access. BackgroundService
+  therefore preserves actionable GitHub authentication errors returned by
+  ZipHandler instead of misclassifying them as ZIP decode failures. Genuine
+  base64/ZIP processing errors keep the existing reload/GitHub-issue guidance.
+
+  Rationale: the server-backed connection check is centralized behind the
+  existing background auth client so popup/content contexts do not instantiate
+  SupabaseAuthService. Double-gating push is intentional because popup/reminder
+  pushes enter through BackgroundService while the injected Bolt toolbar calls
+  GitHubUploadHandler directly.
+temptations:
+  - risk: Do not treat a positive local githubAppInstallationId as proof that it belongs to the current Supabase user.
+    instead: For GitHub App mode, reconcile through the background auth authority before enabling or starting GitHub-backed work.
+  - risk: Do not clear GitHub App state on timeouts, 5xx responses, malformed responses, or message transport failures.
+    instead: Clear stale GitHub App keys only for authoritative not-connected response codes; throw other failures so the UI reports verification unavailable.
+  - risk: Do not place the gate after commit confirmation, premium usage consumption, ZIP export, project file loading, or GitHub comparison.
+    instead: Call the gate at each public action entry point and return immediately on every non-connected result.
+  - risk: Do not block a deliberately configured legacy PAT user merely because no GitHub App exists.
+    instead: Allow PAT mode only when a non-empty PAT is stored; otherwise require live GitHub App reconciliation.
+  - risk: Do not render stale GitHub popup tabs while an asynchronous live check is still pending.
+    instead: Keep GitHub-backed popup components unmounted behind an explicit checking state until the current connection result resolves.
+files:
+  create:
+    - path: src/lib/utils/githubConnection.ts
+      artifacts:
+        - kind: type
+          name: GitHubConnectionFailureReason
+          type: "'not_authenticated' | 'not_connected' | 'unavailable'"
+        - kind: interface
+          name: GitHubConnectionResult
+        - kind: attribute
+          name: connected
+          of: GitHubConnectionResult
+          type: boolean
+        - kind: attribute
+          name: reason
+          of: GitHubConnectionResult
+          type: GitHubConnectionFailureReason | undefined
+        - kind: attribute
+          name: message
+          of: GitHubConnectionResult
+          type: string
+        - kind: interface
+          name: GitHubConnectionAuthClient
+        - kind: attribute
+          name: getAuthState
+          of: GitHubConnectionAuthClient
+          type: () => Promise<AuthState>
+        - kind: attribute
+          name: syncGitHubApp
+          of: GitHubConnectionAuthClient
+          type: () => Promise<boolean>
+        - kind: function
+          name: checkGitHubConnection
+          args:
+            - name: authClient
+              type: GitHubConnectionAuthClient
+          returns: Promise<GitHubConnectionResult>
+          description: |
+            Allows a configured PAT immediately. Otherwise queries the
+            background auth authority and returns an explicit connected,
+            unauthenticated, disconnected, or unavailable result. The optional
+            dependency is for the background direct-call adapter and tests;
+            popup/content callers use BackgroundAuthClient by default.
+    - path: src/lib/utils/__tests__/githubConnection.test.ts
+      artifacts:
+        - kind: test_function
+          name: configured legacy PAT remains connected without a GitHub App check
+        - kind: test_function
+          name: unauthenticated users are blocked before GitHub App synchronization
+        - kind: test_function
+          name: authenticated users without a GitHub App receive the connect message
+        - kind: test_function
+          name: authenticated users with a live GitHub App are connected
+        - kind: test_function
+          name: verification failures are visible and do not masquerade as disconnection
+    - path: src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts
+      artifacts:
+        - kind: test_function
+          name: authoritative NO_GITHUB_APP clears stale GitHub App configuration and returns false
+        - kind: test_function
+          name: authoritative missing-installation response clears stale GitHub App configuration and returns false
+        - kind: test_function
+          name: live GitHub App response persists stable identity and returns true
+        - kind: test_function
+          name: transient GitHub verification failure rejects without clearing stored connection state
+        - kind: test_function
+          name: malformed successful response rejects without clearing stored connection state
+  edit:
+    - path: src/content/services/githubAppIdentity.ts
+      artifacts:
+        - kind: function
+          name: stableGitHubAppInstallationId
+          args:
+            - name: installationId
+              type: 'number | null | undefined'
+          returns: 'number | undefined'
+          description: Returns only a server-provided finite positive installation ID; never manufactures one.
+    - path: src/content/services/SupabaseAuthService.ts
+      artifacts:
+        - kind: method
+          name: clearExpiredSession
+          of: SupabaseAuthService
+          args: []
+          returns: Promise<void>
+          description: |
+            Clears only Supabase session storage keys and resets in-memory auth
+            state. A transient session expiry does not clear a server-confirmed
+            GitHub App connection; authoritative GitHub App absence is handled by
+            syncGitHubApp instead.
+        - kind: method
+          name: syncGitHubApp
+          of: SupabaseAuthService
+          args: []
+          returns: Promise<boolean>
+          description: |
+            Returns true only when the current authenticated user has a live,
+            stable GitHub App installation. Returns false after authoritative
+            absence and clears stale GitHub App keys. Throws for transient or
+            malformed verification failures without clearing connection state.
+    - path: src/content/handlers/GitHubUploadHandler.ts
+      artifacts:
+        - kind: class
+          name: GitHubUploadHandler
+          description: All public push entry points gate live GitHub connection before settings, confirmation, commit templates, ZIP export, or message dispatch.
+        - kind: method
+          name: validateSettings
+          of: GitHubUploadHandler
+          args: []
+          returns: Promise<boolean>
+        - kind: method
+          name: handleGitHubPushWithFreshComparison
+          of: GitHubUploadHandler
+          args: []
+          returns: Promise<void>
+        - kind: method
+          name: handleGitHubPush
+          of: GitHubUploadHandler
+          args:
+            - name: useStoredChanges
+              type: boolean
+            - name: skipChangeDetection
+              type: boolean
+          returns: Promise<void>
+        - kind: method
+          name: getProjectInfo
+          of: GitHubUploadHandler
+          args: []
+          returns: 'Promise<{ repoName?: string; branch?: string } | null>'
+    - path: src/content/handlers/FileChangeHandler.ts
+      artifacts:
+        - kind: class
+          name: FileChangeHandler
+          description: GitHub-backed file comparison gates live connection before premium usage, file loading, comparison, fallback, storage, or popup messaging.
+        - kind: method
+          name: setPremiumService
+          of: FileChangeHandler
+          args:
+            - name: premiumService
+              type: PremiumService
+          returns: void
+        - kind: method
+          name: setUploadStatusManager
+          of: FileChangeHandler
+          args:
+            - name: uploadStatusManager
+              type: IUploadStatusManager
+          returns: void
+        - kind: method
+          name: loadProjectFiles
+          of: FileChangeHandler
+          args:
+            - name: forceRefresh
+              type: boolean
+          returns: Promise<void>
+        - kind: method
+          name: showChangedFiles
+          of: FileChangeHandler
+          args: []
+          returns: Promise<void>
+        - kind: method
+          name: getCurrentProjectId
+          of: FileChangeHandler
+          args: []
+          returns: string
+        - kind: method
+          name: getChangedFiles
+          of: FileChangeHandler
+          args:
+            - name: forceRefresh
+              type: boolean
+          returns: Promise<Map<string, FileChange>>
+    - path: src/background/BackgroundService.ts
+      artifacts:
+        - kind: class
+          name: BackgroundService
+          description: Popup and reminder PUSH_TO_GITHUB runtime actions are live-connection gated before a content-script push message is dispatched.
+    - path: src/popup/App.svelte
+      artifacts:
+        - kind: function
+          name: reconcilePopupGitHubConnection
+          args:
+            - name: checkConnection
+              type: '() => Promise<GitHubConnectionResult>'
+            - name: refreshSettings
+              type: '() => Promise<void>'
+            - name: showStatus
+              type: '(message: string, duration: number) => void'
+          returns: Promise<GitHubConnectionResult>
+          description: |
+            Runs popup live-connection reconciliation through injected seams,
+            refreshes the settings store after authoritative disconnection, and
+            shows every blocked/unavailable result as a visible popup status.
+        - kind: function
+          name: runPopupGitHubAction
+          args:
+            - name: checkConnection
+              type: '() => Promise<GitHubConnectionResult>'
+            - name: refreshSettings
+              type: '() => Promise<void>'
+            - name: showStatus
+              type: '(message: string, duration: number) => void'
+            - name: action
+              type: '() => Promise<void>'
+          returns: Promise<boolean>
+          description: |
+            Runs a popup GitHub action only after live connection reconciliation
+            succeeds, providing a non-rendered seam for direct-action coverage.
+        - kind: function
+          name: canOpenPopupGitHubSurface
+          args:
+            - name: connectionReady
+              type: boolean
+            - name: requirementsMet
+              type: boolean
+          returns: boolean
+          description: Keeps popup GitHub modals and pending contexts unmounted until live verification succeeds.
+    - path: src/content/handlers/__tests__/GitHubUploadHandler.test.ts
+      artifacts:
+        - kind: test_function
+          name: disconnected push stops before commit confirmation and ZIP export
+    - path: src/content/handlers/__tests__/FileChangeHandler.test.ts
+      artifacts:
+        - kind: test_function
+          name: disconnected file changes stops before premium usage and project loading
+        - kind: test_function
+          name: disconnected programmatic file changes stops before refresh and comparison
+    - path: src/background/__tests__/BackgroundService.reload.test.ts
+      artifacts:
+        - kind: test_function
+          name: disconnected runtime push returns an error before dispatching to the Bolt tab
+    - path: src/background/__tests__/BackgroundService.storage-recovery.test.ts
+      artifacts:
+        - kind: test_function
+          name: late GitHub authentication failure remains actionable instead of becoming a ZIP error
+    - path: src/popup/__tests__/App.component.test.ts
+      artifacts:
+        - kind: test_function
+          name: reconcilePopupGitHubConnection refreshes stale settings and surfaces disconnection
+        - kind: test_function
+          name: popup keeps GitHub-backed surfaces hidden while live connection verification is pending
+        - kind: test_function
+          name: popup opening reconciles a disconnected GitHub App and shows onboarding immediately
+        - kind: test_function
+          name: unavailable popup verification keeps stale GitHub-backed surfaces unmounted
+        - kind: test_function
+          name: unavailable popup verification does not display pending cached file changes
+        - kind: test_function
+          name: unavailable popup verification blocks pending issues context from mounting IssueManager
+        - kind: test_function
+          name: disconnected popup file changes stops before cached changes are displayed
+    - path: src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts
+      artifacts:
+        - kind: test_function
+          name: clearExpiredSession removes supabase session keys and minted flags
+        - kind: test_function
+          name: clearExpiredSession preserves authenticationMethod and githubApp keys
+        - kind: test_function
+          name: re-authentication flow after session expiry keeps GitHub App linkage usable
+        - kind: test_function
+          name: explicit logout still clears GitHub App cache and authenticationMethod
+    - path: src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts
+      artifacts:
+        - kind: test_function
+          name: accepts only a stable positive server-provided installation ID
+        - kind: test_function
+          name: does not synthesize a changing installation ID when the edge response omits it
+        - kind: test_function
+          name: persists the exact positive installation ID supplied by the edge response
+  read:
+    - src/lib/services/BackgroundAuthClient.ts
+    - src/lib/utils/githubAppSync.ts
+    - src/lib/stores/githubSettings.ts
+    - src/lib/utils/__tests__/githubAppSync.test.ts
+    - manifests/background-auth-message-endpoints.manifest.yaml
+    - manifests/popup-auth-client-migration.manifest.yaml
+    - manifests/preserve-github-app-config-on-reauth.manifest.yaml
+    - manifests/prevent-github-token-request-stampede.manifest.yaml
+validate:
+  - pnpm exec vitest run src/lib/utils/__tests__/githubConnection.test.ts src/content/services/__tests__/SupabaseAuthService.github-connection.test.ts src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts src/content/services/__tests__/SupabaseAuthService.independent-session.test.ts src/content/services/__tests__/SupabaseAuthService.edge-function-loop.test.ts src/content/handlers/__tests__/GitHubUploadHandler.test.ts src/content/handlers/__tests__/FileChangeHandler.test.ts src/background/__tests__/BackgroundService.reload.test.ts src/background/__tests__/BackgroundService.storage-recovery.test.ts src/popup/__tests__/App.component.test.ts src/lib/utils/__tests__/githubAppSync.test.ts
+  - pnpm lint
+  - pnpm check
+  - pnpm build
+metadata:
+  tags:
+    - auth
+    - github-app
+    - popup
+    - content-script
+    - user-visible-correctness
+  priority: critical
+  depends_on:
+    - background-auth-message-endpoints
+    - popup-auth-client-migration
+    - prevent-github-token-request-stampede
+  promotion_ready: true
+  notes: |
+    This contract supersedes the prior session-cleanup and edge-function-loop
+    contracts while carrying their stable-identity and session-boundary
+    artifacts forward. The existing syncGitHubApp Promise<boolean> signature is
+    retained and its previously ambiguous success semantics are tightened.
+    App.svelte exposes small injected guard functions so popup connection
+    behavior is testable without adding test-only controls to the rendered UI.
+    Plan-lock red evidence covers authoritative absence, transient and malformed
+    failures, popup degraded states, push and comparison gates, cached modal
+    bypasses, and late authentication error preservation.
+outcome:
+  status: completed
+  summary: |
+    GitHub-backed actions now require a live connection instead of trusting
+    stale local GitHub App metadata. Popup initialization, toolbar and runtime
+    push, displayed and programmatic file comparisons, cached file changes, and
+    Issues surfaces all stop before protected work when verification fails.
+    Authoritative absence clears stale App state; transient and malformed
+    responses preserve durable state and remain visible. Late authentication
+    failures retain their actionable message instead of becoming ZIP errors.
+  rationale: |
+    Local installation metadata cannot prove that the current Supabase user
+    still owns a live GitHub App installation. Centralizing reconciliation
+    behind the background auth authority prevents account-transition drift,
+    while explicit PAT handling preserves the supported legacy path. Gating at
+    every public action boundary protects both UI and background entry points.
+  lessons:
+    - lesson_type: auth-authority-boundary
+      summary: |
+        Durable local GitHub App metadata is configuration, not current-account
+        authorization. Reconcile through the single background auth authority
+        before enabling or starting GitHub-backed work.
+      tags:
+        - auth
+        - github-app
+        - mv3
+      paths:
+        - src/lib/utils/githubConnection.ts
+        - src/content/services/SupabaseAuthService.ts
+    - lesson_type: gate-public-entry-points
+      summary: |
+        UI-only gating is insufficient when reminder, runtime, cached-state,
+        and programmatic APIs can reach the same operation. Gate every public
+        entry point before dialogs, premium usage, file loading, ZIP export,
+        comparison, or dispatch.
+      tags:
+        - auth
+        - popup
+        - reliability
+      paths:
+        - src/background/BackgroundService.ts
+        - src/content/handlers/GitHubUploadHandler.ts
+        - src/content/handlers/FileChangeHandler.ts
+        - src/popup/App.svelte
+  review_notes:
+    - source: independent reviewer maid_auth_gate_review
+      severity: findings-fixed
+      summary: |
+        Initial review identified malformed-response state clearing and an
+        ungated programmatic comparison path. Both were fixed with focused
+        behavioral coverage; its popup readiness concern was confirmed by a
+        new unavailable-state regression test.
+    - source: independent reviewer maid_auth_gate_rereview
+      severity: findings-fixed
+      summary: |
+        Follow-up review identified cached file-change startup and Issues modal
+        bypasses after failed popup verification. Startup and modal/context
+        paths now require live readiness.
+    - source: independent reviewer maid_auth_gate_final_review
+      severity: ready
+      summary: |
+        Final fresh review found no blocker or should-fix findings and returned
+        Ready to merge after confirming every prior gap and the full contract.
+  validation:
+    - command:
+        - pnpm
+        - test:ci
+      status: passed
+      summary: Full Vitest CI suite passed after all review-driven fixes.
+    - command:
+        - pnpm
+        - lint
+      status: passed
+      summary: ESLint completed successfully.
+    - command:
+        - pnpm
+        - check
+      status: passed
+      summary: Svelte and TypeScript checks completed with 0 errors and 0 warnings.
+    - command:
+        - pnpm
+        - build
+      status: passed
+      summary: Production extension build completed with existing chunk warnings only.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - behavioral
+      status: passed
+      summary: Behavioral validation passed 26 active manifests with 3 superseded.
+    - command:
+        - ./scripts/maid
+        - validate
+        - --manifest-dir
+        - manifests
+        - --mode
+        - implementation
+      status: passed
+      summary: Implementation validation passed 26 active manifests with 3 superseded.
+    - command:
+        - ./scripts/maid
+        - test
+        - --manifest
+        - manifests/gate-github-actions-on-live-connection.manifest.yaml
+      status: passed
+      summary: All manifest-declared validation commands completed successfully.
+    - command:
+        - ./scripts/maid
+        - coherence
+        - --manifest-dir
+        - manifests
+      status: passed
+      summary: Coherence passed with no errors and only pre-existing warnings.
+    - command:
+        - ./scripts/maid
+        - plan
+        - status
+        - manifests/gate-github-actions-on-live-connection.manifest.yaml
+      status: passed
+      summary: Final plan lock matched all behavioral-test hashes with red evidence recorded.
+  completed_at: '2026-07-12T16:13:02Z'

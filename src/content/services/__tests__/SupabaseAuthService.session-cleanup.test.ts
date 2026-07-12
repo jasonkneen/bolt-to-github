@@ -149,9 +149,17 @@ global.fetch = vi.fn(async (input: RequestInfo | URL) => {
 
   if (url.includes('/functions/v1/get-github-token')) {
     return {
-      ok: false,
-      status: 404,
-      json: () => Promise.resolve({ error: 'No GitHub App integration found' }),
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          type: 'github_app',
+          access_token: 'github-app-token',
+          installation_id: 12345,
+          github_username: 'octocat',
+          expires_at: '2024-01-01T01:00:00.000Z',
+          scopes: ['contents:write'],
+        }),
     } as Response;
   }
 
