@@ -7,9 +7,13 @@ export interface WhatsNewVersion {
 
 export const whatsNewContent: Record<string, WhatsNewVersion> = {
   '1.3.20': {
-    date: '2026-XX-XX',
-    highlights: ['TBD - update before release'],
-    details: 'TBD - update before release.',
+    date: '2026-07-12',
+    highlights: [
+      '🛡️ GitHub App Retry Loop Fixed - Incomplete connections no longer trigger repeated background checks',
+      '⚙️ Stable Background Checks - Missing installation details no longer start repeated token checks',
+      '✨ Helpful Pro Follow-Up - Successful pushes can now show a lightweight Pro feature suggestion',
+    ],
+    details: `This release improves GitHub App reliability by stopping repeated background checks when a connection is missing required installation details. Open Bolt tabs also receive clearer refresh guidance during authentication recovery, and successful pushes may show a lightweight suggestion for a relevant Pro feature.`,
     type: 'patch',
   },
   '1.3.19': {

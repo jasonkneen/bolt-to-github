@@ -1,26 +1,30 @@
 # Changelog
 
-## 2026-XX-XX - Version 1.3.20
+## 2026-07-12 - Version 1.3.20
 
 ### ✨ New Features
 
-- TBD
+- **Post-Push Pro Teaser** - Successful pushes can show a lightweight, rate-limited Pro feature suggestion without interrupting the completed workflow
 
 ### 🔧 Performance & Stability
 
-- TBD
+- **Auth Invocation Loop Containment** - GitHub App synchronization no longer manufactures changing installation identities when the backend omits an installation ID, preventing storage recovery from recursively invoking token checks
+- **Stable GitHub App Identity** - Successful token responses persist only finite positive server-provided installation IDs; malformed successful responses exit before reporting a false GitHub App success
+- **Tab-Aware Reload Guidance** - Auth self-heal reloads notify open Bolt tabs before the extension reloads so users see a durable refresh-to-reconnect message instead of silently losing the injected controls
+
+### 📊 Analytics & Attribution
+
+- **Upgrade Funnel Instrumentation** - Upgrade modal views, CTA clicks, dismissals, and successful checkout launches now carry consistent source and feature context
 
 ### 🧪 Testing & Quality
 
-- TBD
-
-### 🐛 Bug Fixes
-
-- TBD
+- **Auth Loop Regression Coverage** - Focused tests cover missing, malformed, and valid installation IDs while preserving the v1.3.19 storage-recovery contract
+- **Auth Boundary Guard** - A source-boundary test prevents popup and content code from importing the background-owned auth service directly
+- **Browser Release Gate Repair** - Lifecycle E2E coverage now uses the current storage schema and popup URL, while obsolete duplicate error scenarios were retired in favor of deterministic product-visible checks
 
 ### 📚 Documentation
 
-- TBD
+- **Supabase Function Contract** - Documented the required GitHub App installation ID on successful token responses and the visible degraded path for incomplete connections
 
 ## 2026-07-03 - Version 1.3.19
 

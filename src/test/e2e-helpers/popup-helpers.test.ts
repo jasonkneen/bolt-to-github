@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import type { Page } from '@playwright/test';
 import {
@@ -46,6 +48,25 @@ function createLocator(options: { visible?: boolean; text?: string } = {}): Loca
 }
 
 describe('popup E2E helper characterization', () => {
+  it('pins lifecycle E2E to current storage keys and popup URL', () => {
+    const lifecycleSpec = readFileSync(join(process.cwd(), 'e2e/lifecycle.spec.ts'), 'utf8');
+
+    expect(lifecycleSpec).toContain('settingsBefore.authenticationMethod');
+    expect(lifecycleSpec).toContain('settingsAfter.githubAppInstallationId');
+    expect(lifecycleSpec).toContain('/src/popup/index.html');
+    expect(lifecycleSpec).not.toMatch(/\.authType\b|\.installationId\b|\/popup\.html/);
+  });
+
+  it('keeps only the deterministic product-visible error-flow suite', () => {
+    const legacySpecPath = join(process.cwd(), 'e2e/errors.spec.ts');
+    const productSpec = readFileSync(join(process.cwd(), 'e2e/error-flow-product.spec.ts'), 'utf8');
+
+    expect(existsSync(legacySpecPath)).toBe(false);
+    expect(productSpec).toContain("test('should show error for invalid repository name'");
+    expect(productSpec).toContain("test('should show error when push fails'");
+    expect(productSpec).toContain("test('should allow retry after failed push'");
+  });
+
   it('fills only visible repository settings controls', async () => {
     const repoInput = createLocator();
     const branchInput = createLocator({ visible: true });

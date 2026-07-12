@@ -1,0 +1,100 @@
+schema: '2'
+goal: Finalize v1.3.20 release notes for auth containment and post-push guidance
+type: fix
+created: '2026-07-12T03:49:28Z'
+description: |
+  Extend the existing release-notes contract for v1.3.20. The developer changelog
+  records the auth invocation-loop containment, reload guidance, upgrade-funnel
+  instrumentation, Pro teaser, and validation work. README and in-extension copy
+  describe only user-visible outcomes, use the actual release date, and contain no
+  placeholder or in-development language. This is an additive chain merge because
+  the WhatsNewVersion public interface is unchanged.
+temptations:
+- risk: Do not expose MAID, Edge Function, storage-listener, or test-tooling terminology in the in-extension modal.
+  instead: Describe the observable reliability and post-push guidance outcomes in user language.
+- risk: Do not leave TBD, 2026-XX-XX, or In Development markers in any v1.3.20 release surface.
+  instead: Pin the release date to 2026-07-12 and test all three release surfaces for final copy.
+- risk: Do not claim the extension repairs incomplete GitHub App installations automatically.
+  instead: Say that incomplete connections stop retrying endlessly and may require reconnection.
+files:
+  edit:
+  - path: CHANGELOG.md
+    artifacts:
+    - kind: namespace
+      name: Version_1_3_20_Changelog
+      description: Developer-facing v1.3.20 release record with concrete engineering and validation details.
+  - path: README.md
+    artifacts:
+    - kind: namespace
+      name: Version_1_3_20_Readme
+      description: User-facing current-release summary with no development placeholders.
+  - path: src/lib/constants/__tests__/whatsNewContent.test.ts
+    artifacts:
+    - kind: test_function
+      name: keeps the 1.3.20 modal focused on final user-facing release notes
+    - kind: test_function
+      name: keeps the v1.3.20 changelog and README release-ready
+  scope:
+  - path: src/lib/constants/whatsNewContent.ts
+    reason: Update the existing 1.3.20 data entry without changing the previously declared WhatsNewVersion public interface.
+  read:
+  - manifests/release-notes-v1-3-19-auth-recovery.manifest.yaml
+  - src/content/services/PostPushTeaserService.ts
+  - src/content/services/githubAppIdentity.ts
+  - src/lib/utils/reloadNotification.ts
+  - src/lib/utils/analytics.ts
+validate:
+- pnpm exec vitest run src/lib/constants/__tests__/whatsNewContent.test.ts
+- pnpm check
+- pnpm lint
+metadata:
+  tags:
+  - release-notes
+  - whats-new
+  - auth
+  - conversion
+  priority: high
+  promotion_ready: true
+outcome:
+  status: completed
+  summary: |
+    Finalized the July 12 v1.3.20 changelog, README summary, and in-extension
+    what's-new entry. Removed every placeholder while separating engineering
+    detail from user-facing outcomes.
+  rationale: |
+    Release surfaces describe verified loop containment, tab reload guidance,
+    and post-push Pro discovery. They do not claim that the deployed backend
+    409 clears a preexisting fabricated installation ID or automatically
+    reconnects an affected integration.
+  lessons:
+    - lesson_type: release-claim-boundary
+      summary: A backend response can stop a request loop without clearing previously persisted client identity state.
+      tags: [release-notes, auth, accuracy]
+      paths:
+        - CHANGELOG.md
+        - README.md
+        - src/lib/constants/whatsNewContent.ts
+  review_notes:
+    - source: independent reviewer release_gate_review
+      severity: finding-fixed
+      summary: Initial copy overstated the 409 as a reconnect path; copy and tests were narrowed to verified containment.
+    - source: independent reviewer release_gate_review follow-up
+      severity: ready
+      summary: Updated copy resolved the substantive claim issue with no remaining release-copy findings.
+  validation:
+    - command: [pnpm, exec, vitest, run, src/lib/constants/__tests__/whatsNewContent.test.ts]
+      status: passed
+      summary: Four release-content tests passed.
+    - command: [pnpm, check]
+      status: passed
+      summary: Svelte and TypeScript checks found 0 errors and 0 warnings.
+    - command: [pnpm, lint]
+      status: passed
+      summary: ESLint completed successfully.
+    - command: [./scripts/maid, validate, manifests/release-notes-v1-3-20.manifest.yaml, --mode, implementation]
+      status: passed
+      summary: Implementation validation passed with expected markdown validator warnings only.
+    - command: [./scripts/maid, plan, status, manifests/release-notes-v1-3-20.manifest.yaml]
+      status: passed
+      summary: Revision 2 plan lock is OK with genuine red evidence recorded.
+  completed_at: '2026-07-12T12:00:00+08:00'

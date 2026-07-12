@@ -1,0 +1,78 @@
+schema: '2'
+goal: Repair E2E lifecycle storage contracts
+description: |
+  Align lifecycle E2E tests and helpers with the current extension URLs and storage schema
+  so service worker restart, extension reload, auth persistence, and cross-context storage
+  checks protect deployed MV3 behavior instead of stale assumptions such as authType,
+  installationId, and popup.html.
+type: fix
+files:
+  edit:
+  - path: src/test/e2e-helpers/popup-helpers.test.ts
+    artifacts:
+    - kind: test_function
+      name: pins lifecycle E2E to current storage keys and popup URL
+  scope:
+  - path: e2e/lifecycle.spec.ts
+    reason: Align browser release coverage with current storage keys and the packaged popup URL without placing Playwright in the fast MAID gate.
+  read:
+  - e2e/helpers/storage.ts
+  - e2e/helpers/popup.ts
+  - manifest.json
+  - src/lib/services/chromeStorage.ts
+  - src/background/BackgroundService.ts
+  - src/popup/index.html
+validate:
+  - pnpm exec vitest run src/test/e2e-helpers/popup-helpers.test.ts
+  - pnpm lint
+  - pnpm check
+created: '2026-07-12T03:34:51Z'
+metadata:
+  tags:
+  - e2e
+  - storage
+  - mv3
+  priority: high
+outcome:
+  status: completed
+  summary: |
+    Lifecycle browser coverage now uses the current authenticationMethod,
+    githubToken, and githubAppInstallationId storage keys plus the packaged
+    src/popup/index.html URL. A fast source-contract test protects those
+    assumptions without placing Playwright in the MAID behavioral gate.
+  rationale: |
+    The failures were stale test contracts rather than extension behavior.
+    Aligning the E2E assertions with the production storage schema restores
+    meaningful update, restart, tab-switch, and cross-context coverage while
+    keeping the fast MAID gate deterministic.
+  lessons:
+    - lesson_type: e2e-contract-drift
+      summary: |
+        Chrome extension lifecycle tests must use the packaged extension URL
+        and canonical storage keys; aliases such as authType, installationId,
+        and popup.html can make release gates fail before behavior is tested.
+      tags: [e2e, mv3, storage]
+      paths:
+        - e2e/lifecycle.spec.ts
+        - src/test/e2e-helpers/popup-helpers.test.ts
+  review_notes:
+    - source: independent reviewer release_gate_review
+      severity: ready
+      summary: Read-only review found no lifecycle regressions after the focused suite passed 24 of 24 tests.
+  validation:
+    - command: [pnpm, exec, vitest, run, src/test/e2e-helpers/popup-helpers.test.ts]
+      status: passed
+      summary: Fast E2E source-contract coverage passed in the aggregate MAID test batch.
+    - command: [pnpm, exec, playwright, test, e2e/lifecycle.spec.ts, --project=chromium, --reporter=list]
+      status: passed
+      summary: Focused lifecycle browser suite passed all 24 tests.
+    - command: [pnpm, exec, playwright, test, --project=chromium, --reporter=list]
+      status: passed
+      summary: Full browser release gate passed 59 tests with 3 intentional skips.
+    - command: [./scripts/maid, validate, manifests/repair-e2e-lifecycle-storage-contracts.manifest.yaml, --mode, implementation]
+      status: passed
+      summary: Focused MAID implementation validation passed.
+    - command: [./scripts/maid, plan, status, manifests/repair-e2e-lifecycle-storage-contracts.manifest.yaml]
+      status: passed
+      summary: Revision 5 plan lock is OK with genuine red evidence recorded.
+  completed_at: '2026-07-12T12:00:00+08:00'
