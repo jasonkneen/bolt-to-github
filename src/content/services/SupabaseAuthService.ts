@@ -620,10 +620,10 @@ export class SupabaseAuthService {
           subscription: { isActive: false, plan: 'free' },
         });
 
-        // No token at all – kick off onboarding / re-auth automatically
-        if (!this.isPostConnectionMode) {
-          await this.triggerReAuthentication('No authentication token found');
-        }
+        // An absent session is expected during first-install onboarding. Keep
+        // automatic re-authentication for tokens that existed but failed
+        // verification; sign-in for a new session starts from the welcome UI
+        // or another explicit user action.
       }
     } catch (error) {
       logger.error('Error checking auth status:', error);
