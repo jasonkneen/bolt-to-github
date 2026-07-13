@@ -48,6 +48,30 @@ function createLocator(options: { visible?: boolean; text?: string } = {}): Loca
 }
 
 describe('popup E2E helper characterization', () => {
+  it('pins PAT onboarding validation to the current submit control', () => {
+    const authSpec = readFileSync(join(process.cwd(), 'e2e/auth.spec.ts'), 'utf8');
+
+    expect(authSpec).toContain("getByRole('button', { name: /get started|complete setup/i })");
+    expect(authSpec).not.toContain('button:has-text("Complete Setup")');
+  });
+
+  it('seeds product error flows through a live PAT connection', () => {
+    const errorFlowSpec = readFileSync(
+      join(process.cwd(), 'e2e/error-flow-product.spec.ts'),
+      'utf8'
+    );
+    const seedProductAuth = errorFlowSpec.slice(
+      errorFlowSpec.indexOf('async function seedProductAuth'),
+      errorFlowSpec.indexOf('async function dismissWhatsNewForCurrentVersion')
+    );
+
+    expect(seedProductAuth).toContain("authenticationMethod: 'pat'");
+    expect(seedProductAuth).toContain("githubToken: 'ghp_e2e_product_token'");
+    expect(seedProductAuth).not.toContain("authenticationMethod: 'github_app'");
+    expect(seedProductAuth).not.toContain('githubAppInstallationId');
+    expect(errorFlowSpec).toContain("context.route('https://api.github.com/users/testuser'");
+  });
+
   it('pins lifecycle E2E to current storage keys and popup URL', () => {
     const lifecycleSpec = readFileSync(join(process.cwd(), 'e2e/lifecycle.spec.ts'), 'utf8');
 

@@ -34,4 +34,72 @@ describe('SupabaseAuthService - fresh installation', () => {
       subscription: { isActive: false, plan: 'free' },
     });
   });
+
+  test('opens recovery when a previously stored session can no longer provide a token', async () => {
+    const storedSession: Record<string, unknown> = {
+      supabaseToken: 'expired-access-token',
+      supabaseRefreshToken: 'stale-refresh-token',
+      supabaseTokenExpiry: Date.now() - 60_000,
+      refreshTokenIssuedAt: Date.now() - 31 * 24 * 60 * 60 * 1000,
+    };
+    vi.mocked(chrome.storage.local.get).mockImplementation(async (keys) => {
+      const requestedKeys = Array.isArray(keys) ? keys : [keys];
+      return Object.fromEntries(
+        requestedKeys
+          .filter((key): key is string => typeof key === 'string' && key in storedSession)
+          .map((key) => [key, storedSession[key]])
+      );
+    });
+    vi.mocked(chrome.storage.local.remove).mockImplementation(async (keys) => {
+      for (const key of Array.isArray(keys) ? keys : [keys]) {
+        delete storedSession[key];
+      }
+    });
+
+    authService = SupabaseAuthService.getInstance();
+
+    await authService.forceCheck();
+
+    expect(chrome.tabs.create).toHaveBeenCalledWith({
+      url: 'https://bolt2github.com/login',
+      active: true,
+    });
+    expect(authService.getAuthState()).toMatchObject({
+      isAuthenticated: false,
+      user: null,
+      subscription: { isActive: false, plan: 'free' },
+    });
+  });
+
+  test('opens only one recovery tab when stored-session checks overlap', async () => {
+    const storedSession: Record<string, unknown> = {
+      supabaseToken: 'expired-access-token',
+      supabaseRefreshToken: 'stale-refresh-token',
+      supabaseTokenExpiry: Date.now() - 60_000,
+      refreshTokenIssuedAt: Date.now() - 31 * 24 * 60 * 60 * 1000,
+    };
+    vi.mocked(chrome.storage.local.get).mockImplementation(async (keys) => {
+      const requestedKeys = Array.isArray(keys) ? keys : [keys];
+      return Object.fromEntries(
+        requestedKeys
+          .filter((key): key is string => typeof key === 'string' && key in storedSession)
+          .map((key) => [key, storedSession[key]])
+      );
+    });
+    vi.mocked(chrome.storage.local.remove).mockImplementation(async (keys) => {
+      for (const key of Array.isArray(keys) ? keys : [keys]) {
+        delete storedSession[key];
+      }
+    });
+
+    authService = SupabaseAuthService.getInstance();
+
+    await Promise.all([authService.forceCheck(), authService.forceCheck()]);
+
+    expect(chrome.tabs.create).toHaveBeenCalledTimes(1);
+    expect(chrome.tabs.create).toHaveBeenCalledWith({
+      url: 'https://bolt2github.com/login',
+      active: true,
+    });
+  });
 });

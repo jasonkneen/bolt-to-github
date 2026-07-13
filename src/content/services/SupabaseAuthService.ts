@@ -91,6 +91,7 @@ export class SupabaseAuthService {
   private consecutiveAuthFailures: number = 0;
   private lastReloadTimestamp: number = 0;
   private reloadRequested: boolean = false;
+  private storedSessionRecoveryInProgress: boolean = false;
   private readonly MAX_AUTH_FAILURES_BEFORE_RELOAD = 3;
   private readonly MIN_TIME_BETWEEN_RELOADS = 5 * 60 * 1000; /* 5 minutes */
 
@@ -550,6 +551,17 @@ export class SupabaseAuthService {
     try {
       logger.info('🔄 Checking authentication status...');
 
+      // Token resolution may clear an expired session before returning null.
+      // Preserve whether credentials existed so a failed stored session is not
+      // mistaken for a genuinely empty first-install state.
+      const storedSession = await chrome.storage.local.get([
+        'supabaseToken',
+        'supabaseRefreshToken',
+      ]);
+      const hadStoredSession = Boolean(
+        storedSession.supabaseToken || storedSession.supabaseRefreshToken
+      );
+
       /* Try to get authentication token from various sources */
       const token = await this.getAuthToken();
 
@@ -624,6 +636,18 @@ export class SupabaseAuthService {
         // automatic re-authentication for tokens that existed but failed
         // verification; sign-in for a new session starts from the welcome UI
         // or another explicit user action.
+        if (
+          hadStoredSession &&
+          !this.isPostConnectionMode &&
+          !this.storedSessionRecoveryInProgress
+        ) {
+          this.storedSessionRecoveryInProgress = true;
+          try {
+            await this.triggerReAuthentication('Stored session could not be recovered');
+          } finally {
+            this.storedSessionRecoveryInProgress = false;
+          }
+        }
       }
     } catch (error) {
       logger.error('Error checking auth status:', error);
@@ -1731,6 +1755,7 @@ export class SupabaseAuthService {
     /* Reset failure counter and reload flag (but preserve reload timestamp to prevent loops) */
     this.consecutiveAuthFailures = 0;
     this.reloadRequested = false;
+    this.storedSessionRecoveryInProgress = false;
 
     logger.info('🧹 Cleaned up SupabaseAuthService including aggressive detection');
   }

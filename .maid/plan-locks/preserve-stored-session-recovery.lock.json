@@ -1,0 +1,170 @@
+{
+  "manifest_path": "manifests/preserve-stored-session-recovery.manifest.yaml",
+  "manifest_hash": "sha256:6afc8a9391308625134ed82bec0476226109c5b67849bcfb21e1fc0847bb4b50",
+  "test_hashes": {
+    "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts": "sha256:8433144040598979ebb7c80b6b108842a0d93657d9f67eeb4b32fb29f7b3fb20",
+    "src/content/services/__tests__/SupabaseAuthService.reload.test.ts": "sha256:9d3add94bdb54e32cd9852396532020eb32b969df384c4e041c3955cabf95b02",
+    "src/content/services/__tests__/SupabaseAuthService.fresh-install.test.ts": "sha256:c718ea793b4a0d1e3421354cc88f03cd52343a46cfdaad77702a39728cc35a83"
+  },
+  "created_at": "2026-07-13T01:52:32.979159+00:00",
+  "revision": 6,
+  "revisions": [
+    {
+      "prior_manifest_hash": "sha256:9d61e9bc20b2f146f1eb36c1c1ffb67c91da01fc7acf9bd6724146b8fd7c40c5",
+      "prior_test_hashes": {
+        "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts": "sha256:8433144040598979ebb7c80b6b108842a0d93657d9f67eeb4b32fb29f7b3fb20",
+        "src/content/services/__tests__/SupabaseAuthService.fresh-install.test.ts": "sha256:8af6b319ddecfb48a14c3a42b2c21b1aec495a1d091101f7e5d0508dc4e8aa2e"
+      },
+      "revised_at": "2026-07-13T02:03:28.972233+00:00",
+      "reason": "Require overlapping stored-session checks to share one guided recovery side effect",
+      "agent": null,
+      "contract_delta": {
+        "artifacts_added": [
+          "src/content/services/__tests__/SupabaseAuthService.fresh-install.test.ts:opens only one recovery tab when stored-session checks overlap",
+          "src/content/services/__tests__/SupabaseAuthService.fresh-install.test.ts:opens only one recovery tab when stored-session checks overlap:kind=test_function"
+        ],
+        "artifacts_removed": [],
+        "files_added": [],
+        "files_removed": [],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:9bb365d4237ad48dcf6d7bc9ddeffdf25240fa441b025687239f25e0a81cb1c6",
+      "prior_test_hashes": {
+        "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts": "sha256:8433144040598979ebb7c80b6b108842a0d93657d9f67eeb4b32fb29f7b3fb20",
+        "src/content/services/__tests__/SupabaseAuthService.fresh-install.test.ts": "sha256:c718ea793b4a0d1e3421354cc88f03cd52343a46cfdaad77702a39728cc35a83"
+      },
+      "revised_at": "2026-07-13T02:04:42.472373+00:00",
+      "reason": "Protect the existing rapid-failure reload threshold while narrowing stored-session recovery deduplication",
+      "agent": null,
+      "contract_delta": {
+        "artifacts_added": [],
+        "artifacts_removed": [],
+        "files_added": ["read:src/content/services/__tests__/SupabaseAuthService.reload.test.ts"],
+        "files_removed": [],
+        "validate_commands_added": [
+          "pnpm exec vitest run src/content/services/__tests__/SupabaseAuthService.fresh-install.test.ts src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts src/content/services/__tests__/SupabaseAuthService.reload.test.ts"
+        ],
+        "validate_commands_removed": [
+          "pnpm exec vitest run src/content/services/__tests__/SupabaseAuthService.fresh-install.test.ts src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts"
+        ]
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:7470fe8e6238efac40722025908a2d72b836c8fa2058811926f9d1aa538909af",
+      "prior_test_hashes": {
+        "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts": "sha256:8433144040598979ebb7c80b6b108842a0d93657d9f67eeb4b32fb29f7b3fb20",
+        "src/content/services/__tests__/SupabaseAuthService.reload.test.ts": "sha256:9d3add94bdb54e32cd9852396532020eb32b969df384c4e041c3955cabf95b02",
+        "src/content/services/__tests__/SupabaseAuthService.fresh-install.test.ts": "sha256:c718ea793b4a0d1e3421354cc88f03cd52343a46cfdaad77702a39728cc35a83"
+      },
+      "revised_at": "2026-07-13T02:09:54.483309+00:00",
+      "reason": "Capture reviewed completed Outcome evidence",
+      "agent": null,
+      "contract_delta": {
+        "artifacts_added": [],
+        "artifacts_removed": [],
+        "files_added": [],
+        "files_removed": [],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:6afc8a9391308625134ed82bec0476226109c5b67849bcfb21e1fc0847bb4b50",
+      "prior_test_hashes": {
+        "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts": "sha256:8433144040598979ebb7c80b6b108842a0d93657d9f67eeb4b32fb29f7b3fb20",
+        "src/content/services/__tests__/SupabaseAuthService.reload.test.ts": "sha256:9d3add94bdb54e32cd9852396532020eb32b969df384c4e041c3955cabf95b02",
+        "src/content/services/__tests__/SupabaseAuthService.fresh-install.test.ts": "sha256:c718ea793b4a0d1e3421354cc88f03cd52343a46cfdaad77702a39728cc35a83"
+      },
+      "revised_at": "2026-07-13T02:15:02.028924+00:00",
+      "reason": "Recapture red evidence against the expanded auth and reload validation command",
+      "agent": null,
+      "contract_delta": {
+        "artifacts_added": [],
+        "artifacts_removed": [],
+        "files_added": [],
+        "files_removed": [],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:6afc8a9391308625134ed82bec0476226109c5b67849bcfb21e1fc0847bb4b50",
+      "prior_test_hashes": {
+        "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts": "sha256:8433144040598979ebb7c80b6b108842a0d93657d9f67eeb4b32fb29f7b3fb20",
+        "src/content/services/__tests__/SupabaseAuthService.reload.test.ts": "sha256:9d3add94bdb54e32cd9852396532020eb32b969df384c4e041c3955cabf95b02",
+        "src/content/services/__tests__/SupabaseAuthService.fresh-install.test.ts": "sha256:c718ea793b4a0d1e3421354cc88f03cd52343a46cfdaad77702a39728cc35a83"
+      },
+      "revised_at": "2026-07-13T02:19:34.382483+00:00",
+      "reason": "Refresh behavioral test hash after pre-commit formatting",
+      "agent": null,
+      "contract_delta": {
+        "artifacts_added": [],
+        "artifacts_removed": [],
+        "files_added": [],
+        "files_removed": [],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    }
+  ],
+  "red_evidence": {
+    "red": true,
+    "captured_at": "2026-07-13T02:15:16.139799+00:00",
+    "commands": [
+      {
+        "command": "pnpm exec vitest run src/content/services/__tests__/SupabaseAuthService.fresh-install.test.ts src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts src/content/services/__tests__/SupabaseAuthService.reload.test.ts",
+        "exit_code": 1,
+        "output_tail": "     62| \n     63|     expect(chrome.tabs.create).toHaveBeenCalledWith({\n       |                                ^\n     64|       url: 'https://bolt2github.com/login',\n     65|       active: true,\n\n\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af[1/2]\u23af\n\n FAIL  src/content/services/__tests__/SupabaseAuthService.fresh-install.test.ts > SupabaseAuthService - fresh installation > opens only one recovery tab when stored-session checks overlap\nAssertionError: expected \"spy\" to be called 1 times, but got 0 times\n \u276f src/content/services/__tests__/SupabaseAuthService.fresh-install.test.ts:99:32\n     97|     await Promise.all([authService.forceCheck(), authService.forceChec\u2026\n     98| \n     99|     expect(chrome.tabs.create).toHaveBeenCalledTimes(1);\n       |                                ^\n    100|     expect(chrome.tabs.create).toHaveBeenCalledWith({\n    101|       url: 'https://bolt2github.com/login',\n\n\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af[2/2]\u23af\n",
+        "classification": "red"
+      },
+      {
+        "command": "pnpm lint",
+        "exit_code": 0,
+        "output_tail": "\n> bolt-to-github@1.3.20 lint /home/atomrem/projects/codefrost-dev/bolt-to-github\n> eslint \"src/**/*.{js,ts,svelte}\"\n",
+        "classification": "not_red"
+      },
+      {
+        "command": "pnpm check",
+        "exit_code": 0,
+        "output_tail": "\n> bolt-to-github@1.3.20 check /home/atomrem/projects/codefrost-dev/bolt-to-github\n> svelte-check --tsconfig ./tsconfig.json\n\n\n====================================\nLoading svelte-check in workspace: /home/atomrem/projects/codefrost-dev/bolt-to-github\nGetting Svelte diagnostics...\n\n====================================\nsvelte-check found 0 errors and 0 warnings",
+        "classification": "not_red"
+      }
+    ]
+  },
+  "agent": null,
+  "_manifest_contract": {
+    "artifacts": [
+      "src/content/services/SupabaseAuthService.ts:class:SupabaseAuthService",
+      "src/content/services/SupabaseAuthService.ts:class:SupabaseAuthService:kind=class",
+      "src/content/services/__tests__/SupabaseAuthService.fresh-install.test.ts:opens only one recovery tab when stored-session checks overlap",
+      "src/content/services/__tests__/SupabaseAuthService.fresh-install.test.ts:opens only one recovery tab when stored-session checks overlap:kind=test_function",
+      "src/content/services/__tests__/SupabaseAuthService.fresh-install.test.ts:opens recovery when a previously stored session can no longer provide a token",
+      "src/content/services/__tests__/SupabaseAuthService.fresh-install.test.ts:opens recovery when a previously stored session can no longer provide a token:kind=test_function"
+    ],
+    "files": {
+      "create": [],
+      "edit": [
+        "src/content/services/SupabaseAuthService.ts",
+        "src/content/services/__tests__/SupabaseAuthService.fresh-install.test.ts"
+      ],
+      "read": [
+        "manifests/prevent-login-tabs-on-fresh-install.manifest.yaml",
+        "src/content/services/__tests__/SupabaseAuthService.reload.test.ts",
+        "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts"
+      ]
+    },
+    "test_files": [
+      "src/content/services/__tests__/SupabaseAuthService.fresh-install.test.ts",
+      "src/content/services/__tests__/SupabaseAuthService.reload.test.ts",
+      "src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts"
+    ],
+    "validate_commands": [
+      "pnpm exec vitest run src/content/services/__tests__/SupabaseAuthService.fresh-install.test.ts src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts src/content/services/__tests__/SupabaseAuthService.reload.test.ts",
+      "pnpm lint",
+      "pnpm check"
+    ]
+  }
+}

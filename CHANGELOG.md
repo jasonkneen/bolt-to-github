@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-07-13 - Version 1.3.21
+
+### 🐛 Bug Fixes
+
+- **Fresh-Install Login Tab Fix** - Brand-new unauthenticated installs now open only the intended welcome page instead of treating an absent session as an expired session and opening one or more automatic login tabs
+- **Recovery Behavior Preserved** - Existing tokens that fail verification still follow the established guided re-authentication path; only the expected no-session onboarding state is passive
+
+### 🧪 Testing & Quality
+
+- **First-Install Regression Coverage** - Public-path auth tests verify that overlapping startup checks keep the extension unauthenticated without creating login tabs, while welcome-page and invalid-session recovery coverage remains green
+- **Release Version Contract** - Package metadata, Chrome manifest metadata, changelog, README, and cumulative in-app release notes are checked together for v1.3.21
+
 ## 2026-07-12 - Version 1.3.20
 
 ### ✨ New Features
