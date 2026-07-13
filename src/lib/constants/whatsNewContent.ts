@@ -6,6 +6,19 @@ export interface WhatsNewVersion {
 }
 
 export const whatsNewContent: Record<string, WhatsNewVersion> = {
+  '1.3.21': {
+    date: '2026-07-13',
+    highlights: [
+      '👋 Cleaner First Install - New installs now open only the welcome page',
+      '🚫 No Duplicate Login Tabs - Empty sessions no longer trigger automatic sign-in tabs',
+      '🔐 Recovery Preserved - Existing invalid sessions still guide you back to sign in',
+      '🛡️ GitHub App Retry Loop Fixed - Incomplete connections no longer trigger repeated background checks',
+      '⚙️ Stable Background Checks - Missing installation details no longer start repeated token checks',
+      '✨ Helpful Pro Follow-Up - Successful pushes can now show a lightweight Pro feature suggestion',
+    ],
+    details: `This cumulative Chrome Web Store release includes the v1.3.20 reliability improvements plus a cleaner first-install experience. New installs open only the welcome page instead of launching duplicate login tabs, while existing invalid sessions keep their guided recovery path. GitHub App checks no longer repeat endlessly when installation details are missing, open Bolt tabs receive clearer recovery guidance, and successful pushes may show a lightweight suggestion for a relevant Pro feature.`,
+    type: 'patch',
+  },
   '1.3.20': {
     date: '2026-07-12',
     highlights: [

@@ -19,9 +19,8 @@ async function seedProductAuth(
 ) {
   await setGitHubSettings(context, extensionId, {
     repoOwner: 'testuser',
-    authenticationMethod: 'github_app',
-    githubAppInstallationId: 12345,
-    githubAppUsername: 'testuser',
+    githubToken: 'ghp_e2e_product_token',
+    authenticationMethod: 'pat',
     projectSettings: {
       [ERROR_FLOW_PROJECT_ID]: {
         repoName,
@@ -62,6 +61,14 @@ async function openPopupForBoltProject(
   repoName = 'test-repo'
 ) {
   await seedProductAuth(context, extensionId, repoName);
+
+  await context.route('https://api.github.com/users/testuser', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ login: 'testuser' }),
+    });
+  });
 
   await context.route('https://bolt.new/**', async (route) => {
     await route.fulfill({

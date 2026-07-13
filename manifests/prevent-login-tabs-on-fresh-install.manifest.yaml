@@ -1,0 +1,165 @@
+schema: '2'
+goal: Fresh extension installs open only the welcome page, without automatic login tabs
+type: fix
+description: |
+  Root cause: SupabaseAuthService.checkAuthStatus() treats an absent session as
+  an expired-session failure and calls triggerReAuthentication(). On a fresh
+  service-worker startup, the service's initial check, its short onboarding
+  interval, and BackgroundService's forced startup check can overlap before
+  post-connection mode is established. Each recovery attempt is allowed to
+  create https://bolt2github.com/login, so installation can open two login tabs
+  in addition to the intended welcome page.
+
+  Fix contract: an unauthenticated check with no stored or discoverable token
+  records the unauthenticated state but does not launch re-authentication UI or
+  create a login tab. The installation listener remains the sole automatic tab
+  opener for a fresh install and continues to open the welcome page. A token
+  that exists but fails verification remains a genuine recovery failure and
+  keeps the established re-authentication behavior.
+
+  Rationale: absence of credentials is the expected first-install state, not a
+  broken session. Login navigation should come from the welcome/onboarding UI or
+  an explicit user action; automatic recovery is reserved for sessions that
+  previously existed and became invalid.
+temptations:
+- risk: Do not deduplicate login tabs after creating them; that still races, steals focus, and treats first-install onboarding as a recovery failure.
+  instead: Stop the no-token branch before triggerReAuthentication while preserving the invalid-token recovery branch.
+- risk: Do not suppress every re-authentication request just to make the install test pass.
+  instead: Keep token-verification failures and explicit OPEN_REAUTHENTICATION requests on their existing recovery paths.
+- risk: Do not test private checkAuthStatus or triggerReAuthentication helpers directly.
+  instead: Drive the empty-session scenario through public getInstance and forceCheck, then assert the observable tab behavior.
+files:
+  edit:
+  - path: src/content/services/SupabaseAuthService.ts
+    artifacts:
+    - kind: class
+      name: SupabaseAuthService
+      description: |
+        Empty-session authentication checks keep the service unauthenticated
+        without launching re-authentication UI or opening a login tab. Existing
+        tokens that fail verification continue through re-authentication.
+  create:
+  - path: src/content/services/__tests__/SupabaseAuthService.fresh-install.test.ts
+    artifacts:
+    - kind: test_function
+      name: does not open login tabs when an unauthenticated extension has no stored session
+  read:
+  - src/background/BackgroundService.ts
+  - src/background/__tests__/BackgroundService.welcome-flow.test.ts
+  - src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts
+  - src/content/services/__tests__/SupabaseAuthService.reload.test.ts
+validate:
+- pnpm exec vitest run src/content/services/__tests__/SupabaseAuthService.fresh-install.test.ts src/background/__tests__/BackgroundService.welcome-flow.test.ts src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts src/content/services/__tests__/SupabaseAuthService.reload.test.ts
+- pnpm lint
+- pnpm check
+created: '2026-07-13T00:42:13Z'
+metadata:
+  tags:
+  - auth
+  - onboarding
+  - mv3
+  - tabs
+  priority: high
+  depends_on: []
+  promotion_ready: false
+  notes: |
+    Additive chain-merge evolution: no existing public artifact is renamed,
+    removed, or given a new signature. SupabaseAuthService.ts is an already
+    covered call site whose no-token branch is narrowed without changing its
+    public API.
+outcome:
+  status: completed
+  summary: |
+    Fresh unauthenticated extension startup no longer launches
+    bolt2github.com/login when no stored or discoverable session exists. The
+    install listener remains responsible for opening the welcome page, while
+    existing-token verification failures retain their re-authentication path.
+  rationale: |
+    Missing credentials are expected during first-install onboarding and must
+    not be treated as an expired-session recovery event. Keeping the no-token
+    branch passive prevents overlapping MV3 startup checks from opening
+    duplicate login tabs without weakening explicit or invalid-token recovery.
+  lessons:
+  - lesson_type: auth-state-classification
+    summary: |
+      Authentication startup must distinguish an absent session from a session
+      that existed and failed verification; only the latter warrants automatic
+      recovery UI.
+    tags:
+    - auth
+    - onboarding
+    - mv3
+    paths:
+    - src/content/services/SupabaseAuthService.ts
+  - lesson_type: startup-side-effect-control
+    summary: |
+      Short polling and forced startup checks may overlap in MV3 service
+      workers, so expected unauthenticated checks must remain idempotent and
+      free of navigation side effects.
+    tags:
+    - mv3
+    - concurrency
+    - tabs
+    paths:
+    - src/content/services/SupabaseAuthService.ts
+    - src/background/BackgroundService.ts
+  review_notes:
+  - source: independent reviewer /root/maid_implementation_reviewer
+    severity: ready
+    summary: |
+      Read-only implementation review found no blocking, should-fix, or scope
+      findings and returned Ready to merge after confirming auth recovery,
+      behavioral coverage, plan-lock integrity, and implementation scope.
+  validation:
+  - command:
+    - pnpm
+    - exec
+    - vitest
+    - run
+    - src/content/services/__tests__/SupabaseAuthService.fresh-install.test.ts
+    status: failed-red-phase
+    summary: |
+      Before implementation, the regression test failed because
+      chrome.tabs.create opened https://bolt2github.com/login for empty storage.
+  - command:
+    - ./scripts/maid
+    - test
+    - --manifest
+    - manifests/prevent-login-tabs-on-fresh-install.manifest.yaml
+    status: passed
+    summary: Focused 24-test auth/welcome suite, lint, and type checking passed.
+  - command:
+    - ./scripts/maid
+    - validate
+    - manifests/prevent-login-tabs-on-fresh-install.manifest.yaml
+    - --mode
+    - implementation
+    status: passed
+    summary: The promoted manifest passed implementation validation.
+  - command:
+    - pnpm
+    - test:ci
+    status: passed
+    summary: Full Vitest CI suite passed 195 files and 4,358 tests.
+  - command:
+    - pnpm
+    - build
+    status: passed
+    summary: Production extension build passed with existing Vite chunk warnings only.
+  - command:
+    - ./scripts/maid
+    - verify
+    - --manifest-dir
+    - manifests
+    - --require-plan-lock
+    - --require-red-evidence
+    - --plan-lock-scope
+    - task
+    - --file-tracking-scope
+    - task
+    - --since
+    - HEAD
+    - --keep-going
+    - --summary
+    status: passed
+    summary: All nine MAID verification gates passed with zero blocking findings or warnings.

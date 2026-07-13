@@ -1,0 +1,84 @@
+schema: '2'
+goal: Preserve guided recovery when a previously stored Supabase session can no longer provide a token
+type: fix
+created: '2026-07-13T01:52:32Z'
+description: |
+  Distinguish a truly empty first-install session from a stored session whose
+  access or refresh credentials are expired or invalid. Empty storage remains
+  passive so installation opens only the welcome page, while a failed stored
+  session continues through the established re-authentication UI and login-tab
+  recovery path, even when token resolution clears stale refresh credentials.
+temptations:
+- risk: Do not restore automatic login tabs for empty first-install storage.
+  instead: Snapshot whether stored Supabase credentials existed before token resolution can clear or discard them.
+- risk: Do not test private auth helpers directly.
+  instead: Drive both empty and failed stored-session behavior through getInstance and forceCheck, then assert observable tab navigation and auth state.
+- risk: Do not weaken token expiry or refresh validation to keep a token available.
+  instead: Preserve the failed-session classification separately from successful token resolution.
+files:
+  edit:
+  - path: src/content/services/SupabaseAuthService.ts
+    artifacts:
+    - kind: class
+      name: SupabaseAuthService
+      description: Empty sessions remain passive, while previously stored sessions that fail token resolution launch guided re-authentication.
+  - path: src/content/services/__tests__/SupabaseAuthService.fresh-install.test.ts
+    artifacts:
+    - kind: test_function
+      name: opens recovery when a previously stored session can no longer provide a token
+    - kind: test_function
+      name: opens only one recovery tab when stored-session checks overlap
+  read:
+  - manifests/prevent-login-tabs-on-fresh-install.manifest.yaml
+  - src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts
+  - src/content/services/__tests__/SupabaseAuthService.reload.test.ts
+validate:
+- pnpm exec vitest run src/content/services/__tests__/SupabaseAuthService.fresh-install.test.ts src/content/services/__tests__/SupabaseAuthService.session-cleanup.test.ts src/content/services/__tests__/SupabaseAuthService.reload.test.ts
+- pnpm lint
+- pnpm check
+metadata:
+  tags:
+  - auth
+  - recovery
+  - onboarding
+  priority: high
+  promotion_ready: true
+outcome:
+  status: completed
+  summary: |
+    Authentication checks now distinguish empty first-install storage from a
+    previously stored session that fails token resolution. Guided recovery is
+    preserved for the latter and overlapping checks share one stored-session
+    recovery side effect.
+  rationale: |
+    Token resolution can clear stale credentials before returning null, so the
+    prior fresh-install correction accidentally made some expired sessions
+    passive. Snapshotting credential presence preserves classification, while a
+    narrow single-flight guard prevents duplicate tabs without changing the
+    established rapid-failure reload threshold.
+  lessons:
+  - lesson_type: auth-state-classification
+    summary: Preserve pre-resolution credential presence when cleanup can erase the evidence needed to distinguish failed and absent sessions.
+    tags: [auth, recovery, storage]
+    paths: [src/content/services/SupabaseAuthService.ts]
+  - lesson_type: scoped-concurrency-control
+    summary: Deduplicate only stored-session recovery so overlapping MV3 checks cannot duplicate tabs while other failure thresholds retain their behavior.
+    tags: [auth, concurrency, mv3]
+    paths: [src/content/services/SupabaseAuthService.ts]
+  review_notes:
+  - source: independent reviewer /root/repeat_release_review
+    severity: ready
+    summary: Final re-review confirmed the classification fix, public-path concurrency coverage, narrow guard, cleanup reset, and preserved reload semantics.
+  validation:
+  - command: [pnpm, exec, vitest, run, src/content/services/__tests__/SupabaseAuthService.fresh-install.test.ts]
+    status: failed-red-phase
+    summary: Sequential recovery initially opened no tab; the later overlapping scenario reproduced two login tabs before concurrency protection.
+  - command: [./scripts/maid, validate, manifests/preserve-stored-session-recovery.manifest.yaml, --mode, implementation, --run-tests]
+    status: passed
+    summary: Focused auth, cleanup, reload-threshold, lint, and type-check gates passed.
+  - command: [pnpm, test:ci]
+    status: passed
+    summary: Full Vitest suite passed 195 files and 4,364 tests.
+  - command: [pnpm, test:e2e]
+    status: passed
+    summary: Full Playwright suite passed 59 scenarios with three intentional skips.

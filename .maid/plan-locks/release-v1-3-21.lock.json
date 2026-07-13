@@ -1,0 +1,137 @@
+{
+  "manifest_path": "manifests/release-v1-3-21.manifest.yaml",
+  "manifest_hash": "sha256:d030dd5e56db2cb14fe1aaa711ac3447de6a83f793be941a4350b705f44c8192",
+  "test_hashes": {
+    "src/lib/constants/__tests__/whatsNewContent.test.ts": "sha256:959f63368810d58937bc2f06484fb1d27b57eb244a7fab9d4b9b3b597320b8c3"
+  },
+  "created_at": "2026-07-13T01:06:31.006371+00:00",
+  "revision": 4,
+  "revisions": [
+    {
+      "prior_manifest_hash": "sha256:09b4193617d10e6d63fa0667f1bb3d0d705c4f2af629a8baab5bbfdf87ea6b2b",
+      "prior_test_hashes": {
+        "src/lib/constants/__tests__/whatsNewContent.test.ts": "sha256:7644b57fa20ba4516b292580bcc98c9bcaa8cc3a3dcb215136059cb0f026e04c"
+      },
+      "revised_at": "2026-07-13T01:51:11.795923+00:00",
+      "reason": "Include the repository development guide in the v1.3.21 version-alignment contract",
+      "agent": null,
+      "contract_delta": {
+        "artifacts_added": [
+          "CLAUDE.md:namespace:DevelopmentGuideVersion_1_3_21",
+          "CLAUDE.md:namespace:DevelopmentGuideVersion_1_3_21:kind=namespace"
+        ],
+        "artifacts_removed": [],
+        "files_added": ["edit:CLAUDE.md"],
+        "files_removed": [],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:be07d060d8e9b416c25ec8008115644399db856a4f2c824f475b781fd518fa2f",
+      "prior_test_hashes": {
+        "src/lib/constants/__tests__/whatsNewContent.test.ts": "sha256:b4120488c9ea5123912faa4a0417a4fe82ef9e55fad3dff9b5ea5f56fe753a3e"
+      },
+      "revised_at": "2026-07-13T02:09:53.865163+00:00",
+      "reason": "Capture reviewed completed Outcome evidence",
+      "agent": null,
+      "contract_delta": {
+        "artifacts_added": [],
+        "artifacts_removed": [],
+        "files_added": [],
+        "files_removed": [],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    },
+    {
+      "prior_manifest_hash": "sha256:d030dd5e56db2cb14fe1aaa711ac3447de6a83f793be941a4350b705f44c8192",
+      "prior_test_hashes": {
+        "src/lib/constants/__tests__/whatsNewContent.test.ts": "sha256:b4120488c9ea5123912faa4a0417a4fe82ef9e55fad3dff9b5ea5f56fe753a3e"
+      },
+      "revised_at": "2026-07-13T02:19:32.796028+00:00",
+      "reason": "Refresh behavioral test hash after pre-commit formatting",
+      "agent": null,
+      "contract_delta": {
+        "artifacts_added": [],
+        "artifacts_removed": [],
+        "files_added": [],
+        "files_removed": [],
+        "validate_commands_added": [],
+        "validate_commands_removed": []
+      }
+    }
+  ],
+  "red_evidence": {
+    "red": true,
+    "captured_at": "2026-07-13T01:51:36.335794+00:00",
+    "commands": [
+      {
+        "command": "pnpm exec vitest run src/lib/constants/__tests__/whatsNewContent.test.ts",
+        "exit_code": 1,
+        "output_tail": "+\n+ ## Performance Considerations\n+\n+ - Minimize bundle sizes with proper code splitting\n+ - Optimize asset loading for extension context\n+ - Use proper Chrome extension performance patterns\n+ - Leverage Vite's optimization features\n+ - Test in both light and dark modes\n+\n\n \u276f src/lib/constants/__tests__/whatsNewContent.test.ts:22:44\n     20|     expect(PackageVersion_1_3_21.version).toBe('1.3.21');\n     21|     expect(ChromeManifestVersion_1_3_21.version).toBe('1.3.21');\n     22|     expect(DevelopmentGuideVersion_1_3_21).toContain('**Current Versio\u2026\n       |                                            ^\n     23|   });\n     24| \n\n\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af\u23af[1/1]\u23af\n",
+        "classification": "red"
+      },
+      {
+        "command": "pnpm lint",
+        "exit_code": 0,
+        "output_tail": "\n> bolt-to-github@1.3.21 lint /home/atomrem/projects/codefrost-dev/bolt-to-github\n> eslint \"src/**/*.{js,ts,svelte}\"\n",
+        "classification": "not_red"
+      },
+      {
+        "command": "pnpm check",
+        "exit_code": 1,
+        "output_tail": "> svelte-check --tsconfig ./tsconfig.json\n\n\n====================================\nLoading svelte-check in workspace: /home/atomrem/projects/codefrost-dev/bolt-to-github\nGetting Svelte diagnostics...\n\n/home/atomrem/projects/codefrost-dev/bolt-to-github/src/content/services/__tests__/SupabaseAuthService.fresh-install.test.ts:39:59\nError: Argument of type '{ supabaseToken: string; supabaseTokenExpiry: number; }' is not assignable to parameter of type 'void'. \n  test('opens recovery when a previously stored session can no longer provide a token', async () => {\n    vi.mocked(chrome.storage.local.get).mockResolvedValue({\n      supabaseToken: 'expired-access-token',\n      supabaseTokenExpiry: Date.now() - 60_000,\n    });\n\n\n\n====================================\nsvelte-check found 1 error and 0 warnings in 1 file\n\u2009ELIFECYCLE\u2009 Command failed with exit code 1.",
+        "classification": "red"
+      },
+      {
+        "command": "pnpm build",
+        "exit_code": 0,
+        "output_tail": "dist/pages/logs.js                                           15.32 kB \u2502 gzip:   5.72 kB\ndist/assets/debounce-CycWI4oj.js                             22.12 kB \u2502 gzip:   6.78 kB\ndist/assets/input-hfojewKS.js                                72.30 kB \u2502 gzip:  25.10 kB\ndist/assets/GitHubComparisonService-C-CwFltt.js              90.43 kB \u2502 gzip:  25.31 kB\ndist/background/background.js                               110.79 kB \u2502 gzip:  29.56 kB\ndist/content/content.js                                     245.60 kB \u2502 gzip:  72.19 kB\ndist/assets/index.html-BPVdM5_V.js                          511.55 kB \u2502 gzip: 131.80 kB\n\u2713 built in 9.31s\n\n[plugin:vite:reporter] [plugin vite:reporter] \n(!) /home/atomrem/projects/codefrost-dev/bolt-to-github/src/lib/constants/supabase.ts is dynamically imported by /home/atomrem/projects/codefrost-dev/bolt-to-github/src/services/UnifiedGitHubService.ts but also statically imported by /home/atomrem/projects/codefrost-dev/bolt-to-github/src/content/services/SupabaseAuthService.ts, /home/atomrem/projects/codefrost-dev/bolt-to-github/src/services/BoltProjectSyncService.ts, /home/atomrem/projects/codefrost-dev/bolt-to-github/src/services/GitHubAppService.ts, /home/atomrem/projects/codefrost-dev/bolt-to-github/src/services/SubscriptionService.ts, dynamic import will not move module into another chunk.\n\n[plugin:vite:reporter] [plugin vite:reporter] \n(!) /home/atomrem/projects/codefrost-dev/bolt-to-github/src/content/handlers/FileChangeHandler.ts is dynamically imported by /home/atomrem/projects/codefrost-dev/bolt-to-github/src/content/handlers/GitHubUploadHandler.ts, /home/atomrem/projects/codefrost-dev/bolt-to-github/src/content/services/PushReminderService.ts, /home/atomrem/projects/codefrost-dev/bolt-to-github/src/content/services/PushReminderService.ts but also statically imported by /home/atomrem/projects/codefrost-dev/bolt-to-github/src/content/UIManager.ts, dynamic import will not move module into another chunk.\n\n\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.",
+        "classification": "not_red"
+      }
+    ]
+  },
+  "agent": null,
+  "_manifest_contract": {
+    "artifacts": [
+      "CHANGELOG.md:namespace:Version_1_3_21_Changelog",
+      "CHANGELOG.md:namespace:Version_1_3_21_Changelog:kind=namespace",
+      "CLAUDE.md:namespace:DevelopmentGuideVersion_1_3_21",
+      "CLAUDE.md:namespace:DevelopmentGuideVersion_1_3_21:kind=namespace",
+      "README.md:namespace:Version_1_3_21_Readme",
+      "README.md:namespace:Version_1_3_21_Readme:kind=namespace",
+      "manifest.json:namespace:ChromeManifestVersion_1_3_21",
+      "manifest.json:namespace:ChromeManifestVersion_1_3_21:kind=namespace",
+      "package.json:namespace:PackageVersion_1_3_21",
+      "package.json:namespace:PackageVersion_1_3_21:kind=namespace",
+      "src/lib/constants/__tests__/whatsNewContent.test.ts:keeps package and Chrome manifest versions aligned for 1.3.21",
+      "src/lib/constants/__tests__/whatsNewContent.test.ts:keeps package and Chrome manifest versions aligned for 1.3.21:kind=test_function",
+      "src/lib/constants/__tests__/whatsNewContent.test.ts:keeps the v1.3.21 release surfaces final and user-facing",
+      "src/lib/constants/__tests__/whatsNewContent.test.ts:keeps the v1.3.21 release surfaces final and user-facing:kind=test_function"
+    ],
+    "files": {
+      "create": [],
+      "edit": [
+        "CHANGELOG.md",
+        "CLAUDE.md",
+        "README.md",
+        "manifest.json",
+        "package.json",
+        "src/lib/constants/__tests__/whatsNewContent.test.ts"
+      ],
+      "read": [
+        "manifests/prevent-login-tabs-on-fresh-install.manifest.yaml",
+        "manifests/release-notes-v1-3-20.manifest.yaml",
+        "src/content/services/SupabaseAuthService.ts"
+      ]
+    },
+    "test_files": ["src/lib/constants/__tests__/whatsNewContent.test.ts"],
+    "validate_commands": [
+      "pnpm exec vitest run src/lib/constants/__tests__/whatsNewContent.test.ts",
+      "pnpm lint",
+      "pnpm check",
+      "pnpm build"
+    ]
+  }
+}

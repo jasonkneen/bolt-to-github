@@ -92,13 +92,11 @@ test.describe('Authentication Flow', () => {
       // Wait a moment for validation
       await page.waitForTimeout(500);
 
-      // Should disable the Complete Setup button
-      const saveButton = page.locator('button:has-text("Complete Setup")').first();
-      await saveButton.waitFor({ state: 'visible', timeout: 5000 });
-      const isDisabled = await saveButton.isDisabled();
-
-      // Button should be disabled with empty token
-      expect(isDisabled).toBe(true);
+      // The current onboarding surface labels this action "Get Started";
+      // retain the legacy label as a compatibility fallback.
+      const saveButton = page.getByRole('button', { name: /get started|complete setup/i });
+      await expect(saveButton).toBeVisible();
+      await expect(saveButton).toBeDisabled();
 
       await page.close();
     });
@@ -112,13 +110,9 @@ test.describe('Authentication Flow', () => {
       // Wait a moment for validation
       await page.waitForTimeout(500);
 
-      // Should disable the Complete Setup button
-      const saveButton = page.locator('button:has-text("Complete Setup")').first();
-      await saveButton.waitFor({ state: 'visible', timeout: 5000 });
-      const isDisabled = await saveButton.isDisabled();
-
-      // Button should be disabled with empty username
-      expect(isDisabled).toBe(true);
+      const saveButton = page.getByRole('button', { name: /get started|complete setup/i });
+      await expect(saveButton).toBeVisible();
+      await expect(saveButton).toBeDisabled();
 
       await page.close();
     });

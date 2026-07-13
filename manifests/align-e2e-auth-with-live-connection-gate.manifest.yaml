@@ -1,0 +1,76 @@
+schema: '2'
+goal: Align browser auth fixtures with the live GitHub connection gate
+type: fix
+created: '2026-07-13T01:12:43Z'
+description: |
+  Repair stale browser coverage exposed by the v1.3.20 live-connection gate.
+  PAT onboarding validation should recognize the current Get Started control,
+  and product-visible repository/push error scenarios should seed the supported
+  PAT path instead of fabricating a GitHub App installation without a Supabase
+  session. Production correctly blocks that fabricated state, so this change is
+  limited to browser specs and a fast source-contract regression.
+temptations:
+- risk: Do not weaken the live GitHub connection gate so storage-only GitHub App fixtures can mount protected surfaces.
+  instead: Use PAT setup for error scenarios that are not GitHub-App-specific.
+- risk: Do not add sleeps or extend timeouts around controls that are not rendered.
+  instead: Seed a supported authentication path and locate the current accessible control name.
+- risk: Do not place Playwright commands back into the fast MAID behavioral gate.
+  instead: Pin browser-spec setup through the existing fast source-contract test and keep Playwright as release evidence.
+files:
+  edit:
+  - path: src/test/e2e-helpers/popup-helpers.test.ts
+    artifacts:
+    - kind: test_function
+      name: pins PAT onboarding validation to the current submit control
+    - kind: test_function
+      name: seeds product error flows through a live PAT connection
+  scope:
+  - path: e2e/auth.spec.ts
+    reason: Update stale onboarding button locators without changing production behavior.
+  - path: e2e/error-flow-product.spec.ts
+    reason: Replace fabricated GitHub App state with a valid PAT fixture for non-auth-specific product error scenarios.
+  read:
+  - e2e/helpers/popup.ts
+  - e2e/helpers/storage.ts
+  - src/lib/utils/githubConnection.ts
+  - manifests/gate-github-actions-on-live-connection.manifest.yaml
+validate:
+- pnpm exec vitest run src/test/e2e-helpers/popup-helpers.test.ts
+- pnpm lint
+- pnpm check
+metadata:
+  tags:
+  - e2e
+  - auth
+  - release-ci
+  priority: high
+  promotion_ready: true
+outcome:
+  status: completed
+  summary: |
+    Updated stale browser fixtures to use the current accessible onboarding
+    control and a live-valid PAT setup for product error scenarios. Production
+    GitHub connection gating remains unchanged.
+  rationale: |
+    The v1.3.20 live-connection gate correctly rejected a fabricated GitHub App
+    installation without a Supabase session; browser coverage needed to seed a
+    supported connection rather than weaken production behavior.
+  lessons:
+  - lesson_type: browser-fixture-fidelity
+    summary: Protected-surface E2E fixtures must satisfy the same live-connection contract as production state.
+    tags: [e2e, auth, fixtures]
+    paths: [e2e/error-flow-product.spec.ts]
+  review_notes:
+  - source: independent reviewer /root/repeat_release_review
+    severity: ready
+    summary: Review confirmed the PAT fixture and GitHub username route do not weaken production connection gating.
+  validation:
+  - command: [pnpm, exec, vitest, run, src/test/e2e-helpers/popup-helpers.test.ts]
+    status: passed
+    summary: Nine fast source-contract tests passed after red evidence for both stale fixture paths.
+  - command: [./scripts/maid, validate, manifests/align-e2e-auth-with-live-connection-gate.manifest.yaml, --mode, implementation, --run-tests]
+    status: passed
+    summary: Focused contract tests, lint, and type checking passed.
+  - command: [pnpm, test:e2e]
+    status: passed
+    summary: Full Playwright suite passed 59 scenarios with three intentional skips.

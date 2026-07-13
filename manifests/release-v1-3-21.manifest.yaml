@@ -1,0 +1,110 @@
+schema: '2'
+goal: Prepare v1.3.21 for Chrome Web Store submission after the fresh-install onboarding fix
+type: fix
+created: '2026-07-13T01:06:30Z'
+description: |
+  Bump the extension and package versions together to 1.3.21 and add final
+  release copy for the fresh-install onboarding correction. The changelog may
+  record engineering and validation detail, while README and in-extension copy
+  must stay user-facing: a new install opens only the welcome page, empty
+  sessions do not open duplicate login tabs, and invalid existing sessions keep
+  their recovery behavior. Because v1.3.20 was published on GitHub but not
+  submitted to CWS, the v1.3.21 in-app entry is cumulative and also includes
+  v1.3.20 GitHub App loop containment, stable background checks, and the
+  post-push Pro follow-up. This additively evolves the release-note chain without
+  changing the WhatsNewVersion public interface.
+temptations:
+- risk: Do not move or replace the already-published v1.3.20 tag or ZIP.
+  instead: Publish the code fix under the new immutable v1.3.21 version.
+- risk: Do not bump only manifest.json or package.json.
+  instead: Keep both version fields aligned and enforce them with one release-contract test.
+- risk: Do not imply that automatic recovery was removed for expired or invalid existing sessions.
+  instead: Limit the release claim to empty-session first-install behavior and state that established recovery remains.
+- risk: Do not show only the incremental v1.3.21 fix in the in-app modal.
+  instead: Include the user-facing v1.3.20 highlights because CWS users will upgrade directly from v1.3.19 to v1.3.21.
+files:
+  edit:
+  - path: package.json
+    artifacts:
+    - kind: namespace
+      name: PackageVersion_1_3_21
+      description: Package metadata version is exactly 1.3.21.
+  - path: manifest.json
+    artifacts:
+    - kind: namespace
+      name: ChromeManifestVersion_1_3_21
+      description: Chrome extension manifest version is exactly 1.3.21.
+  - path: CHANGELOG.md
+    artifacts:
+    - kind: namespace
+      name: Version_1_3_21_Changelog
+      description: Developer-facing v1.3.21 release record for the fresh-install onboarding fix.
+  - path: README.md
+    artifacts:
+    - kind: namespace
+      name: Version_1_3_21_Readme
+      description: User-facing current release summary with v1.3.20 retained as the previous version.
+  - path: CLAUDE.md
+    artifacts:
+    - kind: namespace
+      name: DevelopmentGuideVersion_1_3_21
+      description: Repository development guidance identifies v1.3.21 as the current release.
+  - path: src/lib/constants/__tests__/whatsNewContent.test.ts
+    artifacts:
+    - kind: test_function
+      name: keeps package and Chrome manifest versions aligned for 1.3.21
+    - kind: test_function
+      name: keeps the v1.3.21 release surfaces final and user-facing
+  scope:
+  - path: src/lib/constants/whatsNewContent.ts
+    reason: Add the v1.3.21 content entry without changing the active WhatsNewVersion interface contract.
+  read:
+  - manifests/prevent-login-tabs-on-fresh-install.manifest.yaml
+  - manifests/release-notes-v1-3-20.manifest.yaml
+  - src/content/services/SupabaseAuthService.ts
+validate:
+- pnpm exec vitest run src/lib/constants/__tests__/whatsNewContent.test.ts
+- pnpm lint
+- pnpm check
+- pnpm build
+metadata:
+  tags:
+  - release
+  - chrome-web-store
+  - onboarding
+  - auth
+  priority: high
+  promotion_ready: true
+outcome:
+  status: completed
+  summary: |
+    Prepared every v1.3.21 release surface with aligned package, Chrome
+    manifest, and development-guide versions. The in-app entry is intentionally
+    cumulative, combining the fresh-install correction with the v1.3.20 changes
+    that were published on GitHub but not submitted to the Chrome Web Store.
+  rationale: |
+    Publishing the additional fix as v1.3.21 preserves the immutable v1.3.20
+    release while ensuring CWS users upgrading from v1.3.19 see the complete set
+    of changes they will actually receive.
+  lessons:
+  - lesson_type: cumulative-store-release-notes
+    summary: In-app notes should follow the store upgrade path when an intermediate GitHub release was not submitted to the store.
+    tags: [release, chrome-web-store, release-notes]
+    paths: [src/lib/constants/whatsNewContent.ts]
+  review_notes:
+  - source: independent reviewer /root/repeat_release_review
+    severity: ready
+    summary: Final read-only review found release/version surfaces accurate, cumulative, and correctly scoped.
+  validation:
+  - command: [pnpm, exec, vitest, run, src/lib/constants/__tests__/whatsNewContent.test.ts]
+    status: passed
+    summary: Six release-content and version-contract tests passed after red-first version assertions.
+  - command: [./scripts/maid, validate, manifests/release-v1-3-21.manifest.yaml, --mode, implementation, --run-tests]
+    status: passed
+    summary: Focused release tests, lint, type checking, and production build passed.
+  - command: [pnpm, test:ci]
+    status: passed
+    summary: Full Vitest suite passed 195 files and 4,364 tests.
+  - command: [pnpm, test:e2e]
+    status: passed
+    summary: Full Playwright suite passed 59 scenarios with three intentional skips.

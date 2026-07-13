@@ -31,7 +31,23 @@ A Chrome extension that automatically captures ZIP file downloads from bolt.new,
   <img src="https://img.shields.io/badge/Install%20from-Chrome%20Web%20Store-blue?style=for-the-badge&logo=google-chrome&logoColor=white" alt="Install from Chrome Web Store" height="40">
 </a>
 
-### Latest Version: v1.3.20
+### Latest Version: v1.3.21
+
+#### Version 1.3.21 - Cleaner First-Install Onboarding (July 2026)
+
+**What's new:**
+
+- New extension installs open only the welcome page instead of also opening automatic login tabs
+- Empty sessions are treated as the expected onboarding state rather than an expired login
+- Existing invalid or expired sessions still keep their guided recovery behavior
+
+**Key Benefits:**
+
+- Cleaner first-run experience with no duplicate, focus-stealing login tabs
+- Sign-in starts from the welcome flow or another explicit user action
+- Established authentication recovery remains available when a real session fails
+
+### Previous Version: v1.3.20
 
 #### Version 1.3.20 - Auth Containment & Post-Push Guidance (July 2026)
 
